@@ -40,22 +40,6 @@ const ShareGPT = React.memo(() => {
 
   return (
     <>
-      <button
-        className='btn btn-neutral'
-        onClick={() => {
-          setIsModalOpen(true);
-        }}
-      >
-        {t('postOnShareGPT.title')}
-      </button>
-      {isModalOpen && (
-        <PopupModal
-          setIsModalOpen={setIsModalOpen}
-          title={t('postOnShareGPT.title') as string}
-          message={t('postOnShareGPT.warning') as string}
-          handleConfirm={handleConfirm}
-        />
-      )}
     </>
   );
 });
