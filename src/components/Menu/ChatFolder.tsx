@@ -233,9 +233,9 @@ const ChatFolder = ({
           className='flex text-gray-300'
           onClick={(e) => e.stopPropagation()}
         >
-          <button className='p-1 hover:text-white' onClick={openDirectoryPicker}>
+          <!-- <button className='p-1 hover:text-white' onClick={openDirectoryPicker}>
             Open Directory
-          </button>
+          </button> -->
           {isDelete || isEdit ? (
             <>
               <button className='p-1 hover:text-white' onClick={handleTick}>
