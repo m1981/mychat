@@ -1,3 +1,4 @@
+import { ipcRenderer } from 'electron';
 import React, { useEffect, useRef, useState } from 'react';
 import useStore from '@store/store';
 
@@ -44,7 +45,11 @@ const ChatFolder = ({
   const [isDelete, setIsDelete] = useState<boolean>(false);
   const [isHover, setIsHover] = useState<boolean>(false);
   const [showPalette, setShowPalette] = useState<boolean>(false);
-
+  
+  const openDirectoryPicker = () => {
+    ipcRenderer.send('open-directory-picker');
+  };
+  
   const editTitle = () => {
     const updatedFolders: FolderCollection = JSON.parse(
       JSON.stringify(useStore.getState().folders)
