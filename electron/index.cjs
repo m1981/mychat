@@ -1,5 +1,6 @@
+const { dialog, ipcMain } = require('electron');
+const fs = require('fs');
 const path = require('path');
-
 const { app, BrowserWindow, Tray, Menu } = require('electron');
 const isDev = require('electron-is-dev');
 const { autoUpdater } = require('electron-updater');
@@ -20,6 +21,27 @@ function createWindow() {
     icon: iconPath,
   });
 
+ipcMain.on('open-directory-picker', (event) => {
+  dialog
+    .showOpenDialog(win, {
+      properties: ['openDirectory'],
+    })
+    .then((result) => {
+      if (!result.canceled && result.filePaths.length > 0) {
+        const directoryPath = result.filePaths[0];
+        // Load existing chat data
+        const chatData = JSON.parse(fs.readFileSync('path/to/chat-data.json', 'utf-8'));
+
+        // Update chat data with the chosen directory path
+        chatData.directoryPath = directoryPath;
+        fs.writeFileSync('path/to/chat-data.json', JSON.stringify(chatData, null, 2));
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+});
+  
   createTray(win);
 
   win.on('minimize', (event) => {
