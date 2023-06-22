@@ -54,7 +54,11 @@ const ChatFolder = ({
     setFolders(updatedFolders);
     setIsEdit(false);
   };
-
+  
+  const openDirectoryPicker = () => {
+    ipcRenderer.send('open-directory-picker');
+  };
+  
   const deleteFolder = () => {
     const updatedChats: ChatInterface[] = JSON.parse(
       JSON.stringify(useStore.getState().chats)
