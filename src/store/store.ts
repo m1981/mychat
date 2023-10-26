@@ -64,7 +64,7 @@ const useStore = create<StoreState>()(
         folders: state.folders,
         enterToSubmit: state.enterToSubmit,
       }),
-      version: 8,
+      version: 9,
       migrate: (persistedState, version) => {
         switch (version) {
           case 0:
@@ -83,6 +83,8 @@ const useStore = create<StoreState>()(
             migrateV6(persistedState as LocalStorageInterfaceV6ToV7);
           case 7:
             migrateV7(persistedState as LocalStorageInterfaceV7oV8);
+          case 8:
+            migrateV8(persistedState as LocalStorageInterfaceV8ToV9);         
             break;
         }
         return persistedState as StoreState;
