@@ -104,3 +104,10 @@ export const migrateV7 = (persistedState: LocalStorageInterfaceV7oV8) => {
     chat.id = uuidv4();
   });
 };
+
+export const migrateV8 = (persistedState: LocalStorageInterfaceV8ToV9) => {
+  persistedState.chats.forEach((chat) => {
+    chat.currentChatTokenCount = 0; 
+  });
+};
+
