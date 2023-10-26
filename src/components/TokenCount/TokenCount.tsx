@@ -21,8 +21,8 @@ const TokenCount = React.memo(() => {
   );
 
   const cost = useMemo(() => {
-    const price = modelCost[model].price * (tokenCount / modelCost[model].unit);
-    return price.toPrecision(3);
+    const price = modelCost[model].price * 4.4 * (tokenCount / modelCost[model].unit);
+    return price.toPrecision(2);
   }, [model, tokenCount]);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ const TokenCount = React.memo(() => {
   return (
     <div className='absolute top-[-16px] right-0'>
       <div className='text-xs italic text-gray-900 dark:text-gray-300'>
-        Tokens: {tokenCount} (${cost})
+        Tokens: {tokenCount} &nbsp; {cost}zł
       </div>
     </div>
   );
