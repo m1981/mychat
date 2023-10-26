@@ -14,6 +14,7 @@ import {
   LocalStorageInterfaceV5ToV6,
   LocalStorageInterfaceV6ToV7,
   LocalStorageInterfaceV7oV8,
+  LocalStorageInterfaceV8ToV9,
 } from '@type/chat';
 import {
   migrateV0,
@@ -24,6 +25,7 @@ import {
   migrateV5,
   migrateV6,
   migrateV7,
+  migrateV8,
 } from './migrate';
 
 export type StoreState = ChatSlice &
