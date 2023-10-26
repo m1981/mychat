@@ -107,8 +107,9 @@ export const migrateV7 = (persistedState: LocalStorageInterfaceV7oV8) => {
 };
 
 export const migrateV8 = (persistedState: LocalStorageInterfaceV8ToV9) => {
-  persistedState.chats.forEach((chat) => {
-    chat.currentChatTokenCount = 0; 
+  persistedState.chats.forEach((chat: ChatInterface) => {
+    chat.currentChatTokenCount = 0;
   });
 };
+
 
