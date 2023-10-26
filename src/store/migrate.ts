@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   Folder,
   FolderCollection,
+  ChatInterface,
   LocalStorageInterfaceV0ToV1,
   LocalStorageInterfaceV1ToV2,
   LocalStorageInterfaceV2ToV3,
