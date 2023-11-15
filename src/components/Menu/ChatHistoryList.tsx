@@ -119,12 +119,17 @@ const ChatHistoryList = () => {
     }));
 
     // Create a new folder collection with updated order
-    const reorderedFoldersCollection = reorderedFolders.reduce((acc, folder) => {
-      acc[folder.id] = folder;
+    const reorderedFoldersCollection = reorderedFolders.reduce<FolderCollection>((acc, folder, index) => {
+      const folderId = folder.id;
+      acc[folderId] = {
+        ...folder,
+        order: index, // Assign the new order based on the array index
+      };
       return acc;
     }, {});
 
-    reorderFolders(reorderedFoldersCollection);
+    reorderFolders(Object.values(reorderedFoldersCollection)); // Pass an array of Folder objects
+
   };
 
 
