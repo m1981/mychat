@@ -28,6 +28,7 @@ const ChatFolder = ({
 }: {
   folderChats: ChatHistoryInterface[];
   folderId: string;
+  setFolderIsDragging: Dispatch<SetStateAction<boolean>>;
 }) => {
   const folderName = useStore((state) => state.folders[folderId].name);
   const isExpanded = useStore((state) => state.folders[folderId].expanded);
