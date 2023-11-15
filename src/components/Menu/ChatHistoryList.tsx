@@ -77,6 +77,56 @@ const ChatHistoryList = () => {
     setNoChatFolders(_noFolders);
   }).current;
 
+
+
+  const reorderFolders = useStore((state) => state.reorderFolders);
+  const folders = useStore((state) => state.folders);
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+
+    // Retrieve the dragged folder ID from the data transfer object
+    const draggedFolderId = e.dataTransfer.getData('folderId');
+
+    // Assuming 'e.target' is your placeholder or visual indicator element
+    const targetElement = e.target as HTMLElement;
+    const targetFolderId = targetElement.getAttribute('data-folder-id');
+
+    // Find the index of the dragged folder and the target folder
+    const folderList = Object.entries(folders).sort((a, b) => a[1].order - b[1].order);
+    const draggedFolderIndex = folderList.findIndex(([id]) => id === draggedFolderId);
+    const targetIndex = folderList.findIndex(([id]) => id === targetFolderId);
+
+    if (draggedFolderIndex === -1 || targetIndex === -1 || draggedFolderIndex === targetIndex) {
+      return; // Invalid drop, ignore
+    }
+
+    // Remove the dragged folder from the array
+    const [removed] = folderList.splice(draggedFolderIndex, 1);
+    // Insert it at the position of the target
+    folderList.splice(targetIndex, 0, removed);
+
+    // Update the order property of each folder
+    const reorderedFolders = folderList.map(([id, folder], index) => ({
+      ...folder,
+      order: index
+    }));
+
+    // Create a new folder collection with updated order
+    const reorderedFoldersCollection = reorderedFolders.reduce((acc, folder) => {
+      acc[folder.id] = folder;
+      return acc;
+    }, {});
+
+    reorderFolders(reorderedFoldersCollection);
+  };
+
+
+
   useEffect(() => {
     updateFolders();
 
@@ -165,12 +215,35 @@ const ChatHistoryList = () => {
     >
       <ChatSearch filter={filter} setFilter={setFilter} />
       <div className='flex flex-col gap-2 text-gray-100 text-sm'>
-        {Object.keys(chatFolders).map((folderId) => (
-          <ChatFolder
-            folderChats={chatFolders[folderId]}
-            folderId={folderId}
-            key={folderId}
-          />
+        {Object.keys(chatFolders).sort((a, b) => folders[a].order - folders[b].order).map((folderId, index, array) => (
+          <>
+            {/* Drop indicator before the folder */}
+            {index > 0 && (
+              <div
+                className="drop-indicator"
+                data-folder-id={folderId}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                style={{ height: '20px', backgroundColor: 'lightgrey' }} // Style as needed
+              />
+            )}
+            <ChatFolder
+              folderChats={chatFolders[folderId]}
+              folderId={folderId}
+              key={folderId}
+              // ... other props ...
+            />
+            {/* Drop indicator after the folder, if it's the last folder */}
+            {index === array.length - 1 && (
+              <div
+                className="drop-indicator"
+                data-folder-id={folderId}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                style={{ height: '20px', backgroundColor: 'lightgrey' }} // Style as needed
+              />
+            )}
+          </>
         ))}
         {noChatFolders.map(({ title, index, id }) => (
           <ChatHistory title={title} key={`${title}-${id}`} chatIndex={index} />

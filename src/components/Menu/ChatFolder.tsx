@@ -142,6 +142,11 @@ const ChatFolder = ({
     setFolders(updatedFolders);
   };
 
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    e.dataTransfer.setData('folderId', folderId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
   useEffect(() => {
     if (inputRef && inputRef.current) inputRef.current.focus();
   }, [isEdit]);
@@ -172,6 +177,8 @@ const ChatFolder = ({
       className={`w-full transition-colors group/folder ${
         isHover ? 'bg-gray-800/40' : ''
       }`}
+      draggable="true"
+      onDragStart={handleDragStart}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
