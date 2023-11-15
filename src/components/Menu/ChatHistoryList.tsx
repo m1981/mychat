@@ -82,11 +82,13 @@ const ChatHistoryList = () => {
   const reorderFolders = useStore((state) => state.reorderFolders);
   const folders = useStore((state) => state.folders);
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
+  // Function to handle the drag over event for folder reordering
+  const handleFolderDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault(); // Necessary to allow the drop action for folder reordering
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  // Function to handle the drop event for folder reordering
+  const handleFolderDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
 
     // Retrieve the dragged folder ID from the data transfer object
@@ -176,7 +178,9 @@ const ChatHistoryList = () => {
     updateFolders();
   }, [filter]);
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+
+  // Function to handle the drop event for dropping chats into folders
+  const handleChatDrop = (e: React.DragEvent<HTMLDivElement>) => {
     if (e.dataTransfer) {
       e.stopPropagation();
       setIsHover(false);
@@ -208,8 +212,8 @@ const ChatHistoryList = () => {
       className={`flex-col flex-1 overflow-y-auto hide-scroll-bar border-b border-white/20 ${
         isHover ? 'bg-gray-800/40' : ''
       }`}
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
+      onDrop={handleChatDrop}
+      onDragOver={handleFolderDragOver}
       onDragLeave={handleDragLeave}
       onDragEnd={handleDragEnd}
     >
@@ -222,8 +226,8 @@ const ChatHistoryList = () => {
               <div
                 className="drop-indicator"
                 data-folder-id={folderId}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
+                onDragOver={handleFolderDragOver}
+                onDrop={handleFolderDrop}
                 style={{ height: '20px', backgroundColor: 'lightgrey' }} // Style as needed
               />
             )}
@@ -238,8 +242,8 @@ const ChatHistoryList = () => {
               <div
                 className="drop-indicator"
                 data-folder-id={folderId}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
+                onDragOver={handleFolderDragOver}
+                onDrop={handleFolderDrop}
                 style={{ height: '20px', backgroundColor: 'lightgrey' }} // Style as needed
               />
             )}
