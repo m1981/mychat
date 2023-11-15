@@ -24,6 +24,7 @@ import { folderColorOptions } from '@constants/color';
 const ChatFolder = ({
   folderChats,
   folderId,
+  setFolderIsDragging,
 }: {
   folderChats: ChatHistoryInterface[];
   folderId: string;
@@ -145,6 +146,11 @@ const ChatFolder = ({
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     e.dataTransfer.setData('folderId', folderId);
     e.dataTransfer.effectAllowed = 'move';
+    setFolderIsDragging(true); // Set dragging state to true
+  };
+
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    setFolderIsDragging(false); // Set dragging state to false when the drag ends
   };
 
   useEffect(() => {
@@ -179,6 +185,7 @@ const ChatFolder = ({
       }`}
       draggable="true"
       onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}

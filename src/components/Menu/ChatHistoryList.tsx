@@ -78,6 +78,8 @@ const ChatHistoryList = () => {
   }).current;
 
 
+  // Add a new state variable to track if a folder is being dragged
+  const [folderIsDragging, setFolderIsDragging] = useState(false);
 
   const reorderFolders = useStore((state) => state.reorderFolders);
   const folders = useStore((state) => state.folders);
@@ -227,29 +229,31 @@ const ChatHistoryList = () => {
         {Object.keys(chatFolders).sort((a, b) => folders[a].order - folders[b].order).map((folderId, index, array) => (
           <>
             {/* Drop indicator before the folder */}
-            {index > 0 && (
+            {folderIsDragging && index > 0 && (
               <div
                 className="drop-indicator"
                 data-folder-id={folderId}
                 onDragOver={handleFolderDragOver}
                 onDrop={handleFolderDrop}
-                style={{ height: '20px', backgroundColor: 'lightgrey' }} // Style as needed
+                style={{ height: '5px', backgroundColor: 'lightgrey', display: folderIsDragging ? 'block' : 'none' }} // Show only when dragging
               />
             )}
             <ChatFolder
               folderChats={chatFolders[folderId]}
               folderId={folderId}
               key={folderId}
-              // ... other props ...
+              // Pass the folder dragging state setters as props to the ChatFolder
+              setFolderIsDragging={setFolderIsDragging}
+
             />
             {/* Drop indicator after the folder, if it's the last folder */}
-            {index === array.length - 1 && (
+            {folderIsDragging && index === array.length - 1 && (
               <div
                 className="drop-indicator"
                 data-folder-id={folderId}
                 onDragOver={handleFolderDragOver}
                 onDrop={handleFolderDrop}
-                style={{ height: '20px', backgroundColor: 'lightgrey' }} // Style as needed
+                style={{ height: '5px', backgroundColor: 'lightgrey', display: folderIsDragging ? 'block' : 'none' }} // Show only when dragging
               />
             )}
           </>
