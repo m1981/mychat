@@ -90,7 +90,15 @@ const MessageActionButtons: React.FC<MessageActionButtonsProps> = ({
   handleDelete,
   handleCopy
 }) => {
-  const lastMessageIndex = useStore(state => state.chats?.[state.currentChatIndex]?.messages.length - 1 ?? 0);
+  const lastMessageIndex = useStore(state => {
+    const chats = state.chats;
+    const currentChatIndex = state.currentChatIndex;
+    if (chats && typeof currentChatIndex === 'number' && chats[currentChatIndex]) {
+      return chats[currentChatIndex].messages.length - 1;
+    }
+    return 0;
+  });
+
   const isGenerating = useStore(state => state.generating);
 
   return (
