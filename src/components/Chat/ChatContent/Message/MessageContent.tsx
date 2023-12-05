@@ -166,6 +166,7 @@ const ContentView = React.memo(
           >
             {content}
           </ReactMarkdown>
+        </div>
         <MessageActionButtons
           isDelete={isDelete}
           role={role}
