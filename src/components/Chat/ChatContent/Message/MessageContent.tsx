@@ -13,12 +13,6 @@ import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import useStore from '@store/store';
 
-import EditIcon2 from '@icon/EditIcon2';
-import DeleteIcon from '@icon/DeleteIcon';
-import TickIcon from '@icon/TickIcon';
-import CrossIcon from '@icon/CrossIcon';
-import RefreshIcon from '@icon/RefreshIcon';
-import DownChevronArrow from '@icon/DownChevronArrow';
 import CopyIcon from '@icon/CopyIcon';
 
 import useSubmit from '@hooks/useSubmit';
@@ -29,6 +23,7 @@ import PopupModal from '@components/PopupModal';
 import TokenCount from '@components/TokenCount';
 import CommandPrompt from './CommandPrompt';
 import CodeBlock from './CodeBlock';
+import MessageActionButtons from './MessageActionButtons';
 import { codeLanguageSubset } from '@constants/chat';
 
 const MessageContent = ({
@@ -134,6 +129,18 @@ const ContentView = React.memo(
 
     return (
       <>
+        <MessageActionButtons
+          isDelete={isDelete}
+          role={role}
+          messageIndex={messageIndex}
+          setIsEdit={setIsEdit}
+          setIsDelete={setIsDelete}
+          handleRefresh={handleRefresh}
+          handleMoveUp={() => handleMove('up')}
+          handleMoveDown={() => handleMove('down')}
+          handleDelete={handleDelete}
+          handleCopy={handleCopy}
+        />
         <div className='markdown prose w-full md:max-w-full break-words dark:prose-invert dark share-gpt-message'>
           <ReactMarkdown
             remarkPlugins={[
@@ -159,39 +166,18 @@ const ContentView = React.memo(
           >
             {content}
           </ReactMarkdown>
-        </div>
-        <div className='flex justify-end gap-2 w-full mt-2'>
-          {isDelete || (
-            <>
-              {!useStore.getState().generating &&
-                role === 'assistant' &&
-                messageIndex === lastMessageIndex && (
-                  <RefreshButton onClick={handleRefresh} />
-                )}
-              {messageIndex !== 0 && <UpButton onClick={handleMoveUp} />}
-              {messageIndex !== lastMessageIndex && (
-                <DownButton onClick={handleMoveDown} />
-              )}
-
-              <CopyButton onClick={handleCopy} />
-              <EditButton setIsEdit={setIsEdit} />
-              <DeleteButton setIsDelete={setIsDelete} />
-            </>
-          )}
-          {isDelete && (
-            <>
-              <button
-                className='p-1 hover:text-white'
-                onClick={() => setIsDelete(false)}
-              >
-                <CrossIcon />
-              </button>
-              <button className='p-1 hover:text-white' onClick={handleDelete}>
-                <TickIcon />
-              </button>
-            </>
-          )}
-        </div>
+        <MessageActionButtons
+          isDelete={isDelete}
+          role={role}
+          messageIndex={messageIndex}
+          setIsEdit={setIsEdit}
+          setIsDelete={setIsDelete}
+          handleRefresh={handleRefresh}
+          handleMoveUp={() => handleMove('up')}
+          handleMoveDown={() => handleMove('down')}
+          handleDelete={handleDelete}
+          handleCopy={handleCopy}
+        />
       </>
     );
   }
