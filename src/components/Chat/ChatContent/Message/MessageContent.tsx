@@ -12,7 +12,12 @@ import rehypeHighlight from 'rehype-highlight';
 import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import useStore from '@store/store';
-
+import EditIcon2 from '@icon/EditIcon2';
+import DeleteIcon from '@icon/DeleteIcon';
+import TickIcon from '@icon/TickIcon';
+import CrossIcon from '@icon/CrossIcon';
+import RefreshIcon from '@icon/RefreshIcon';
+import DownChevronArrow from '@icon/DownChevronArrow';
 import CopyIcon from '@icon/CopyIcon';
 
 import useSubmit from '@hooks/useSubmit';
