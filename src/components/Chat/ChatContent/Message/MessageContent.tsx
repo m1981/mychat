@@ -1,4 +1,9 @@
-import React, { useState } from 'react';
+import React, {
+  DetailedHTMLProps,
+  HTMLAttributes,
+  useEffect,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
