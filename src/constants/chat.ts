@@ -71,9 +71,12 @@ export const generateDefaultChat = (title?: string, folder?: string): ChatInterf
 });
 
 export const codeLanguageSubset = [
+  'dockerfile',
   'python',
   'javascript',
   'java',
+  'groovy',
+  'gradle',
   'go',
   'bash',
   'c',
