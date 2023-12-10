@@ -1,34 +1,18 @@
-import React, {
-  DetailedHTMLProps,
-  HTMLAttributes,
-  useEffect,
-  useState,
-} from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
-import { CodeProps, ReactMarkdownProps } from 'react-markdown/lib/ast-to-react';
 import rehypeKatex from 'rehype-katex';
 import rehypeHighlight from 'rehype-highlight';
 import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import useStore from '@store/store';
-import EditIcon2 from '@icon/EditIcon2';
-import DeleteIcon from '@icon/DeleteIcon';
-import TickIcon from '@icon/TickIcon';
-import CrossIcon from '@icon/CrossIcon';
-import RefreshIcon from '@icon/RefreshIcon';
-import DownChevronArrow from '@icon/DownChevronArrow';
-import CopyIcon from '@icon/CopyIcon';
-
-import useSubmit from '@hooks/useSubmit';
-
 import { ChatInterface } from '@type/chat';
 
 import PopupModal from '@components/PopupModal';
 import TokenCount from '@components/TokenCount';
 import CommandPrompt from './CommandPrompt';
 import CodeBlock from './CodeBlock';
-import MessageActionButtons from './MessageActionButtons';
+import MessageActionButtons from './MessageActionButtons'; // Make sure to import this
 import { codeLanguageSubset } from '@constants/chat';
 
 const MessageContent = ({
@@ -215,98 +199,6 @@ const p = React.memo(
     return <p className='whitespace-pre-wrap'>{props?.children}</p>;
   }
 );
-
-const MessageButton = ({
-  onClick,
-  icon,
-}: {
-  onClick: React.MouseEventHandler<HTMLButtonElement>;
-  icon: React.ReactElement;
-}) => {
-  return (
-    <div className='text-gray-400 flex self-end lg:self-center justify-center gap-3 md:gap-4  visible'>
-      <button
-        className='p-1 rounded-md hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 disabled:dark:hover:text-gray-400 md:invisible md:group-hover:visible'
-        onClick={onClick}
-      >
-        {icon}
-      </button>
-    </div>
-  );
-};
-
-const EditButton = React.memo(
-  ({
-    setIsEdit,
-  }: {
-    setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
-  }) => {
-    return (
-      <MessageButton icon={<EditIcon2 />} onClick={() => setIsEdit(true)} />
-    );
-  }
-);
-
-const DeleteButton = React.memo(
-  ({
-    setIsDelete,
-  }: {
-    setIsDelete: React.Dispatch<React.SetStateAction<boolean>>;
-  }) => {
-    return (
-      <MessageButton icon={<DeleteIcon />} onClick={() => setIsDelete(true)} />
-    );
-  }
-);
-
-const DownButton = ({
-  onClick,
-}: {
-  onClick: React.MouseEventHandler<HTMLButtonElement>;
-}) => {
-  return <MessageButton icon={<DownChevronArrow />} onClick={onClick} />;
-};
-const UpButton = ({
-  onClick,
-}: {
-  onClick: React.MouseEventHandler<HTMLButtonElement>;
-}) => {
-  return (
-    <MessageButton
-      icon={<DownChevronArrow className='rotate-180' />}
-      onClick={onClick}
-    />
-  );
-};
-
-const RefreshButton = ({
-  onClick,
-}: {
-  onClick: React.MouseEventHandler<HTMLButtonElement>;
-}) => {
-  return <MessageButton icon={<RefreshIcon />} onClick={onClick} />;
-};
-
-const CopyButton = ({
-  onClick,
-}: {
-  onClick: React.MouseEventHandler<HTMLButtonElement>;
-}) => {
-  const [isCopied, setIsCopied] = useState<boolean>(false);
-
-  return (
-    <MessageButton
-      icon={isCopied ? <TickIcon /> : <CopyIcon />}
-      onClick={(e) => {
-        onClick(e);
-        setIsCopied(true);
-        window.setTimeout(() => {
-          setIsCopied(false);
-        }, 3000);
-      }}
-    />
-  );
-};
 
 const EditView = ({
   content,
