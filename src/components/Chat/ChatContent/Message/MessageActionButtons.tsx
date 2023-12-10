@@ -15,7 +15,7 @@ interface MessageButtonProps {
 
 const MessageButton: React.FC<MessageButtonProps> = ({ onClick, icon }) => (
   <button
-    className="p-1 rounded-md hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+    className="invisible group-hover:visible p-1 hover:text-white"
     onClick={onClick}
   >
     {icon}
@@ -102,7 +102,7 @@ const MessageActionButtons: React.FC<MessageActionButtonsProps> = ({
   const isGenerating = useStore(state => state.generating);
 
   return (
-    <div className="flex justify-end gap-2 w-full mt-2">
+    <div className="flex justify-end gap-2 w-full mt-2 group">
       {isDelete ? (
         <>
           <MessageButton icon={<CrossIcon />} onClick={() => setIsDelete(false)} />
