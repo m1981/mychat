@@ -6,11 +6,13 @@ import React, {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
+import { CodeProps, ReactMarkdownProps } from 'react-markdown/lib/ast-to-react';
 import rehypeKatex from 'rehype-katex';
 import rehypeHighlight from 'rehype-highlight';
 import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import useStore from '@store/store';
+import useSubmit from '@hooks/useSubmit';
 import { ChatInterface } from '@type/chat';
 
 import PopupModal from '@components/PopupModal';
