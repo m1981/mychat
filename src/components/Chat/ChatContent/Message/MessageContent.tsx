@@ -144,15 +144,8 @@ const ContentView = React.memo(
               [remarkMath, { singleDollarTextMath: false }],
             ]}
             rehypePlugins={[
-              rehypeKatex,
-              [
-                rehypeHighlight,
-                {
-                  detect: true,
-                  ignoreMissing: true,
-                  subset: codeLanguageSubset,
-                },
-              ],
+              RehypeKatex,
+              [RehypeHighlight, { hljs }]
             ]}
             linkTarget='_new'
             components={{
