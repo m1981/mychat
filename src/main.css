@@ -2,61 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-color-scheme:dark;
---color-prettylights-syntax-comment: #565f89;
---color-prettylights-syntax-deletion: #f7768e;
---color-prettylights-syntax-regexp: #f7768e;
---color-prettylights-syntax-selector-attr: #f7768e;
---color-prettylights-syntax-selector-class: #f7768e;
---color-prettylights-syntax-selector-id: #f7768e;
---color-prettylights-syntax-selector-pseudo: #f7768e;
---color-prettylights-syntax-tag: #f7768e;
---color-prettylights-syntax-template-tag: #f7768e;
---color-prettylights-syntax-variable-language: #f7768e;
---color-prettylights-syntax-link: #ff9e64;
---color-prettylights-syntax-literal: #ff9e64;
---color-prettylights-syntax-number: #ff9e64;
---color-prettylights-syntax-params: #ff9e64;
---color-prettylights-syntax-template-variable: #ff9e64;
---color-prettylights-syntax-type: #ff9e64;
---color-prettylights-syntax-variable: #ff9e64;
---color-prettylights-syntax-attribute: #e0af68;
---color-prettylights-syntax-built-in: #e0af68;
---color-prettylights-syntax-keyword: #7dcfff;
---color-prettylights-syntax-property: #7dcfff;
---color-prettylights-syntax-subst: #7dcfff;
---color-prettylights-syntax-title-class: #7dcfff;
---color-prettylights-syntax-title-function: #7dcfff;
---color-prettylights-syntax-selector-tag: #73daca;
---color-prettylights-syntax-addition: #9ece6a;
---color-prettylights-syntax-bullet: #9ece6a;
---color-prettylights-syntax-quote: #9ece6a;
---color-prettylights-syntax-string: #9ece6a;
---color-prettylights-syntax-symbol: #9ece6a;
---color-prettylights-syntax-code: #7aa2f7;
---color-prettylights-syntax-formula: #7aa2f7;
---color-prettylights-syntax-section: #7aa2f7;
---color-prettylights-syntax-attr: #bb9af7;
---color-prettylights-syntax-char-escape: #bb9af7;
---color-prettylights-syntax-name: #bb9af7;
---color-prettylights-syntax-operator: #bb9af7;
---color-prettylights-syntax-punctuation: #c0caf5;
---color-prettylights-syntax-emphasis: #24292f;
---color-prettylights-syntax-strong: #24292f;
---color-fg-default:#c9d1d9;
---color-fg-muted:#8b949e;
---color-fg-subtle:#6e7681;
---color-canvas-default:transparent;
---color-canvas-subtle:#161b22;
---color-border-default:#30363d;
---color-border-muted:#21262d;
---color-neutral-muted:hsla(215,8%,47%,.4);
---color-accent-fg:#58a6ff;
---color-accent-emphasis:#1f6feb;
---color-attention-subtle:rgba(187,128,9,.15);
---color-danger-fg:#f85149
-}
 
 @layer base {
   * {
@@ -299,65 +244,91 @@ color-scheme:dark;
 
 
 
+ /*!
+  Theme: Tokyo-night-Dark
+  origin: https://github.com/enkia/tokyo-night-vscode-theme
+  Description: Original highlight.js style
+  Author: (c) Henri Vandersleyen <hvandersleyen@gmail.com>
+  License: see project LICENSE
+  Touched: 2022
+*/
+  .hljs-comment,
+  .hljs-meta {
+    color: #565f89;
+  }
 
-/* Syntax highlighting styles */
-.hljs-comment,
-.hljs-quote {
-  color: var(--color-prettylights-syntax-comment);
-}
+  .hljs-deletion,
+  .hljs-doctag,
+  .hljs-regexp,
+  .hljs-selector-attr,
+  .hljs-selector-class,
+  .hljs-selector-id,
+  .hljs-selector-pseudo,
+  .hljs-tag,
+  .hljs-template-tag,
+  .hljs-variable.language_ {
+    color: #f7768e;
+  }
 
-.hljs-variable,
-.hljs-template-variable,
-.hljs-tag,
-.hljs-name,
-.hljs-selector-id,
-.hljs-selector-class,
-.hljs-regexp,
-.hljs-deletion {
-  color: var(--color-prettylights-syntax-variable-language);
-}
+  .hljs-link,
+  .hljs-literal,
+  .hljs-number,
+  .hljs-params,
+  .hljs-template-variable,
+  .hljs-type,
+  .hljs-variable {
+    color: #ff9e64;
+  }
 
-.hljs-number,
-.hljs-built_in,
-.hljs-builtin-name,
-.hljs-literal,
-.hljs-type,
-.hljs-params,
-.hljs-meta,
-.hljs-link {
-  color: var(--color-prettylights-syntax-number);
-}
+  .hljs-attribute,
+  .hljs-built_in {
+    color: #e0af68;
+  }
 
-.hljs-attribute,
-.hljs-string,
-.hljs-symbol,
-.hljs-bullet,
-.hljs-addition {
-  color: var(--color-prettylights-syntax-string);
-}
+  .hljs-keyword,
+  .hljs-property,
+  .hljs-subst,
+  .hljs-title,
+  .hljs-title.class_,
+  .hljs-title.class_.inherited__,
+  .hljs-title.function_ {
+    color: #7dcfff;
+  }
 
-.hljs-title,
-.hljs-section {
-  color: var(--color-prettylights-syntax-title-class);
-}
+  .hljs-selector-tag {
+    color: #73daca;
+  }
 
-.hljs-keyword,
-.hljs-selector-tag {
-  color: var(--color-prettylights-syntax-keyword);
-}
+  .hljs-addition,
+  .hljs-bullet,
+  .hljs-quote,
+  .hljs-string,
+  .hljs-symbol {
+    color: #9ece6a;
+  }
 
-.hljs {
-  display: block;
-  overflow-x: auto;
-  background: #1a1b26;
-  color: #c0caf5;
-  padding: 0.5em;
-}
+  .hljs-code,
+  .hljs-formula,
+  .hljs-section {
+    color: #7aa2f7;
+  }
 
-.hljs-emphasis {
-  font-style: italic;
-}
+  .hljs-attr,
+  .hljs-char.escape_,
+  .hljs-keyword,
+  .hljs-name,
+  .hljs-operator {
+    color: #bb9af7;
+  }
 
-.hljs-strong {
-  font-weight: bold;
-}
+  .hljs-punctuation {
+    color: #c0caf5;
+  }
+
+  .hljs-emphasis {
+    font-style: italic;
+  }
+
+  .hljs-strong {
+    font-weight: 700;
+  }
