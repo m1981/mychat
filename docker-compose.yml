@@ -7,10 +7,9 @@ services:
       target: base
     ports:
       - "5173:5173"
-#    volumes:
-#      - .:/home/appuser/app
-#      - /home/appuser/app/node_modules
+    volumes:
+      - .:/home/appuser/app
+      - /home/appuser/app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
-#    command: ["sh"]
-    command: ["sh", "-c", "yarn dev --host"]
+    command: ["sh", "-c", "ls -al && yarn dev --host"]
