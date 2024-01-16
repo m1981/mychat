@@ -1,4 +1,4 @@
-FROM node:alpine
+FROM node:alpine as base
 
 RUN addgroup -S appgroup && \
   adduser -S appuser -G appgroup && \
@@ -13,6 +13,8 @@ WORKDIR /home/appuser/app
 COPY --chown=appuser:appgroup package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
 COPY --chown=appuser:appgroup . .
+
+FROM base as production
 RUN yarn build
 
 EXPOSE 3000
