@@ -2,31 +2,26 @@
 
 set -euo pipefail
 
-# The file where everything will be concatenated
-outputFile="all.txt"
-
-# Empty the file if it already exists
-> "$outputFile"
-
 # Function to safely handle each file
 handle_file() {
     local file="$1"
-    echo "Appending $file to $outputFile"
-    
-    # Append the filename, then the code block start marker
-    echo "File: $file" >> "$outputFile"
-    echo '```' >> "$outputFile"
-    # Append the contents of the current file
-    cat "$file" >> "$outputFile"
-    # Append the code block end marker
-    echo '```' >> "$outputFile"
+    # Echo the filename, then the code block start marker to stdout
+    echo "File: $file"
+    echo '```'
+    # Echo the contents of the current file to stdout
+    cat "$file"
+    # Echo the code block end marker to stdout
+    echo '```'
     # Add a newline for spacing between files entries
-    echo -e "\n" >> "$outputFile"
+    echo -e "\n"
 }
 
 # Check if any arguments were passed
 if [ "$#" -eq 0 ]; then
-    echo "No files specified. Usage: $0 file1.ts file2.js ..."
+    echo "No files specified. Usage: $0 file1 [file2 ...] > output.md" >&2
+    echo ""
+    echo "Concatenate one or more files into Markdown format and print to stdout." >&2
+    echo "To write to a file, redirect stdout to a file using the > operator." >&2
     exit 1
 fi
 
@@ -36,8 +31,8 @@ for file in "$@"; do
     if [ -f "$file" ]; then
         handle_file "$file"
     else
-        echo "Warning: File $file does not exist or is not a regular file. Skipping."
+        echo "Warning: File $file does not exist or is not a regular file. Skipping." >&2
     fi
 done
 
-echo "Concatenation complete. Result is in $outputFile"
+echo "Concatenation complete." >&2
