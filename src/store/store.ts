@@ -5,7 +5,6 @@ import { InputSlice, createInputSlice } from './input-slice';
 import { AuthSlice, createAuthSlice } from './auth-slice';
 import { ConfigSlice, createConfigSlice } from './config-slice';
 import { PromptSlice, createPromptSlice } from './prompt-slice';
-import { FolderCollection } from '@type/chat';
 import {
   LocalStorageInterfaceV0ToV1,
   LocalStorageInterfaceV1ToV2,
@@ -29,19 +28,11 @@ import {
   migrateV8,
 } from './migrate';
 
-
-export interface StoreState extends ChatSlice, InputSlice, AuthSlice, ConfigSlice, PromptSlice {
-  folders: FolderCollection;
-  chats: ChatInterface[];
-}
-
-//export type StoreState = ChatSlice &
-//  InputSlice &
-//  AuthSlice &
-//  ConfigSlice &
-//  PromptSlice & {
-//    folders: FolderCollection;
-//  };
+export type StoreState = ChatSlice &
+  InputSlice &
+  AuthSlice &
+  ConfigSlice &
+  PromptSlice;
 
 export type StoreSlice<T> = (
   set: StoreApi<StoreState>['setState'],

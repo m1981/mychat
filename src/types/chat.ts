@@ -32,7 +32,6 @@ export interface ChatHistoryInterface {
   title: string;
   index: number;
   id: string;
-  order: number;
 }
 
 export interface ChatHistoryFolderInterface {
@@ -49,19 +48,6 @@ export interface Folder {
   expanded: boolean;
   order: number;
   color?: string;
-}
-
-export interface DraggableFolderResult {
-  draggableId: string;
-  type: string;
-  source: {
-    droppableId: string;
-    index: number;
-  };
-  destination: {
-    droppableId: string;
-    index: number;
-  };
 }
 
 export type ModelOptions = 'gpt-3.5-turbo' | 'gpt-3.5-turbo-1106' | 'gpt-4' | 'gpt-4-1106-preview';

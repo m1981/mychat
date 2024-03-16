@@ -1,5 +1,5 @@
 import { StoreSlice } from './store';
-import { ChatInterface, FolderCollection, MessageInterface, Folder } from '@type/chat';
+import { ChatInterface, FolderCollection, MessageInterface } from '@type/chat';
 
 export interface ChatSlice {
   messages: MessageInterface[];
@@ -16,7 +16,6 @@ export interface ChatSlice {
   setError: (error: string) => void;
   setFolders: (folders: FolderCollection) => void;
   setCurrentChatTokenCount: (tokenCount: number) => void;
-  reorderFolders: (updatedFolderOrder: Folder[]) => void;
 }
 
 export const createChatSlice: StoreSlice<ChatSlice> = (set, get) => ({
@@ -66,23 +65,6 @@ export const createChatSlice: StoreSlice<ChatSlice> = (set, get) => ({
     set((prev: ChatSlice) => ({
       ...prev,
       currentChatTokenCount: tokenCount,
-    }));
-  },
-
-  reorderFolders: (updatedFolderOrder: Folder[]) => {
-    // Create a new folder collection with updated order
-    const reorderedFolders: FolderCollection = {};
-    // Assign the new order to the folders
-    updatedFolderOrder.forEach((folder, index) => {
-      const folderId = folder.id;
-      reorderedFolders[folderId] = {
-        ...folder,
-        order: index, // Update the order based on the array index
-      };
-    });
-    set((state) => ({
-      ...state,
-      folders: reorderedFolders,
     }));
   },
 });

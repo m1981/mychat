@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { DragDropContext, Droppable, DropResult, DroppableProvided } from 'react-beautiful-dnd';
 import useStore from '@store/store';
 import { shallow } from 'zustand/shallow';
-import { Folder } from '@type/chat';
+
 import ChatFolder from './ChatFolder';
 import ChatHistory from './ChatHistory';
 import ChatSearch from './ChatSearch';
@@ -43,8 +42,8 @@ const ChatHistoryList = () => {
     const folders = useStore.getState().folders;
 
     Object.values(folders)
-      .sort((a, b) => (a as Folder).order - (b as Folder).order)
-      .forEach((f) => (_folders[(f as Folder).id] = []));
+      .sort((a, b) => a.order - b.order)
+      .forEach((f) => (_folders[f.id] = []));
 
     if (chats) {
       chats.forEach((chat, index) => {
@@ -62,14 +61,13 @@ const ChatHistoryList = () => {
           return;
 
         if (!chat.folder) {
-          _noFolders.push({ title: chat.title, index: index, id: chat.id, order: 0 });
+          _noFolders.push({ title: chat.title, index: index, id: chat.id });
         } else {
           if (!_folders[chat.folder]) _folders[_chatFolderName] = [];
           _folders[chat.folder].push({
             title: chat.title,
             index: index,
             id: chat.id,
-            order: 0,
           });
         }
       });
@@ -128,9 +126,7 @@ const ChatHistoryList = () => {
     updateFolders();
   }, [filter]);
 
-
-  // Function to handle the drop event for dropping chats into folders
-  const handleChatDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     if (e.dataTransfer) {
       e.stopPropagation();
       setIsHover(false);
@@ -153,47 +149,33 @@ const ChatHistoryList = () => {
     setIsHover(false);
   };
 
-  const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-
-    const { source, destination } = result;
-    if (source.droppableId === destination.droppableId) {
-      const folderIds = Object.keys(chatFolders);
-      const updatedFolderOrder = [...folderIds];
-      const [reorderedFolderId] = updatedFolderOrder.splice(source.index, 1);
-      updatedFolderOrder.splice(destination.index, 0, reorderedFolderId);
-
-      const updatedFolders: Folder[] = updatedFolderOrder.map((folderId) => ({
-        ...chatFolders[folderId as string],
-        order: chatFolders[folderId as string].order,
-      }));
-      reorderFolders(updatedFolders);
-    }
+  const handleDragEnd = () => {
+    setIsHover(false);
   };
 
-
   return (
-    <div className={`flex-col flex-1 overflow-y-auto hide-scroll-bar border-b border-white/20`}>
+    <div
+      className={`flex-col flex-1 overflow-y-auto hide-scroll-bar border-b border-white/20 ${
+        isHover ? 'bg-gray-800/40' : ''
+      }`}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDragEnd={handleDragEnd}
+    >
       <ChatSearch filter={filter} setFilter={setFilter} />
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <Droppable droppableId="chat-history-list">
-         {(provided: DroppableProvided) => (
-            <div {...provided.droppableProps} ref={provided.innerRef}>
-              {Object.keys(chatFolders)
-                .sort((a, b) => chatFolders[a as string].order - chatFolders[b as string].order)
-                .map((folderId, index) => (
-                  <ChatFolder
-                    folderChats={chatFolders[folderId]}
-                    folderId={folderId}
-                    key={folderId}
-                    index={index}
-                  />
-                ))}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-      </DragDropContext>
+      <div className='flex flex-col gap-2 text-gray-100 text-sm'>
+        {Object.keys(chatFolders).map((folderId) => (
+          <ChatFolder
+            folderChats={chatFolders[folderId]}
+            folderId={folderId}
+            key={folderId}
+          />
+        ))}
+        {noChatFolders.map(({ title, index, id }) => (
+          <ChatHistory title={title} key={`${title}-${id}`} chatIndex={index} />
+        ))}
+      </div>
       <div className='w-full h-10' />
     </div>
   );
