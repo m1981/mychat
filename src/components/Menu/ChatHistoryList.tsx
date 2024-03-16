@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { DragDropContext, Droppable, DroppableProvided } from 'react-beautiful-dnd';
+
 import useStore from '@store/store';
 import { shallow } from 'zustand/shallow';
 
@@ -76,65 +78,6 @@ const ChatHistoryList = () => {
     setChatFolders(_folders);
     setNoChatFolders(_noFolders);
   }).current;
-
-
-  // Add a new state variable to track if a folder is being dragged
-  const [folderIsDragging, setFolderIsDragging] = useState(false);
-
-  const reorderFolders = useStore((state) => state.reorderFolders);
-  const folders = useStore((state) => state.folders);
-
-  // Function to handle the drag over event for folder reordering
-  const handleFolderDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault(); // Necessary to allow the drop action for folder reordering
-  };
-
-  // Function to handle the drop event for folder reordering
-  const handleFolderDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-
-    // Retrieve the dragged folder ID from the data transfer object
-    const draggedFolderId = e.dataTransfer.getData('folderId');
-
-    // Assuming 'e.target' is your placeholder or visual indicator element
-    const targetElement = e.target as HTMLElement;
-    const targetFolderId = targetElement.getAttribute('data-folder-id');
-
-    // Find the index of the dragged folder and the target folder
-    const folderList = Object.entries(folders).sort((a, b) => a[1].order - b[1].order);
-    const draggedFolderIndex = folderList.findIndex(([id]) => id === draggedFolderId);
-    const targetIndex = folderList.findIndex(([id]) => id === targetFolderId);
-
-    if (draggedFolderIndex === -1 || targetIndex === -1 || draggedFolderIndex === targetIndex) {
-      return; // Invalid drop, ignore
-    }
-
-    // Remove the dragged folder from the array
-    const [removed] = folderList.splice(draggedFolderIndex, 1);
-    // Insert it at the position of the target
-    folderList.splice(targetIndex, 0, removed);
-
-    // Update the order property of each folder
-    const reorderedFolders = folderList.map(([id, folder], index) => ({
-      ...folder,
-      order: index
-    }));
-
-    // Create a new folder collection with updated order
-    const reorderedFoldersCollection = reorderedFolders.reduce<FolderCollection>((acc, folder, index) => {
-      const folderId = folder.id;
-      acc[folderId] = {
-        ...folder,
-        order: index, // Assign the new order based on the array index
-      };
-      return acc;
-    }, {});
-
-    reorderFolders(Object.values(reorderedFoldersCollection)); // Pass an array of Folder objects
-
-  };
-
-
 
   useEffect(() => {
     updateFolders();
@@ -215,53 +158,27 @@ const ChatHistoryList = () => {
   };
 
   return (
-    <div
-      className={`flex-col flex-1 overflow-y-auto hide-scroll-bar border-b border-white/20 ${
-        isHover ? 'bg-gray-800/40' : ''
-      }`}
-      onDrop={handleChatDrop}
-      onDragOver={handleFolderDragOver}
-      onDragLeave={handleDragLeave}
-      onDragEnd={handleDragEnd}
-    >
+    <div className={`flex-col flex-1 overflow-y-auto hide-scroll-bar border-b border-white/20`}>
       <ChatSearch filter={filter} setFilter={setFilter} />
-      <div className='flex flex-col gap-2 text-gray-100 text-sm'>
-        {Object.keys(chatFolders).sort((a, b) => folders[a].order - folders[b].order).map((folderId, index, array) => (
-          <>
-            {/* Drop indicator before the folder */}
-            {folderIsDragging && index > 0 && (
-              <div
-                className="drop-indicator"
-                data-folder-id={folderId}
-                onDragOver={handleFolderDragOver}
-                onDrop={handleFolderDrop}
-                style={{ height: '5px', backgroundColor: 'lightgrey', display: folderIsDragging ? 'block' : 'none' }} // Show only when dragging
-              />
-            )}
-            <ChatFolder
-              folderChats={chatFolders[folderId]}
-              folderId={folderId}
-              key={folderId}
-              // Pass the folder dragging state setters as props to the ChatFolder
-              setFolderIsDragging={setFolderIsDragging}
-
-            />
-            {/* Drop indicator after the folder, if it's the last folder */}
-            {folderIsDragging && index === array.length - 1 && (
-              <div
-                className="drop-indicator"
-                data-folder-id={folderId}
-                onDragOver={handleFolderDragOver}
-                onDrop={handleFolderDrop}
-                style={{ height: '5px', backgroundColor: 'lightgrey', display: folderIsDragging ? 'block' : 'none' }} // Show only when dragging
-              />
-            )}
-          </>
-        ))}
-        {noChatFolders.map(({ title, index, id }) => (
-          <ChatHistory title={title} key={`${title}-${id}`} chatIndex={index} />
-        ))}
-      </div>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Droppable droppableId='chat-history-list'>
+         {(provided: DraggableProvided) => (
+            <div {...provided.droppableProps} ref={provided.innerRef}>
+              {Object.keys(chatFolders)
+                .sort((a, b) => chatFolders[a].order - chatFolders[b].order)
+                .map((folderId, index) => (
+                  <ChatFolder
+                    folderChats={chatFolders[folderId]}
+                    folderId={folderId}
+                    key={folderId}
+                    index={index}
+                  />
+                ))}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
       <div className='w-full h-10' />
     </div>
   );
