@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { DragDropContext, Droppable, DroppableProvided } from 'react-beautiful-dnd';
-
+import { DragDropContext, Droppable, DropResult, DroppableProvided } from 'react-beautiful-dnd';
 import useStore from '@store/store';
 import { shallow } from 'zustand/shallow';
-
+import { Folder } from '@type/chat';
 import ChatFolder from './ChatFolder';
 import ChatHistory from './ChatHistory';
 import ChatSearch from './ChatSearch';
@@ -44,8 +43,8 @@ const ChatHistoryList = () => {
     const folders = useStore.getState().folders;
 
     Object.values(folders)
-      .sort((a, b) => a.order - b.order)
-      .forEach((f) => (_folders[f.id] = []));
+      .sort((a, b) => (a as Folder).order - (b as Folder).order)
+      .forEach((f) => (_folders[(f as Folder).id] = []));
 
     if (chats) {
       chats.forEach((chat, index) => {
@@ -63,13 +62,14 @@ const ChatHistoryList = () => {
           return;
 
         if (!chat.folder) {
-          _noFolders.push({ title: chat.title, index: index, id: chat.id });
+          _noFolders.push({ title: chat.title, index: index, id: chat.id, order: 0 });
         } else {
           if (!_folders[chat.folder]) _folders[_chatFolderName] = [];
           _folders[chat.folder].push({
             title: chat.title,
             index: index,
             id: chat.id,
+            order: 0,
           });
         }
       });
@@ -153,19 +153,34 @@ const ChatHistoryList = () => {
     setIsHover(false);
   };
 
-  const handleDragEnd = () => {
-    setIsHover(false);
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const { source, destination } = result;
+    if (source.droppableId === destination.droppableId) {
+      const folderIds = Object.keys(chatFolders);
+      const updatedFolderOrder = [...folderIds];
+      const [reorderedFolderId] = updatedFolderOrder.splice(source.index, 1);
+      updatedFolderOrder.splice(destination.index, 0, reorderedFolderId);
+
+      const updatedFolders: Folder[] = updatedFolderOrder.map((folderId) => ({
+        ...chatFolders[folderId as string],
+        order: chatFolders[folderId as string].order,
+      }));
+      reorderFolders(updatedFolders);
+    }
   };
+
 
   return (
     <div className={`flex-col flex-1 overflow-y-auto hide-scroll-bar border-b border-white/20`}>
       <ChatSearch filter={filter} setFilter={setFilter} />
       <DragDropContext onDragEnd={handleDragEnd}>
-        <Droppable droppableId='chat-history-list'>
-         {(provided: DraggableProvided) => (
+        <Droppable droppableId="chat-history-list">
+         {(provided: DroppableProvided) => (
             <div {...provided.droppableProps} ref={provided.innerRef}>
               {Object.keys(chatFolders)
-                .sort((a, b) => chatFolders[a].order - chatFolders[b].order)
+                .sort((a, b) => chatFolders[a as string].order - chatFolders[b as string].order)
                 .map((folderId, index) => (
                   <ChatFolder
                     folderChats={chatFolders[folderId]}
