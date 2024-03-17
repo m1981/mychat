@@ -10,6 +10,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "type-check": "tsc --noEmit",
+    "quick-build": "vite build --mode development",
     "preview": "vite preview",
     "electron": "concurrently -k \"BROWSER=none yarn dev\" \"wait-on tcp:5173 && electron .\"",
     "pack": "yarn build && electron-builder --dir",

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import useStore from '@store/store';
 import { shallow } from 'zustand/shallow';
+import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
 
 import ChatFolder from './ChatFolder';
 import ChatHistory from './ChatHistory';
@@ -153,6 +154,27 @@ const ChatHistoryList = () => {
     setIsHover(false);
   };
 
+
+  const handleFolderDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const { source, destination } = result;
+    const newFolderOrder = Array.from(Object.keys(chatFolders));
+    const [reorderedFolder] = newFolderOrder.splice(source.index, 1);
+    newFolderOrder.splice(destination.index, 0, reorderedFolder);
+
+    const updatedFolders: FolderCollection = {};
+    newFolderOrder.forEach((folderId, index) => {
+      updatedFolders[folderId] = {
+        ...useStore.getState().folders[folderId],
+        order: index,
+      };
+    });
+
+    setFolders(updatedFolders);
+  };
+
+
   return (
     <div
       className={`flex-col flex-1 overflow-y-auto hide-scroll-bar border-b border-white/20 ${
@@ -164,19 +186,32 @@ const ChatHistoryList = () => {
       onDragEnd={handleDragEnd}
     >
       <ChatSearch filter={filter} setFilter={setFilter} />
-      <div className='flex flex-col gap-2 text-gray-100 text-sm'>
-        {Object.keys(chatFolders).map((folderId) => (
-          <ChatFolder
-            folderChats={chatFolders[folderId]}
-            folderId={folderId}
-            key={folderId}
-          />
-        ))}
-        {noChatFolders.map(({ title, index, id }) => (
-          <ChatHistory title={title} key={`${title}-${id}`} chatIndex={index} />
-        ))}
+      <div className="flex flex-col gap-2 text-gray-100 text-sm">
+        <DragDropContext onDragEnd={handleFolderDragEnd}>
+          <Droppable droppableId="folders">
+            {(provided) => (
+              <div
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                  className="flex flex-col gap-2"
+              >
+                {Object.keys(chatFolders).map((folderId, index) => (
+                  <ChatFolder
+                    key={folderId}
+                    folderChats={chatFolders[folderId]}
+                    folderId={folderId}
+                  />
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
       </div>
-      <div className='w-full h-10' />
+      {noChatFolders.map(({ title, index, id }) => (
+        <ChatHistory title={title} key={`${title}-${id}`} chatIndex={index} />
+      ))}
+      <div className="w-full h-10" />
     </div>
   );
 };

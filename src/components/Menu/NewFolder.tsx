@@ -31,14 +31,14 @@ const NewFolder = () => {
       id,
       name,
       expanded: false,
-      order: 0,
+      order: Object.values(folders).length,
     };
 
     Object.values(updatedFolders).forEach((folder) => {
       folder.order += 1;
     });
 
-    setFolders({ [id]: newFolder, ...updatedFolders });
+    setFolders({ ...updatedFolders, [id]: newFolder });
   };
 
   return (

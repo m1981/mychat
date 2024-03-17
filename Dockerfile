@@ -1,21 +1,17 @@
 FROM node:alpine as base
 
-RUN addgroup -S appgroup && \
-  adduser -S appuser -G appgroup && \
-  mkdir -p /home/appuser/app && \
-  chown appuser:appgroup /home/appuser/app
-USER appuser
-
-RUN yarn config set prefix ~/.yarn && \
+RUN yarn config set prefix /home/appuser/.yarn && \
   yarn global add serve
 
+RUN ls -al /home/appuser/
+
 WORKDIR /home/appuser/app
-COPY --chown=appuser:appgroup package.json ./
-RUN yarn install
-COPY --chown=appuser:appgroup . .
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
+COPY . .
 
 FROM base as production
 RUN yarn build
-
+#
 EXPOSE 3000
 CMD ["/home/appuser/.yarn/bin/serve", "-s", "dist", "-l", "3000"]
