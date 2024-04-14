@@ -304,13 +304,14 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
             </div>
             <div className='ml-3 pl-1 border-l-2 border-gray-700 flex flex-col gap-1 parent'>
               {isExpanded && <NewChat folder={folderId} />}
-              {isExpanded && (
-                <div>
-                  {folderChats.map((chat) => (
-                    <ChatHistory key={chat.id} title={chat.title} chatIndex={chat.index} />
+              {isExpanded &&
+                folderChats.map((chat) => (
+                  <ChatHistory
+                    title={chat.title}
+                    chatIndex={chat.index}
+                    key={`${chat.title}-${chat.index}`}
+                    />
                   ))}
-                </div>
-              )}
             </div>
           </div>
         </div>
