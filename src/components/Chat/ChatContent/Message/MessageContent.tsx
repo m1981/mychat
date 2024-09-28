@@ -377,8 +377,8 @@ const EditViewButtons = React.memo(
 
     return (
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 z-10">
-        <div className='flex flex-col items-center'>
-          <div className='flex justify-center space-x-2 mb-2'>
+        <div className='flex justify-center items-center'>
+          <div className='flex space-x-2'>
             {sticky && (
               <button
                 className={`btn btn-primary ${
@@ -406,28 +406,38 @@ const EditViewButtons = React.memo(
             </button>
 
             {!sticky && (
-              <button
-                className='btn btn-neutral'
-                onClick={() => {
-                  !generating && setIsModalOpen(true);
-                }}
-                disabled={generating}
-              >
-                {t('saveAndSubmit')}
-              </button>
+              <>
+                <button
+                  className='btn btn-neutral'
+                  onClick={() => {
+                    !generating && setIsModalOpen(true);
+                  }}
+                  disabled={generating}
+                >
+                  {t('saveAndSubmit')}
+                </button>
+                <button
+                  className='btn btn-neutral'
+                  onClick={() => setIsEdit(false)}
+                >
+                  {t('cancel')}
+                </button>
+              </>
             )}
 
-            <button
-              className='btn btn-neutral'
-              onClick={() => setIsEdit(false)}
-            >
-              {t('cancel')}
-            </button>
+            {sticky && (
+              <button
+                className='btn btn-neutral'
+                onClick={() => setIsEdit(false)}
+              >
+                {t('cancel')}
+              </button>
+            )}
           </div>
-          <div className='flex items-center justify-center'>
-            {sticky && <TokenCount />}
-            <CommandPrompt _setContent={_setContent} />
-          </div>
+        </div>
+        <div className='flex justify-center items-center mt-2'>
+          {sticky && <TokenCount />}
+          <CommandPrompt _setContent={_setContent} />
         </div>
       </div>
     );
