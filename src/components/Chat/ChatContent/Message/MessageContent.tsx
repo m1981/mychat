@@ -375,70 +375,65 @@ const EditViewButtons = React.memo(
     const { t } = useTranslation();
     const generating = useStore.getState().generating;
 
-    return (
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 z-10">
-        <div className='flex justify-center items-center'>
-          <div className='flex space-x-2'>
-            {sticky && (
+return (
+      <div className={`flex ${!sticky ? 'fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 shadow-md' : ''}`}>
+        <div className={`flex-1 text-center ${sticky ? 'mt-2' : ''} flex justify-center`}>
+          {sticky ? (
+            <>
               <button
-                className={`btn btn-primary ${
+                className={`btn relative mr-2 btn-primary ${
                   generating ? 'cursor-not-allowed opacity-40' : ''
                 }`}
                 onClick={handleSaveAndSubmit}
-                disabled={generating}
               >
-                {t('saveAndSubmit')}
-              </button>
-            )}
-
-            <button
-              className={`btn ${
-                sticky
-                  ? `btn-neutral ${
-                      generating ? 'cursor-not-allowed opacity-40' : ''
-                    }`
-                  : 'btn-primary'
-              }`}
-              onClick={handleSave}
-              disabled={sticky && generating}
-            >
-              {t('save')}
-            </button>
-
-            {!sticky && (
-              <>
-                <button
-                  className='btn btn-neutral'
-                  onClick={() => {
-                    !generating && setIsModalOpen(true);
-                  }}
-                  disabled={generating}
-                >
+                <div className='flex items-center justify-center gap-2'>
                   {t('saveAndSubmit')}
-                </button>
-                <button
-                  className='btn btn-neutral'
-                  onClick={() => setIsEdit(false)}
-                >
-                  {t('cancel')}
-                </button>
-              </>
-            )}
-
-            {sticky && (
+                </div>
+              </button>
               <button
-                className='btn btn-neutral'
+                className={`btn relative mr-2 btn-neutral ${
+                  generating ? 'cursor-not-allowed opacity-40' : ''
+                }`}
+                onClick={handleSave}
+              >
+                <div className='flex items-center justify-center gap-2'>
+                  {t('save')}
+                </div>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className='btn relative mr-2 btn-primary'
+                onClick={handleSave}
+              >
+                <div className='flex items-center justify-center gap-2'>
+                  {t('save')}
+                </div>
+              </button>
+              <button
+                className='btn relative mr-2 btn-neutral'
+                onClick={() => {
+                  !generating && setIsModalOpen(true);
+                }}
+              >
+                <div className='flex items-center justify-center gap-2'>
+                  {t('saveAndSubmit')}
+                </div>
+              </button>
+              <button
+                className='btn relative btn-neutral'
                 onClick={() => setIsEdit(false)}
               >
-                {t('cancel')}
+                <div className='flex items-center justify-center gap-2'>
+                  {t('cancel')}
+                </div>
               </button>
-            )}
-          </div>
+            </>
+          )}
         </div>
-        <div className='flex justify-center items-center mt-2'>
-          {sticky && <TokenCount />}
-          <CommandPrompt _setContent={_setContent} />
-        </div>
+        {sticky && <TokenCount />}
+        <CommandPrompt _setContent={_setContent} />
       </div>
     );
   }
