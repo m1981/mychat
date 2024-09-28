@@ -26,7 +26,7 @@ const MessageContent = ({
   role,
   content,
   messageIndex,
-  sticky = false,
+  sticky = true,
 }: {
   role: string;
   content: string;
