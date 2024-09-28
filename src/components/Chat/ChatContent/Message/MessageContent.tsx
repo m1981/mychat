@@ -376,8 +376,8 @@ const EditViewButtons = React.memo(
     const generating = useStore.getState().generating;
 
 return (
-      <div className={`flex ${!sticky ? 'fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 shadow-md' : ''}`}>
-        <div className={`flex-1 text-center border-t z-50 ${sticky ? 'mt-2' : ''} flex justify-center`}>
+      <div className={`flex ${!sticky ? 'fixed border-t z-50 bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 shadow-md' : ''}`}>
+        <div className={`flex-1 text-center ${sticky ? 'mt-2' : ''} flex justify-center`}>
           {sticky ? (
             <>
               <button
