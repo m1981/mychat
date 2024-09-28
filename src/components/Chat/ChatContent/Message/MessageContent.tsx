@@ -26,7 +26,7 @@ const MessageContent = ({
   role,
   content,
   messageIndex,
-  sticky = true,
+  sticky = false,
 }: {
   role: string;
   content: string;
@@ -358,7 +358,7 @@ const EditView = ({
 
 const EditViewButtons = React.memo(
   ({
-    sticky = true,
+    sticky = false,
     handleSaveAndSubmit,
     handleSave,
     setIsModalOpen,
@@ -376,62 +376,60 @@ const EditViewButtons = React.memo(
     const generating = useStore.getState().generating;
 
     return (
-      <div className='flex'>
-        <div className='flex-1 text-center mt-2 flex justify-center'>
-          {sticky && (
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 z-10">
+        <div className='flex justify-between items-center'>
+          <div className='flex space-x-2'>
+            {sticky && (
+              <button
+                className={`btn btn-primary ${
+                  generating ? 'cursor-not-allowed opacity-40' : ''
+                }`}
+                onClick={handleSaveAndSubmit}
+                disabled={generating}
+              >
+                {t('saveAndSubmit')}
+              </button>
+            )}
+
             <button
-              className={`btn relative mr-2 btn-primary ${
-                generating ? 'cursor-not-allowed opacity-40' : ''
+              className={`btn ${
+                sticky
+                  ? `btn-neutral ${
+                      generating ? 'cursor-not-allowed opacity-40' : ''
+                    }`
+                  : 'btn-primary'
               }`}
-              onClick={handleSaveAndSubmit}
+              onClick={handleSave}
+              disabled={sticky && generating}
             >
-              <div className='flex items-center justify-center gap-2'>
-                {t('saveAndSubmit')}
-              </div>
-            </button>
-          )}
-
-          <button
-            className={`btn relative mr-2 ${
-              sticky
-                ? `btn-neutral ${
-                    generating ? 'cursor-not-allowed opacity-40' : ''
-                  }`
-                : 'btn-primary'
-            }`}
-            onClick={handleSave}
-          >
-            <div className='flex items-center justify-center gap-2'>
               {t('save')}
-            </div>
-          </button>
-
-          {sticky || (
-            <button
-              className='btn relative mr-2 btn-neutral'
-              onClick={() => {
-                !generating && setIsModalOpen(true);
-              }}
-            >
-              <div className='flex items-center justify-center gap-2'>
-                {t('saveAndSubmit')}
-              </div>
             </button>
-          )}
 
-          {sticky || (
-            <button
-              className='btn relative btn-neutral'
-              onClick={() => setIsEdit(false)}
-            >
-              <div className='flex items-center justify-center gap-2'>
-                {t('cancel')}
-              </div>
-            </button>
-          )}
+            {!sticky && (
+              <>
+                <button
+                  className='btn btn-neutral'
+                  onClick={() => {
+                    !generating && setIsModalOpen(true);
+                  }}
+                  disabled={generating}
+                >
+                  {t('saveAndSubmit')}
+                </button>
+                <button
+                  className='btn btn-neutral'
+                  onClick={() => setIsEdit(false)}
+                >
+                  {t('cancel')}
+                </button>
+              </>
+            )}
+          </div>
+          <div className='flex items-center'>
+            {sticky && <TokenCount />}
+            <CommandPrompt _setContent={_setContent} />
+          </div>
         </div>
-        {sticky && <TokenCount />}
-        <CommandPrompt _setContent={_setContent} />
       </div>
     );
   }
