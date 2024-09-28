@@ -377,7 +377,7 @@ const EditViewButtons = React.memo(
 
     return (
       <div className='flex'>
-        <div className='flex-1 text-center mt-2 flex justify-center'>
+        <div className='fixed bottom-0 left-1 z-50 p-3' style="border-radius: 10px; background-color: rgb(64 65 79);">
           {sticky && (
             <button
               className={`btn relative mr-2 btn-primary ${
