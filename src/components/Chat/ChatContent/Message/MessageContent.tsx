@@ -139,14 +139,13 @@ const ContentView = React.memo(
           isDelete={isDelete}
           role={role}
           messageIndex={messageIndex}
-          setIsEdit={setIsEdit}
+          setIsEdit={handleEdit}
           setIsDelete={setIsDelete}
           handleRefresh={handleRefresh}
           handleMoveUp={() => handleMove('up')}
           handleMoveDown={() => handleMove('down')}
           handleDelete={handleDelete}
           handleCopy={handleCopy}
-          setIsEdit={handleEdit}
         />
         <div className='markdown prose w-full md:max-w-full break-words dark:prose-invert dark share-gpt-message'>
           <ReactMarkdown
