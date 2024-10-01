@@ -375,44 +375,45 @@ const EditViewButtons = React.memo(
     const { t } = useTranslation();
     const generating = useStore.getState().generating;
 
-return (
-      <div className={`flex ${!sticky ? 'fixed border-t z-50 bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 shadow-md' : ''}`}>
-        <div className={`flex-1 text-center ${sticky ? 'mt-2' : ''} flex justify-center`}>
-          {sticky ? (
+    const buttonContainerClass = sticky
+      ? 'flex-1 text-center mt-2 flex justify-center'
+      : 'fixed border-t z-50 bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 flex justify-center space-x-2 shadow-lg';
+
+    return (
+      <div className={`flex ${sticky ? '' : 'flex-col'}`}>
+        <div className={buttonContainerClass}>
+          {sticky && (
+            <button
+              className={`btn relative mr-2 btn-primary ${
+                generating ? 'cursor-not-allowed opacity-40' : ''
+              }`}
+              onClick={handleSaveAndSubmit}
+            >
+              <div className='flex items-center justify-center gap-2'>
+                {t('saveAndSubmit')}
+              </div>
+            </button>
+          )}
+
+          <button
+            className={`btn relative ${
+              sticky
+                ? `btn-neutral mr-2 ${
+                    generating ? 'cursor-not-allowed opacity-40' : ''
+                  }`
+                : 'btn-primary'
+            }`}
+            onClick={handleSave}
+          >
+            <div className='flex items-center justify-center gap-2'>
+              {t('save')}
+            </div>
+          </button>
+
+          {!sticky && (
             <>
               <button
-                className={`btn relative mr-2 btn-primary ${
-                  generating ? 'cursor-not-allowed opacity-40' : ''
-                }`}
-                onClick={handleSaveAndSubmit}
-              >
-                <div className='flex items-center justify-center gap-2'>
-                  {t('saveAndSubmit')}
-                </div>
-              </button>
-              <button
-                className={`btn relative mr-2 btn-neutral ${
-                  generating ? 'cursor-not-allowed opacity-40' : ''
-                }`}
-                onClick={handleSave}
-              >
-                <div className='flex items-center justify-center gap-2'>
-                  {t('save')}
-                </div>
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                className='btn relative mr-2 btn-primary'
-                onClick={handleSave}
-              >
-                <div className='flex items-center justify-center gap-2'>
-                  {t('save')}
-                </div>
-              </button>
-              <button
-                className='btn relative mr-2 btn-neutral'
+                className='btn relative btn-neutral'
                 onClick={() => {
                   !generating && setIsModalOpen(true);
                 }}
@@ -421,6 +422,7 @@ return (
                   {t('saveAndSubmit')}
                 </div>
               </button>
+
               <button
                 className='btn relative btn-neutral'
                 onClick={() => setIsEdit(false)}
