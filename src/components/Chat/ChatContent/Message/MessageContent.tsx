@@ -53,6 +53,7 @@ const MessageContent = ({
           content={content}
           setIsEdit={setIsEdit}
           messageIndex={messageIndex}
+          setIsEditing={setIsEditing}
         />
       )}
     </div>
@@ -65,11 +66,13 @@ const ContentView = React.memo(
     content,
     setIsEdit,
     messageIndex,
+    setIsEditing,
   }: {
     role: string;
     content: string;
     setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
     messageIndex: number;
+    setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
   }) => {
     const { handleSubmit } = useSubmit();
     const [isDelete, setIsDelete] = useState<boolean>(false);
@@ -87,6 +90,11 @@ const ContentView = React.memo(
       setChats(updatedChats);
     };
 
+    const handleEdit = () => {
+      setIsEdit(true);
+      setIsEditing(true);
+    };
+    
     const handleMove = (direction: 'up' | 'down') => {
       const updatedChats: ChatInterface[] = JSON.parse(
         JSON.stringify(useStore.getState().chats)
@@ -138,6 +146,7 @@ const ContentView = React.memo(
           handleMoveDown={() => handleMove('down')}
           handleDelete={handleDelete}
           handleCopy={handleCopy}
+          setIsEdit={handleEdit}
         />
         <div className='markdown prose w-full md:max-w-full break-words dark:prose-invert dark share-gpt-message'>
           <ReactMarkdown
@@ -395,65 +404,68 @@ const EditViewButtons = React.memo(
       ? 'flex-1 text-center mt-2 flex justify-center'
       : 'fixed border-t z-50 bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 flex justify-center space-x-2 shadow-lg';
 
-    return (
-      <div className={`flex ${sticky ? '' : 'flex-col'}`}>
-        <div className={buttonContainerClass}>
-          {sticky && (
-            <button
-              className={`btn relative mr-2 btn-primary ${
-                generating || isEditing? 'cursor-not-allowed opacity-40' : ''
-              }`}
-              onClick={handleSaveAndSubmit}
-            >
-              <div className='flex items-center justify-center gap-2'>
-                {t('saveAndSubmit')}
-              </div>
-            </button>
-          )}
+return (
+  <div className={`flex ${sticky ? '' : 'flex-col'}`}>
+    <div className={buttonContainerClass}>
+      {sticky && (
+        <button
+          className={`btn relative mr-2 btn-primary ${
+            generating || isEditing ? 'cursor-not-allowed opacity-40' : ''
+          }`}
+          onClick={handleSaveAndSubmit}
+          disabled={generating || isEditing}
+        >
+          <div className='flex items-center justify-center gap-2'>
+            {t('saveAndSubmit')}
+          </div>
+        </button>
+      )}
 
+      <button
+        className={`btn relative mr-2 ${
+          sticky
+            ? `btn-neutral ${
+                generating || isEditing ? 'cursor-not-allowed opacity-40' : ''
+              }`
+            : 'btn-primary'
+        }`}
+        onClick={handleSave}
+        disabled={sticky && (generating || isEditing)}
+      >
+        <div className='flex items-center justify-center gap-2'>
+          {t('save')}
+        </div>
+      </button>
+
+      {!sticky && (
+        <>
           <button
-            className={`btn relative ${
-              sticky
-                ? `btn-neutral mr-2 ${
-                    generating || isEditing? 'cursor-not-allowed opacity-40' : ''
-                  }`
-                : 'btn-primary'
-            }`}
-            onClick={handleSave}
+            className='btn relative mr-2 btn-neutral'
+            onClick={() => {
+              !generating && setIsModalOpen(true);
+            }}
           >
             <div className='flex items-center justify-center gap-2'>
-              {t('save')}
+              {t('saveAndSubmit')}
             </div>
           </button>
 
-          {!sticky && (
-            <>
-              <button
-                className='btn relative btn-neutral'
-                onClick={() => {
-                  !generating && setIsModalOpen(true);
-                }}
-              >
-                <div className='flex items-center justify-center gap-2'>
-                  {t('saveAndSubmit')}
-                </div>
-              </button>
+          <button
+            className='btn relative btn-neutral'
+            onClick={() => setIsEdit(false)}
+          >
+            <div className='flex items-center justify-center gap-2'>
+              {t('cancel')}
+            </div>
+          </button>
+        </>
+      )}
+    </div>
+    {sticky && <TokenCount />}
+    <CommandPrompt _setContent={_setContent} />
+  </div>
+);
 
-              <button
-                className='btn relative btn-neutral'
-                onClick={() => setIsEdit(false)}
-              >
-                <div className='flex items-center justify-center gap-2'>
-                  {t('cancel')}
-                </div>
-              </button>
-            </>
-          )}
-        </div>
-        {sticky && <TokenCount />}
-        <CommandPrompt _setContent={_setContent} />
-      </div>
-    );
   }
 );
 
