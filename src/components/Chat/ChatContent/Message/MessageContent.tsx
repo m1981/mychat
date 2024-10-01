@@ -34,7 +34,7 @@ const MessageContent = ({
   sticky?: boolean;
 }) => {
   const [isEdit, setIsEdit] = useState<boolean>(sticky);
-
+  const [isEditing, setIsEditing] = useState<boolean>(false);
   return (
     <div className='relative flex flex-col gap-1 md:gap-3 lg:w-[calc(100%-115px)]'>
       <div className='flex flex-grow flex-col gap-3'></div>
@@ -44,6 +44,8 @@ const MessageContent = ({
           setIsEdit={setIsEdit}
           messageIndex={messageIndex}
           sticky={sticky}
+          isEditing={isEditing}
+          setIsEditing={setIsEditing}          
         />
       ) : (
         <ContentView
@@ -212,11 +214,15 @@ const EditView = ({
   setIsEdit,
   messageIndex,
   sticky,
+  isEditing,
+  setIsEditing,  
 }: {
   content: string;
   setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
   messageIndex: number;
   sticky?: boolean;
+  isEditing: boolean;
+  setIsEditing: React.Dispatch<React.SetStateAction<boolean>>; 
 }) => {
   const inputRole = useStore((state) => state.inputRole);
   const setChats = useStore((state) => state.setChats);
@@ -274,6 +280,7 @@ const EditView = ({
       setIsEdit(false);
     }
     setChats(updatedChats);
+    setIsEditing(false);
   };
 
   const { handleSubmit } = useSubmit();
@@ -298,6 +305,7 @@ const EditView = ({
       setIsEdit(false);
     }
     setChats(updatedChats);
+    setIsEditing(false);
     handleSubmit();
   };
 
@@ -315,6 +323,11 @@ const EditView = ({
     }
   }, []);
 
+  useEffect(() => {
+    setIsEditing(true);
+    return () => setIsEditing(false);
+  }, []);
+  
   return (
     <>
       <div
@@ -343,6 +356,7 @@ const EditView = ({
         setIsModalOpen={setIsModalOpen}
         setIsEdit={setIsEdit}
         _setContent={_setContent}
+        isEditing={isEditing}
       />
       {isModalOpen && (
         <PopupModal
@@ -364,6 +378,7 @@ const EditViewButtons = React.memo(
     setIsModalOpen,
     setIsEdit,
     _setContent,
+    isEditing,
   }: {
     sticky?: boolean;
     handleSaveAndSubmit: () => void;
@@ -371,6 +386,7 @@ const EditViewButtons = React.memo(
     setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
     _setContent: React.Dispatch<React.SetStateAction<string>>;
+    isEditing: boolean;
   }) => {
     const { t } = useTranslation();
     const generating = useStore.getState().generating;
@@ -385,7 +401,7 @@ const EditViewButtons = React.memo(
           {sticky && (
             <button
               className={`btn relative mr-2 btn-primary ${
-                generating ? 'cursor-not-allowed opacity-40' : ''
+                generating || isEditing? 'cursor-not-allowed opacity-40' : ''
               }`}
               onClick={handleSaveAndSubmit}
             >
@@ -399,7 +415,7 @@ const EditViewButtons = React.memo(
             className={`btn relative ${
               sticky
                 ? `btn-neutral mr-2 ${
-                    generating ? 'cursor-not-allowed opacity-40' : ''
+                    generating || isEditing? 'cursor-not-allowed opacity-40' : ''
                   }`
                 : 'btn-primary'
             }`}
