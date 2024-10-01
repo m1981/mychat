@@ -397,74 +397,76 @@ const EditViewButtons = React.memo(
     isEditing: boolean;
   }) => {
     const { t } = useTranslation();
-    const generating = useStore.getState().generating;
+    const generating = useStore((state) => state.generating);
 
     const buttonContainerClass = sticky
       ? 'flex-1 text-center mt-2 flex justify-center'
       : 'fixed border-t z-50 bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 flex justify-center space-x-2 shadow-lg';
 
-return (
-  <div className={`flex ${sticky ? '' : 'flex-col'}`}>
-    <div className={buttonContainerClass}>
-      {sticky && (
-        <button
-          className={`btn relative mr-2 btn-primary ${
-            generating || isEditing ? 'cursor-not-allowed opacity-40' : ''
-          }`}
-          onClick={handleSaveAndSubmit}
-          disabled={generating || isEditing}
-        >
-          <div className='flex items-center justify-center gap-2'>
-            {t('saveAndSubmit')}
-          </div>
-        </button>
-      )}
+    // For sticky buttons, we should disable them when generating or when another message is being edited
+    const disableSticky = generating || (isEditing && !sticky);
 
-      <button
-        className={`btn relative mr-2 ${
-          sticky
-            ? `btn-neutral ${
-                generating || isEditing ? 'cursor-not-allowed opacity-40' : ''
-              }`
-            : 'btn-primary'
-        }`}
-        onClick={handleSave}
-        disabled={sticky && (generating || isEditing)}
-      >
-        <div className='flex items-center justify-center gap-2'>
-          {t('save')}
+    return (
+      <div className={`flex ${sticky ? '' : 'flex-col'}`}>
+        <div className={buttonContainerClass}>
+          {sticky && (
+            <button
+              className={`btn relative mr-2 btn-primary ${
+                disableSticky ? 'cursor-not-allowed opacity-40' : ''
+              }`}
+              onClick={handleSaveAndSubmit}
+              disabled={disableSticky}
+            >
+              <div className='flex items-center justify-center gap-2'>
+                {t('saveAndSubmit')}
+              </div>
+            </button>
+          )}
+
+          <button
+            className={`btn relative mr-2 ${
+              sticky
+                ? `btn-neutral ${
+                    disableSticky ? 'cursor-not-allowed opacity-40' : ''
+                  }`
+                : 'btn-primary'
+            }`}
+            onClick={handleSave}
+            disabled={sticky && disableSticky}
+          >
+            <div className='flex items-center justify-center gap-2'>
+              {t('save')}
+            </div>
+          </button>
+
+          {!sticky && (
+            <>
+              <button
+                className='btn relative mr-2 btn-neutral'
+                onClick={() => {
+                  !generating && setIsModalOpen(true);
+                }}
+              >
+                <div className='flex items-center justify-center gap-2'>
+                  {t('saveAndSubmit')}
+                </div>
+              </button>
+
+              <button
+                className='btn relative btn-neutral'
+                onClick={() => setIsEdit(false)}
+              >
+                <div className='flex items-center justify-center gap-2'>
+                  {t('cancel')}
+                </div>
+              </button>
+            </>
+          )}
         </div>
-      </button>
-
-      {!sticky && (
-        <>
-          <button
-            className='btn relative mr-2 btn-neutral'
-            onClick={() => {
-              !generating && setIsModalOpen(true);
-            }}
-          >
-            <div className='flex items-center justify-center gap-2'>
-              {t('saveAndSubmit')}
-            </div>
-          </button>
-
-          <button
-            className='btn relative btn-neutral'
-            onClick={() => setIsEdit(false)}
-          >
-            <div className='flex items-center justify-center gap-2'>
-              {t('cancel')}
-            </div>
-          </button>
-        </>
-      )}
-    </div>
-    {sticky && <TokenCount />}
-    <CommandPrompt _setContent={_setContent} />
-  </div>
-);
-
+        {sticky && <TokenCount />}
+        <CommandPrompt _setContent={_setContent} />
+      </div>
+    );
   }
 );
 
