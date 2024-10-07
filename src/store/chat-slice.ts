@@ -16,8 +16,6 @@ export interface ChatSlice {
   setError: (error: string) => void;
   setFolders: (folders: FolderCollection) => void;
   setCurrentChatTokenCount: (tokenCount: number) => void;
-  isEditing: boolean;
-  setIsEditing: (isEditing: boolean) => void;
 }
 
 export const createChatSlice: StoreSlice<ChatSlice> = (set, get) => ({
