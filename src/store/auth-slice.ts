@@ -1,35 +1,51 @@
 import { defaultAPIEndpoint } from '@constants/auth';
 import { StoreSlice } from './store';
+import { providers } from '@type/providers';
+import { officialAPIEndpoint } from '@constants/auth';
+import { ProviderKey } from '@type/chat';
 
 export interface AuthSlice {
-  apiKey?: string;
-  apiEndpoint: string;
+  provider: ProviderKey;
+  apiKeys: Record<ProviderKey, string>;
+  apiEndpoints: Record<ProviderKey, string>;
   firstVisit: boolean;
-  setApiKey: (apiKey: string) => void;
-  setApiEndpoint: (apiEndpoint: string) => void;
+  setProvider: (provider: ProviderKey) => void;
+  setApiKey: (provider: ProviderKey, apiKey: string) => void;
   setFirstVisit: (firstVisit: boolean) => void;
 }
 
 export const createAuthSlice: StoreSlice<AuthSlice> = (set, get) => ({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY || undefined,
-  apiEndpoint: defaultAPIEndpoint,
+  provider: 'openai',
+  apiKeys: {
+    openai: import.meta.env.VITE_OPENAI_API_KEY || '',
+    anthropic: import.meta.env.VITE_ANTHROPIC_API_KEY || '',
+  },
+  apiEndpoints: {
+    openai: officialAPIEndpoint,
+    anthropic: 'https://api.anthropic.com/v1/messages',
+  },
   firstVisit: true,
-  setApiKey: (apiKey: string) => {
+  setProvider: (provider: ProviderKey) => {
     set((prev: AuthSlice) => ({
       ...prev,
-      apiKey: apiKey,
+      provider,
+      // Optionally reset endpoint to provider's default
+      apiEndpoint: providers[provider].endpoints[0],
     }));
   },
-  setApiEndpoint: (apiEndpoint: string) => {
+  setApiKey: (provider: ProviderKey, apiKey: string) => {
     set((prev: AuthSlice) => ({
       ...prev,
-      apiEndpoint: apiEndpoint,
+      apiKeys: {
+        ...prev.apiKeys,
+        [provider]: apiKey,
+      },
     }));
   },
   setFirstVisit: (firstVisit: boolean) => {
     set((prev: AuthSlice) => ({
       ...prev,
-      firstVisit: firstVisit,
+      firstVisit,
     }));
   },
 });

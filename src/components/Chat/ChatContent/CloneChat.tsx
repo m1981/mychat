@@ -22,7 +22,7 @@ const CloneChat = React.memo(() => {
       let title = `Copy of ${chats[index].title}`;
       let i = 0;
 
-      while (chats.some((chat) => chat.title === title)) {
+      while (chats.some((chat: ChatInterface) => chat.title === title)) {
         i += 1;
         title = `Copy ${i} of ${chats[index].title}`;
       }

@@ -8,7 +8,6 @@ import Menu from '@components/Menu';
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
 import { ChatInterface } from '@type/chat';
 import { Theme } from '@type/theme';
-import ApiPopup from '@components/ApiPopup';
 
 function App() {
   const initialiseNewChat = useInitialiseNewChat();
@@ -25,14 +24,13 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // legacy local storage
+
     const oldChats = localStorage.getItem('chats');
     const apiKey = localStorage.getItem('apiKey');
     const theme = localStorage.getItem('theme');
 
     if (apiKey) {
-      // legacy local storage
-      setApiKey(apiKey);
+      setApiKey('openai', apiKey);
       localStorage.removeItem('apiKey');
     }
 
@@ -77,7 +75,6 @@ function App() {
     <div className='overflow-hidden w-full h-full relative'>
       <Menu />
       <Chat />
-      <ApiPopup />
     </div>
   );
 }

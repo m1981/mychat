@@ -59,7 +59,7 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
     const updatedChats: ChatInterface[] = JSON.parse(
       JSON.stringify(useStore.getState().chats)
     );
-    updatedChats.forEach((chat) => {
+    updatedChats.forEach((chat: ChatInterface) => {
       if (chat.folder === folderId) delete chat.folder;
     });
     setChats(updatedChats);
@@ -305,7 +305,7 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
             <div className='ml-3 pl-1 border-l-2 border-gray-700 flex flex-col gap-1 parent'>
               {isExpanded && <NewChat folder={folderId} />}
               {isExpanded &&
-                folderChats.map((chat) => (
+                folderChats.map((chat: ChatHistoryInterface) => (
                   <ChatHistory
                     title={chat.title}
                     chatIndex={chat.index}

@@ -1,50 +1,41 @@
 import React from 'react';
 import useStore from '@store/store';
 import { useTranslation } from 'react-i18next';
-import { ChatInterface, MessageInterface } from '@type/chat';
+import { ChatInterface, MessageInterface, ProviderKey} from '@type/chat';
 import { getChatCompletion, getChatCompletionStream } from '@api/api';
 import { parseEventSource } from '@api/helper';
 import { limitMessageTokens } from '@utils/messageUtils';
 import { _defaultChatConfig } from '@constants/chat';
 import { officialAPIEndpoint } from '@constants/auth';
+import { providers } from '@type/providers';
 
 const useSubmit = () => {
+  const provider = useStore((state) => state.provider) as ProviderKey;
+  const currentProvider = providers[provider];
   const { t, i18n } = useTranslation('api');
   const error = useStore((state) => state.error);
   const setError = useStore((state) => state.setError);
-  const apiEndpoint = useStore((state) => state.apiEndpoint);
-  const apiKey = useStore((state) => state.apiKey);
+  const apiEndpoints = useStore((state) => state.apiEndpoints);
+  const currentEndpoint = apiEndpoints[provider];
+  const apiKeys = useStore((state) => state.apiKeys);
+  const currentApiKey = apiKeys[provider];
   const setGenerating = useStore((state) => state.setGenerating);
   const generating = useStore((state) => state.generating);
   const currentChatIndex = useStore((state) => state.currentChatIndex);
   const setChats = useStore((state) => state.setChats);
 
-  const generateTitle = async (
-    message: MessageInterface[]
-  ): Promise<string> => {
-    let data;
-    if (!apiKey || apiKey.length === 0) {
-      // official endpoint
-      if (apiEndpoint === officialAPIEndpoint) {
-        throw new Error(t('noApiKeyWarning') as string);
-      }
+  const generateTitle = async (message: MessageInterface[]): Promise<string> => {
+    const currentProvider = providers[useStore.getState().provider];
+    const currentApiKey = useStore.getState().apiKeys[currentProvider.id];
 
-      // other endpoints
-      data = await getChatCompletion(
-        useStore.getState().apiEndpoint,
-        message,
-        _defaultChatConfig
-      );
-    } else if (apiKey) {
-      // own apikey
-      data = await getChatCompletion(
-        useStore.getState().apiEndpoint,
-        message,
-        _defaultChatConfig,
-        apiKey
-      );
-    }
-    return data.choices[0].message.content;
+    const data = await getChatCompletion(
+      currentProvider,
+      message,
+      _defaultChatConfig,
+      currentApiKey
+    );
+
+    return data;
   };
 
   const handleSubmit = async () => {
@@ -52,7 +43,6 @@ const useSubmit = () => {
     if (generating || !chats) return;
 
     const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(chats));
-
     updatedChats[currentChatIndex].messages.push({
       role: 'assistant',
       content: '',
@@ -74,25 +64,25 @@ const useSubmit = () => {
       if (messages.length === 0) throw new Error('Message exceed max token!');
 
       // no api key (free)
-      if (!apiKey || apiKey.length === 0) {
+      if (!currentApiKey || currentApiKey.length === 0) {
         // official endpoint
-        if (apiEndpoint === officialAPIEndpoint) {
+        if (currentEndpoint === officialAPIEndpoint) {
           throw new Error(t('noApiKeyWarning') as string);
         }
 
         // other endpoints
         stream = await getChatCompletionStream(
-          useStore.getState().apiEndpoint,
+          currentProvider,
           messages,
           chats[currentChatIndex].config
         );
-      } else if (apiKey) {
-        // own apikey
+      } else {
+        // using API key
         stream = await getChatCompletionStream(
-          useStore.getState().apiEndpoint,
+          currentProvider,
           messages,
           chats[currentChatIndex].config,
-          apiKey
+          currentApiKey
         );
       }
 
@@ -106,9 +96,11 @@ const useSubmit = () => {
         let partial = '';
         while (reading && useStore.getState().generating) {
           const { done, value } = await reader.read();
+          console.log('Raw value:', value);
           const result = parseEventSource(
             partial + new TextDecoder().decode(value)
           );
+          console.log('Parsed result:', result);
           partial = '';
 
           if (result === '[DONE]' || done) {
@@ -118,8 +110,15 @@ const useSubmit = () => {
               if (typeof curr === 'string') {
                 partial += curr;
               } else {
-                const content = curr.choices[0].delta.content;
-                if (content) output += content;
+                try {
+                  const content = currentProvider.parseStreamingResponse(curr); // Changed from result to curr
+                  if (content) output += content;
+                } catch (err) {
+                  console.error('Error parsing streaming response:', err);
+                  console.log('Current chunk:', curr);
+                  // Continue without throwing to maintain the stream
+                  return output;
+                }
               }
               return output;
             }, '');

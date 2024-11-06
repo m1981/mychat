@@ -1,39 +1,40 @@
-import React, { useEffect, useState } from 'react';
-import { useTranslation, Trans } from 'react-i18next';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import useStore from '@store/store';
-
 import PopupModal from '@components/PopupModal';
-import { availableEndpoints, defaultAPIEndpoint } from '@constants/auth';
 import DownChevronArrow from '@icon/DownChevronArrow';
+import { providers } from '@type/providers';
+import { ProviderKey } from '@type/chat';
 
-const ApiMenu = ({
-  setIsModalOpen,
-}: {
-  setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+const ApiMenu = ({ 
+  setIsModalOpen 
+}: { 
+  setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>> 
 }) => {
   const { t } = useTranslation(['main', 'api']);
-
-  const apiKey = useStore((state) => state.apiKey);
+  
+  // Global store values
+  const provider = useStore((state) => state.provider);
+  const setProvider = useStore((state) => state.setProvider);
+  const apiKeys = useStore((state) => state.apiKeys);
   const setApiKey = useStore((state) => state.setApiKey);
-  const apiEndpoint = useStore((state) => state.apiEndpoint);
-  const setApiEndpoint = useStore((state) => state.setApiEndpoint);
+  const apiEndpoints = useStore((state) => state.apiEndpoints);
 
-  const [_apiKey, _setApiKey] = useState<string>(apiKey || '');
-  const [_apiEndpoint, _setApiEndpoint] = useState<string>(apiEndpoint);
-  const [_customEndpoint, _setCustomEndpoint] = useState<boolean>(
-    !availableEndpoints.includes(apiEndpoint)
-  );
+  // Local state for form
+  const [tempProvider, setTempProvider] = useState<ProviderKey>(provider);
+  const [tempApiKeys, setTempApiKeys] = useState<Record<ProviderKey, string>>(apiKeys);
+  const [tempEndpoints, setTempEndpoints] = useState<Record<string, string>>(apiEndpoints);
 
   const handleSave = () => {
-    setApiKey(_apiKey);
-    setApiEndpoint(_apiEndpoint);
+    // Save provider
+    setProvider(tempProvider);
+    
+    // Save API keys
+    (Object.entries(tempApiKeys) as [ProviderKey, string][]).forEach(([provider, key]) => {
+      setApiKey(provider, key);
+    });
+    
     setIsModalOpen(false);
-  };
-
-  const handleToggleCustomEndpoint = () => {
-    if (_customEndpoint) _setApiEndpoint(defaultAPIEndpoint);
-    else _setApiEndpoint('');
-    _setCustomEndpoint((prev) => !prev);
   };
 
   return (
@@ -43,121 +44,70 @@ const ApiMenu = ({
       handleConfirm={handleSave}
     >
       <div className='p-6 border-b border-gray-200 dark:border-gray-600'>
-        <label className='flex gap-2 text-gray-900 dark:text-gray-300 text-sm items-center mb-4'>
-          <input
-            type='checkbox'
-            checked={_customEndpoint}
-            className='w-4 h-4'
-            onChange={handleToggleCustomEndpoint}
-          />
-          {t('customEndpoint', { ns: 'api' })}
-        </label>
-
-        <div className='flex gap-2 items-center justify-center mb-6'>
-          <div className='min-w-fit text-gray-900 dark:text-gray-300 text-sm'>
-            {t('apiEndpoint.inputLabel', { ns: 'api' })}
-          </div>
-          {_customEndpoint ? (
-            <input
-              type='text'
-              className='text-gray-800 dark:text-white p-3 text-sm border-none bg-gray-200 dark:bg-gray-600 rounded-md m-0 w-full mr-0 h-8 focus:outline-none'
-              value={_apiEndpoint}
-              onChange={(e) => {
-                _setApiEndpoint(e.target.value);
-              }}
-            />
-          ) : (
-            <ApiEndpointSelector
-              _apiEndpoint={_apiEndpoint}
-              _setApiEndpoint={_setApiEndpoint}
-            />
-          )}
+        {/* Provider Selection */}
+        <div className='mb-4'>
+          <label className='block text-sm font-medium text-gray-900 dark:text-white'>
+            {t('provider')}
+          </label>
+          <select
+            value={tempProvider}
+            onChange={(e) => setTempProvider(e.target.value as ProviderKey)}
+            className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
+          >
+            {Object.values(providers).map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
         </div>
 
-        <div className='flex gap-2 items-center justify-center mt-2'>
-          <div className='min-w-fit text-gray-900 dark:text-gray-300 text-sm'>
-            {t('apiKey.inputLabel', { ns: 'api' })}
+        {/* API Keys and Endpoints for each provider */}
+        {Object.values(providers).map((p) => (
+          <div key={p.id} className='mb-6'>
+            <div className='mb-4'>
+              <label className='block text-sm font-medium text-gray-900 dark:text-white'>
+                {p.name} API Key
+              </label>
+              <input
+                type='password'
+                value={tempApiKeys[p.id] || ''}
+                onChange={(e) => setTempApiKeys({
+                  ...tempApiKeys,
+                  [p.id]: e.target.value
+                })}
+                className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
+              />
+            </div>
+
+            <div className='mb-4'>
+              <label className='block text-sm font-medium text-gray-900 dark:text-white'>
+                {p.name} Endpoint
+              </label>
+              <select
+                value={tempEndpoints[p.id] || p.endpoints[0]}
+                onChange={(e) => setTempEndpoints({
+                  ...tempEndpoints,
+                  [p.id]: e.target.value
+                })}
+                className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
+              >
+                {p.endpoints.map((endpoint) => (
+                  <option key={endpoint} value={endpoint}>
+                    {endpoint}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <input
-            type='text'
-            className='text-gray-800 dark:text-white p-3 text-sm border-none bg-gray-200 dark:bg-gray-600 rounded-md m-0 w-full mr-0 h-8 focus:outline-none'
-            value={_apiKey}
-            onChange={(e) => {
-              _setApiKey(e.target.value);
-            }}
-          />
-        </div>
+        ))}
 
-        <div className='min-w-fit text-gray-900 dark:text-gray-300 text-sm flex flex-col gap-3 leading-relaxed'>
-          <p className='mt-4'>
-            <Trans
-              i18nKey='apiKey.howTo'
-              ns='api'
-              components={[
-                <a
-                  href='https://platform.openai.com/account/api-keys'
-                  className='link'
-                  target='_blank'
-                />,
-              ]}
-            />
-          </p>
-
+        {/* Info Messages */}
+        <div className='text-sm text-gray-900 dark:text-gray-300 flex flex-col gap-3'>
           <p>{t('securityMessage', { ns: 'api' })}</p>
-
           <p>{t('apiEndpoint.description', { ns: 'api' })}</p>
-
           <p>{t('apiEndpoint.warn', { ns: 'api' })}</p>
         </div>
       </div>
     </PopupModal>
-  );
-};
-
-const ApiEndpointSelector = ({
-  _apiEndpoint,
-  _setApiEndpoint,
-}: {
-  _apiEndpoint: string;
-  _setApiEndpoint: React.Dispatch<React.SetStateAction<string>>;
-}) => {
-  const [dropDown, setDropDown] = useState<boolean>(false);
-
-  return (
-    <div className='w-full relative'>
-      <button
-        className='btn btn-neutral btn-small flex w-32 flex justify-between w-full'
-        type='button'
-        onClick={() => setDropDown((prev) => !prev)}
-      >
-        {_apiEndpoint}
-        <DownChevronArrow />
-      </button>
-      <div
-        id='dropdown'
-        className={`${
-          dropDown ? '' : 'hidden'
-        } absolute top-100 bottom-100 z-10 bg-white rounded-lg shadow-xl border-b border-black/10 dark:border-gray-900/50 text-gray-800 dark:text-gray-100 group dark:bg-gray-800 opacity-90 w-32 w-full`}
-      >
-        <ul
-          className='text-sm text-gray-700 dark:text-gray-200 p-0 m-0'
-          aria-labelledby='dropdownDefaultButton'
-        >
-          {availableEndpoints.map((endpoint) => (
-            <li
-              className='px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white cursor-pointer'
-              onClick={() => {
-                _setApiEndpoint(endpoint);
-                setDropDown(false);
-              }}
-              key={endpoint}
-            >
-              {endpoint}
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
   );
 };
 

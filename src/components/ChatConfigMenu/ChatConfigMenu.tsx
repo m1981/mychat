@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import useStore from '@store/store';
 import { useTranslation } from 'react-i18next';
+import { providers } from '@type/providers';
 
 import PopupModal from '@components/PopupModal';
 import {
@@ -38,11 +39,16 @@ const ChatConfigPopup = ({
   const setDefaultSystemMessage = useStore(
     (state) => state.setDefaultSystemMessage
   );
-
+  const provider = useStore((state) => state.provider);
+  const currentProvider = providers[provider];
   const [_systemMessage, _setSystemMessage] = useState<string>(
     useStore.getState().defaultSystemMessage
   );
-  const [_model, _setModel] = useState<ModelOptions>(config.model);
+  const [_model, _setModel] = useState<ModelOptions>(() => {
+    return currentProvider.models.includes(config.model)
+      ? config.model
+      : currentProvider.models[0];
+  });
   const [_maxToken, _setMaxToken] = useState<number>(config.max_tokens);
   const [_temperature, _setTemperature] = useState<number>(config.temperature);
   const [_topP, _setTopP] = useState<number>(config.top_p);
@@ -89,7 +95,11 @@ const ChatConfigPopup = ({
           _systemMessage={_systemMessage}
           _setSystemMessage={_setSystemMessage}
         />
-        <ModelSelector _model={_model} _setModel={_setModel} />
+        <ModelSelector
+          _model={_model}
+          _setModel={_setModel}
+          _setMaxToken={_setMaxToken}
+        />
         <MaxTokenSlider
           _maxToken={_maxToken}
           _setMaxToken={_setMaxToken}

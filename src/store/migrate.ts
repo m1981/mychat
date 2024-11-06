@@ -13,6 +13,8 @@ import {
   LocalStorageInterfaceV6ToV7,
   LocalStorageInterfaceV7oV8,
   LocalStorageInterfaceV8ToV9,
+  LocalStorageInterfaceV9ToV10,
+  CurrentLocalStorageInterface,
 } from '@type/chat';
 import {
   _defaultChatConfig,
@@ -113,4 +115,21 @@ export const migrateV8 = (persistedState: LocalStorageInterfaceV8ToV9) => {
   });
 };
 
+export const migrateV9 = (state: LocalStorageInterfaceV9ToV10): CurrentLocalStorageInterface => {
+  return {
+    ...state,
+    provider: 'openai',
+    apiKeys: {
+      openai: state.apiKey || '',
+      anthropic: '',
+    },
+    apiEndpoints: {
+      openai: officialAPIEndpoint,
+      anthropic: 'https://api.anthropic.com/v1/messages',
+    },
+    enterToSubmit: false,
+    apiKey: undefined,
+    apiEndpoint: undefined,
+  } as CurrentLocalStorageInterface;
+};
 

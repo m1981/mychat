@@ -103,7 +103,7 @@ const ImportChat = () => {
               const offset = parsedFolders.length;
 
               const updatedFolders = useStore.getState().folders;
-              Object.values(updatedFolders).forEach((f) => (f.order += offset));
+              Object.values<Folder>(updatedFolders).forEach((f) => (f.order += offset));
 
               setFolders({ ...newFolders, ...updatedFolders });
 
@@ -134,9 +134,7 @@ const ImportChat = () => {
                   const offset = Object.keys(parsedData.folders).length;
 
                   const updatedFolders = useStore.getState().folders;
-                  Object.values(updatedFolders).forEach(
-                    (f) => (f.order += offset)
-                  );
+                  Object.values<Folder>(updatedFolders).forEach((f) => (f.order += offset));
 
                   setFolders({ ...parsedData.folders, ...updatedFolders });
 

@@ -3,6 +3,7 @@ import { Theme } from './theme';
 
 export type Role = 'user' | 'assistant' | 'system';
 export const roles: Role[] = ['user', 'assistant', 'system'];
+export type ProviderKey = 'openai' | 'anthropic';
 
 export interface MessageInterface {
   role: Role;
@@ -50,7 +51,7 @@ export interface Folder {
   color?: string;
 }
 
-export type ModelOptions = 'gpt-3.5-turbo' | 'gpt-3.5-turbo-1106' | 'gpt-4' | 'gpt-4-1106-preview'| 'gpt-4o';
+export type ModelOptions = string;
 
 export interface LocalStorageInterfaceV0ToV1 {
   chats: ChatInterface[];
@@ -140,8 +141,32 @@ export interface LocalStorageInterfaceV7oV8
   folders: FolderCollection;
 }
 
-
 export interface LocalStorageInterfaceV8ToV9 extends LocalStorageInterfaceV7oV8 {
-  chats: ChatInterface[];
+  currentChatTokenCount: number;
 }
 
+export interface CurrentLocalStorageInterface {
+  chats: ChatInterface[];
+  currentChatIndex: number;
+  provider: ProviderKey;
+  apiKeys: Record<ProviderKey, string>;
+  apiEndpoints: Record<ProviderKey, string>;
+  theme: Theme;
+  autoTitle: boolean;
+  prompts: Prompt[];
+  defaultChatConfig: ConfigInterface;
+  defaultSystemMessage: string;
+  hideMenuOptions: boolean;
+  firstVisit: boolean;
+  hideSideMenu: boolean;
+  folders: FolderCollection;
+  currentChatTokenCount: number;
+  enterToSubmit: boolean;
+}
+
+export interface LocalStorageInterfaceV9ToV10 extends Omit<LocalStorageInterfaceV8ToV9, 'apiKey'> {
+  provider?: ProviderKey;
+  apiKeys?: Record<ProviderKey, string>;
+  apiKey?: string;
+  enterToSubmit?: boolean;
+}

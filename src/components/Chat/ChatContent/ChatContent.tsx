@@ -12,6 +12,12 @@ import useSubmit from '@hooks/useSubmit';
 import DownloadChat from './DownloadChat';
 import CloneChat from './CloneChat';
 import ShareGPT from '@components/ShareGPT';
+import { Role } from '@type/chat';
+
+interface Message {
+  role: Role;
+  content: string;
+}
 
 const ChatContent = () => {
   const inputRole = useStore((state) => state.inputRole);
@@ -62,7 +68,7 @@ const ChatContent = () => {
             {!generating && messages?.length === 0 && (
               <NewMessageButton messageIndex={-1} />
             )}
-            {messages?.map((message, index) => (
+            {messages?.map((message: Message, index: number) => (
               <React.Fragment key={index}>
                 <Message
                   role={message.role}

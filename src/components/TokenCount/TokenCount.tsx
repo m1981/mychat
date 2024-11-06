@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import useStore from '@store/store';
 import { shallow } from 'zustand/shallow';
-
 import countTokens from '@utils/messageUtils';
-import { modelCost } from '@constants/chat';
+import { providers } from '@type/providers';
 
 const TokenCount = React.memo(() => {
   const [tokenCount, setTokenCount] = useState<number>(0);
   const generating = useStore((state) => state.generating);
+  const provider = useStore((state) => state.provider);
   const messages = useStore(
     (state) =>
       state.chats ? state.chats[state.currentChatIndex].messages : [],
@@ -17,13 +17,20 @@ const TokenCount = React.memo(() => {
   const model = useStore((state) =>
     state.chats
       ? state.chats[state.currentChatIndex].config.model
-      : 'gpt-3.5-turbo'
+      : providers[provider].models[0] // Use default model from current provider
   );
 
   const cost = useMemo(() => {
-    const price = modelCost[model].price * 4.4 * (tokenCount / modelCost[model].unit);
+    const currentProvider = providers[provider];
+    const modelCosts = currentProvider.costs[model];
+    
+    if (!modelCosts) {
+      return '0.00'; // Return default value if cost not found
+    }
+
+    const price = modelCosts.price * 4.4 * (tokenCount / modelCosts.unit);
     return price.toPrecision(2);
-  }, [model, tokenCount]);
+  }, [model, tokenCount, provider]);
 
   useEffect(() => {
     if (!generating) setTokenCount(countTokens(messages, model));

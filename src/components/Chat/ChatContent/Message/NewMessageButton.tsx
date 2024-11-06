@@ -19,7 +19,7 @@ const NewMessageButton = React.memo(
         let titleIndex = 1;
         let title = `New Chat ${titleIndex}`;
 
-        while (chats.some((chat) => chat.title === title)) {
+        while (chats.some((chat: ChatInterface) => chat.title === title)) {
           titleIndex += 1;
           title = `New Chat ${titleIndex}`;
         }

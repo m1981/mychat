@@ -17,8 +17,9 @@ const CommandPrompt = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const filteredPrompts = matchSorter(useStore.getState().prompts, input, {
+    const filteredPrompts = matchSorter<Prompt>(useStore.getState().prompts, input, {
       keys: ['name'],
+      threshold: matchSorter.rankings.CONTAINS, // Optional: you can adjust the matching threshold
     });
     _setPrompts(filteredPrompts);
   }, [input]);

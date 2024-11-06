@@ -8,28 +8,34 @@ import ChatHistory from './ChatHistory';
 import ChatSearch from './ChatSearch';
 
 import {
-  ChatHistoryInterface,
-  ChatHistoryFolderInterface,
   ChatInterface,
+  Folder,
   FolderCollection,
 } from '@type/chat';
+
+// Define local interfaces that don't conflict with imports
+interface ChatHistoryItem {
+  title: string;
+  index: number;
+  id: string;
+}
+
+interface ChatHistoryFolderMap {
+  [key: string]: ChatHistoryItem[];
+}
 
 const ChatHistoryList = () => {
   const currentChatIndex = useStore((state) => state.currentChatIndex);
   const setChats = useStore((state) => state.setChats);
   const setFolders = useStore((state) => state.setFolders);
   const chatTitles = useStore(
-    (state) => state.chats?.map((chat) => chat.title),
+    (state) => state.chats?.map((chat: ChatInterface) => chat.title),
     shallow
   );
 
   const [isHover, setIsHover] = useState<boolean>(false);
-  const [chatFolders, setChatFolders] = useState<ChatHistoryFolderInterface>(
-    {}
-  );
-  const [noChatFolders, setNoChatFolders] = useState<ChatHistoryInterface[]>(
-    []
-  );
+  const [chatFolders, setChatFolders] = useState<ChatHistoryFolderMap>({});
+  const [noChatFolders, setNoChatFolders] = useState<ChatHistoryItem[]>([]);
   const [filter, setFilter] = useState<string>('');
 
   const chatsRef = useRef<ChatInterface[]>(useStore.getState().chats || []);
@@ -37,17 +43,17 @@ const ChatHistoryList = () => {
   const filterRef = useRef<string>(filter);
 
   const updateFolders = useRef(() => {
-    const _folders: ChatHistoryFolderInterface = {};
-    const _noFolders: ChatHistoryInterface[] = [];
+    const _folders: ChatHistoryFolderMap = {};
+    const _noFolders: ChatHistoryItem[] = [];
     const chats = useStore.getState().chats;
     const folders = useStore.getState().folders;
 
-    Object.values(folders)
+    (Object.values(folders) as Folder[])
       .sort((a, b) => a.order - b.order)
       .forEach((f) => (_folders[f.id] = []));
 
     if (chats) {
-      chats.forEach((chat, index) => {
+      chats.forEach((chat: ChatInterface, index: number) => {
         const _filterLowerCase = filterRef.current.toLowerCase();
         const _chatTitle = chat.title.toLowerCase();
         const _chatFolderName = chat.folder
@@ -64,7 +70,7 @@ const ChatHistoryList = () => {
         if (!chat.folder) {
           _noFolders.push({ title: chat.title, index: index, id: chat.id });
         } else {
-          if (!_folders[chat.folder]) _folders[_chatFolderName] = [];
+          if (!_folders[chat.folder]) _folders[chat.folder] = [];
           _folders[chat.folder].push({
             title: chat.title,
             index: index,
@@ -164,7 +170,7 @@ const ChatHistoryList = () => {
     newFolderOrder.splice(destination.index, 0, reorderedFolder);
 
     const updatedFolders: FolderCollection = {};
-    newFolderOrder.forEach((folderId, index) => {
+    newFolderOrder.forEach((folderId: string, index: number) => {
       updatedFolders[folderId] = {
         ...useStore.getState().folders[folderId],
         order: index,

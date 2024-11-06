@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import useStore from '@store/store';
 import { useTranslation } from 'react-i18next';
 import PopupModal from '@components/PopupModal';
-import { ConfigInterface, ModelOptions } from '@type/chat';
+import { ConfigInterface, ModelOptions, ProviderKey } from '@type/chat';
 import DownChevronArrow from '@icon/DownChevronArrow';
 import { modelMaxToken, modelOptions } from '@constants/chat';
+import { providers } from '@type/providers';
 
 const ConfigMenu = ({
   setIsModalOpen,
@@ -47,7 +48,11 @@ const ConfigMenu = ({
       handleClickBackdrop={handleConfirm}
     >
       <div className='p-6 border-b border-gray-200 dark:border-gray-600'>
-        <ModelSelector _model={_model} _setModel={_setModel} />
+        <ModelSelector
+          _model={_model}
+          _setModel={_setModel}
+          _setMaxToken={_setMaxToken}
+        />
         <MaxTokenSlider
           _maxToken={_maxToken}
           _setMaxToken={_setMaxToken}
@@ -74,37 +79,58 @@ const ConfigMenu = ({
 export const ModelSelector = ({
   _model,
   _setModel,
+  _setMaxToken,
 }: {
   _model: ModelOptions;
   _setModel: React.Dispatch<React.SetStateAction<ModelOptions>>;
+  _setMaxToken: React.Dispatch<React.SetStateAction<number>>;
 }) => {
+  const provider = useStore((state) => state.provider);
+  const currentProvider = providers[provider];
   const [dropDown, setDropDown] = useState<boolean>(false);
+
+  // Ensure selected model is valid for current provider
+  useEffect(() => {
+    if (!currentProvider.models.includes(_model)) {
+      _setModel(currentProvider.models[0]);
+    }
+  }, [provider]);
 
   return (
     <div className='mb-4'>
-      <button
-        className='btn btn-neutral btn-small flex gap-1'
-        type='button'
-        onClick={() => setDropDown((prev) => !prev)}
-      >
-        {_model}
-        <DownChevronArrow />
-      </button>
+      <div className='flex gap-2 mb-2'>
+        <select
+          className='btn btn-neutral btn-small'
+          value={provider}
+          onChange={(e) => useStore.getState().setProvider(e.target.value as ProviderKey)}
+        >
+          {Object.values(providers).map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+        <button
+          className='btn btn-neutral btn-small flex gap-1'
+          type='button'
+          onClick={() => setDropDown((prev) => !prev)}
+        >
+          {_model}
+          <DownChevronArrow />
+        </button>
+      </div>
       <div
-        id='dropdown'
         className={`${
           dropDown ? '' : 'hidden'
-        } absolute top-100 bottom-100 z-10 bg-white rounded-lg shadow-xl border-b border-black/10 dark:border-gray-900/50 text-gray-800 dark:text-gray-100 group dark:bg-gray-800 opacity-90`}
+        } absolute z-10 bg-white rounded-lg shadow-xl...`}
       >
-        <ul
-          className='text-sm text-gray-700 dark:text-gray-200 p-0 m-0'
-          aria-labelledby='dropdownDefaultButton'
-        >
-          {modelOptions.map((m) => (
+        <ul className='text-sm text-gray-700 dark:text-gray-200 p-0 m-0'>
+          {currentProvider.models.map((m) => (
             <li
-              className='px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white cursor-pointer'
+              className='px-4 py-2 hover:bg-gray-700 dark:hover:bg-gray-200 cursor-pointer'
               onClick={() => {
-                _setModel(m);
+                _setModel(m as ModelOptions);
+                _setMaxToken(currentProvider.maxTokens[m]);
                 setDropDown(false);
               }}
               key={m}
@@ -129,12 +155,16 @@ export const MaxTokenSlider = ({
 }) => {
   const { t } = useTranslation('model');
   const inputRef = useRef<HTMLInputElement>(null);
+  const provider = useStore((state) => state.provider);
+  const currentProvider = providers[provider];
 
   useEffect(() => {
-    inputRef &&
-      inputRef.current &&
-      _setMaxToken(Number(inputRef.current.value));
-  }, [_model]);
+    // When model changes, set token to the default or max value for that model
+    const maxTokenForModel = currentProvider.maxTokens[_model];
+    if (maxTokenForModel && (!_maxToken || _maxToken > maxTokenForModel)) {
+      _setMaxToken(maxTokenForModel);
+    }
+  }, [_model, provider]);
 
   return (
     <div>
@@ -148,9 +178,9 @@ export const MaxTokenSlider = ({
         onChange={(e) => {
           _setMaxToken(Number(e.target.value));
         }}
-        min={0}
-        max={modelMaxToken[_model]}
-        step={1}
+        min={1000} // Set a reasonable minimum
+        max={currentProvider.maxTokens[_model] || 100000} // Use provider's max token or fallback
+        step={1000} // Larger step for better UX with large numbers
         className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
       />
       <div className='min-w-fit text-gray-500 dark:text-gray-300 text-sm mt-2'>
@@ -159,6 +189,7 @@ export const MaxTokenSlider = ({
     </div>
   );
 };
+
 
 export const TemperatureSlider = ({
   _temperature,

@@ -15,6 +15,7 @@ import {
   LocalStorageInterfaceV6ToV7,
   LocalStorageInterfaceV7oV8,
   LocalStorageInterfaceV8ToV9,
+  LocalStorageInterfaceV9ToV10,
 } from '@type/chat';
 import {
   migrateV0,
@@ -26,6 +27,7 @@ import {
   migrateV6,
   migrateV7,
   migrateV8,
+  migrateV9,
 } from './migrate';
 
 export type StoreState = ChatSlice &
@@ -49,23 +51,24 @@ const useStore = create<StoreState>()(
       ...createPromptSlice(set, get),
     }),
     {
-      name: 'free-chat-gpt',
-      partialize: (state) => ({
-        chats: state.chats,
-        currentChatIndex: state.currentChatIndex,
-        apiKey: state.apiKey,
-        apiEndpoint: state.apiEndpoint,
-        theme: state.theme,
-        autoTitle: state.autoTitle,
-        prompts: state.prompts,
-        defaultChatConfig: state.defaultChatConfig,
-        defaultSystemMessage: state.defaultSystemMessage,
-        hideMenuOptions: state.hideMenuOptions,
-        firstVisit: state.firstVisit,
-        hideSideMenu: state.hideSideMenu,
-        folders: state.folders,
-        enterToSubmit: state.enterToSubmit,
-      }),
+    name: 'free-chat-gpt',
+    partialize: (state) => ({
+      chats: state.chats,
+      currentChatIndex: state.currentChatIndex,
+      apiKeys: state.apiKeys,
+      provider: state.provider,
+      apiEndpoints: state.apiEndpoints,
+      theme: state.theme,
+      autoTitle: state.autoTitle,
+      prompts: state.prompts,
+      defaultChatConfig: state.defaultChatConfig,
+      defaultSystemMessage: state.defaultSystemMessage,
+      hideMenuOptions: state.hideMenuOptions,
+      firstVisit: state.firstVisit,
+      hideSideMenu: state.hideSideMenu,
+      folders: state.folders,
+      enterToSubmit: state.enterToSubmit,
+    }),
       version: 9,
       migrate: (persistedState, version) => {
         switch (version) {
@@ -88,6 +91,8 @@ const useStore = create<StoreState>()(
           case 8:
             migrateV8(persistedState as LocalStorageInterfaceV8ToV9);
             break;
+          case 9:
+            migrateV9(persistedState as LocalStorageInterfaceV9ToV10);
         }
         return persistedState as StoreState;
       },
