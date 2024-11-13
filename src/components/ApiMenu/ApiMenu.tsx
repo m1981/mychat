@@ -2,36 +2,32 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useStore from '@store/store';
 import PopupModal from '@components/PopupModal';
-import DownChevronArrow from '@icon/DownChevronArrow';
-import { provider } from '@type/provider';
+import { providers } from '@constants/providers'; // Change import
 import { ProviderKey } from '@type/chat';
 
-const ApiMenu = ({ 
-  setIsModalOpen 
-}: { 
-  setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>> 
+const ApiMenu = ({
+  setIsModalOpen
+}: {
+  setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>
 }) => {
   const { t } = useTranslation(['main', 'api']);
-  
-  // Global store values
-  const provider = useStore((state) => state.provider);
-  const setProvider = useStore((state) => state.setProvider);
+
   const apiKeys = useStore((state) => state.apiKeys);
   const setApiKey = useStore((state) => state.setApiKey);
   const apiEndpoints = useStore((state) => state.apiEndpoints);
+  const setApiEndpoint = useStore((state) => state.setApiEndpoint);
 
-  // Local state for form
-  const [tempProvider, setTempProvider] = useState<ProviderKey>(provider);
   const [tempApiKeys, setTempApiKeys] = useState<Record<ProviderKey, string>>(apiKeys);
-  const [tempEndpoints, setTempEndpoints] = useState<Record<string, string>>(apiEndpoints);
+  const [tempEndpoints, setTempEndpoints] = useState<Record<ProviderKey, string>>(apiEndpoints);
 
   const handleSave = () => {
-    // Save provider
-    setProvider(tempProvider);
-    
-    // Save API keys
-    (Object.entries(tempApiKeys) as [ProviderKey, string][]).forEach(([provider, key]) => {
-      setApiKey(provider, key);
+    // Save API keys and endpoints
+    Object.entries(tempApiKeys).forEach(([provider, key]) => {
+      setApiKey(provider as ProviderKey, key);
+    });
+
+    Object.entries(tempEndpoints).forEach(([provider, endpoint]) => {
+      setApiEndpoint(provider as ProviderKey, endpoint);
     });
     
     setIsModalOpen(false);

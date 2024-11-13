@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 import useStore from '@store/store';
 import ConfigMenu from '@components/ConfigMenu';
-import { ChatInterface, ConfigInterface } from '@type/chat';
+import { ChatInterface, ChatConfig } from '@type/chat';
 import { _defaultChatConfig } from '@constants/chat';
+import { providers } from '@constants/providers';
 
 const ChatTitle = React.memo(() => {
   const { t } = useTranslation('model');
@@ -22,7 +23,7 @@ const ChatTitle = React.memo(() => {
   const currentChatIndex = useStore((state) => state.currentChatIndex);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
-  const setConfig = (config: ConfigInterface) => {
+  const setConfig = (config: ChatConfig) => {
     const updatedChats: ChatInterface[] = JSON.parse(
       JSON.stringify(useStore.getState().chats)
     );
@@ -30,7 +31,6 @@ const ChatTitle = React.memo(() => {
     setChats(updatedChats);
   };
 
-  // for migrating from old ChatInterface to new ChatInterface (with config)
   useEffect(() => {
     const chats = useStore.getState().chats;
     if (chats && chats.length > 0 && currentChatIndex !== -1 && !config) {
@@ -44,27 +44,28 @@ const ChatTitle = React.memo(() => {
     <>
       <div
         className='flex gap-x-4 gap-y-1 flex-wrap w-full items-center justify-center border-b border-black/10 bg-gray-50 p-3 dark:border-gray-900/50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-pointer'
-        onClick={() => {
-          setIsModalOpen(true);
-        }}
+        onClick={() => setIsModalOpen(true)}
       >
         <div className='text-center p-1 rounded-md bg-gray-300/20 dark:bg-gray-900/10 hover:bg-gray-300/50 dark:hover:bg-gray-900/50'>
-          {t('model')}: {config.model}
+          {t('provider')}: {providers[config.provider].name}
         </div>
         <div className='text-center p-1 rounded-md bg-gray-300/20 dark:bg-gray-900/10 hover:bg-gray-300/50 dark:hover:bg-gray-900/50'>
-          {t('token.label')}: {config.max_tokens}
+          {t('model')}: {config.modelConfig.model}
         </div>
         <div className='text-center p-1 rounded-md bg-gray-300/20 dark:bg-gray-900/10 hover:bg-gray-300/50 dark:hover:bg-gray-900/50'>
-          {t('temperature.label')}: {config.temperature}
+          {t('token.label')}: {config.modelConfig.max_tokens}
         </div>
         <div className='text-center p-1 rounded-md bg-gray-300/20 dark:bg-gray-900/10 hover:bg-gray-300/50 dark:hover:bg-gray-900/50'>
-          {t('topP.label')}: {config.top_p}
+          {t('temperature.label')}: {config.modelConfig.temperature}
         </div>
         <div className='text-center p-1 rounded-md bg-gray-300/20 dark:bg-gray-900/10 hover:bg-gray-300/50 dark:hover:bg-gray-900/50'>
-          {t('presencePenalty.label')}: {config.presence_penalty}
+          {t('topP.label')}: {config.modelConfig.top_p}
         </div>
         <div className='text-center p-1 rounded-md bg-gray-300/20 dark:bg-gray-900/10 hover:bg-gray-300/50 dark:hover:bg-gray-900/50'>
-          {t('frequencyPenalty.label')}: {config.frequency_penalty}
+          {t('presencePenalty.label')}: {config.modelConfig.presence_penalty}
+        </div>
+        <div className='text-center p-1 rounded-md bg-gray-300/20 dark:bg-gray-900/10 hover:bg-gray-300/50 dark:hover:bg-gray-900/50'>
+          {t('frequencyPenalty.label')}: {config.modelConfig.frequency_penalty}
         </div>
       </div>
       {isModalOpen && (
