@@ -5,6 +5,21 @@ export type Role = 'user' | 'assistant' | 'system';
 export const roles: Role[] = ['user', 'assistant', 'system'];
 export type ProviderKey = 'openai' | 'anthropic';
 
+
+export interface ModelConfig {
+  model: ModelOptions;
+  max_tokens: number;
+  temperature: number;
+  presence_penalty: number;
+  top_p: number;
+  frequency_penalty: number;
+}
+
+export interface ChatConfig {
+  provider: ProviderKey;
+  modelConfig: ModelConfig;
+}
+
 export interface MessageInterface {
   role: Role;
   content: string;
@@ -15,18 +30,9 @@ export interface ChatInterface {
   title: string;
   folder?: string;
   messages: MessageInterface[];
-  config: ConfigInterface;
+  config: ChatConfig;
   titleSet: boolean;
   currentChatTokenCount?: number;
-}
-
-export interface ConfigInterface {
-  model: ModelOptions;
-  max_tokens: number;
-  temperature: number;
-  presence_penalty: number;
-  top_p: number;
-  frequency_penalty: number;
 }
 
 export interface ChatHistoryInterface {
@@ -148,19 +154,17 @@ export interface LocalStorageInterfaceV8ToV9 extends LocalStorageInterfaceV7oV8 
 export interface CurrentLocalStorageInterface {
   chats: ChatInterface[];
   currentChatIndex: number;
-  provider: ProviderKey;
   apiKeys: Record<ProviderKey, string>;
   apiEndpoints: Record<ProviderKey, string>;
   theme: Theme;
   autoTitle: boolean;
   prompts: Prompt[];
-  defaultChatConfig: ConfigInterface;
+  defaultChatConfig: ChatConfig;
   defaultSystemMessage: string;
   hideMenuOptions: boolean;
   firstVisit: boolean;
   hideSideMenu: boolean;
   folders: FolderCollection;
-  currentChatTokenCount: number;
   enterToSubmit: boolean;
 }
 

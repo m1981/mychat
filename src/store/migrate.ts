@@ -115,21 +115,31 @@ export const migrateV8 = (persistedState: LocalStorageInterfaceV8ToV9) => {
   });
 };
 
-export const migrateV9 = (state: LocalStorageInterfaceV9ToV10): CurrentLocalStorageInterface => {
+// src/store/migrate.ts
+export const migrateV9 = (
+  state: LocalStorageInterfaceV9ToV10
+): CurrentLocalStorageInterface => {
   return {
     ...state,
-    provider: 'openai',
     apiKeys: {
       openai: state.apiKey || '',
       anthropic: '',
     },
     apiEndpoints: {
-      openai: officialAPIEndpoint,
+      openai: state.apiEndpoint || officialAPIEndpoint,
       anthropic: 'https://api.anthropic.com/v1/messages',
     },
+    chats: state.chats.map(chat => ({
+      ...chat,
+      config: {
+        provider: 'openai',
+        modelConfig: chat.config,
+      },
+    })),
+    defaultChatConfig: {
+      provider: 'openai',
+      modelConfig: state.defaultChatConfig,
+    },
     enterToSubmit: false,
-    apiKey: undefined,
-    apiEndpoint: undefined,
   } as CurrentLocalStorageInterface;
 };
-

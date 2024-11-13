@@ -1,6 +1,7 @@
 import { AIProvider, RequestConfig } from '@type/provider';
 import { MessageInterface, ProviderKey } from '@type/chat';
 import { officialAPIEndpoint } from './../constants/auth';
+
 export const providers: Record<ProviderKey, AIProvider> = {
   openai: {
     id: 'openai',
@@ -53,12 +54,7 @@ export const providers: Record<ProviderKey, AIProvider> = {
       temperature: config.temperature,
       stream: config.stream,
     }),
-    parseStreamingResponse: (chunk) => {
-      if (!chunk?.delta?.text) {
-        return '';
-      }
-      return chunk.delta.text;
-    },
+    parseResponse: (response) => response.content[0].text,
     parseStreamingResponse: (chunk) => chunk.delta?.text || '',
   },
 };

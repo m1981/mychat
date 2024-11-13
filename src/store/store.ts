@@ -56,7 +56,6 @@ const useStore = create<StoreState>()(
       chats: state.chats,
       currentChatIndex: state.currentChatIndex,
       apiKeys: state.apiKeys,
-      provider: state.provider,
       apiEndpoints: state.apiEndpoints,
       theme: state.theme,
       autoTitle: state.autoTitle,
@@ -69,7 +68,7 @@ const useStore = create<StoreState>()(
       folders: state.folders,
       enterToSubmit: state.enterToSubmit,
     }),
-      version: 9,
+      version: 10,
       migrate: (persistedState, version) => {
         switch (version) {
           case 0:

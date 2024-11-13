@@ -10,31 +10,34 @@ import { officialAPIEndpoint } from '@constants/auth';
 import { providers } from '@type/providers';
 
 const useSubmit = () => {
-  const provider = useStore((state) => state.provider) as ProviderKey;
-  const currentProvider = providers[provider];
+  const chats = useStore((state) => state.chats);
+  const currentChat = chats?.[currentChatIndex];
+  const currentProvider = providers[currentChat?.config.provider || 'openai'];
+
+  // Get API credentials based on chat's provider
+  const apiKeys = useStore((state) => state.apiKeys);
+  const apiEndpoints = useStore((state) => state.apiEndpoints);
+  const currentApiKey = apiKeys[currentChat?.config.provider || 'openai'];
+  const currentEndpoint = apiEndpoints[currentChat?.config.provider || 'openai'];
+
   const { t, i18n } = useTranslation('api');
   const error = useStore((state) => state.error);
   const setError = useStore((state) => state.setError);
-  const apiEndpoints = useStore((state) => state.apiEndpoints);
-  const currentEndpoint = apiEndpoints[provider];
-  const apiKeys = useStore((state) => state.apiKeys);
-  const currentApiKey = apiKeys[provider];
   const setGenerating = useStore((state) => state.setGenerating);
   const generating = useStore((state) => state.generating);
   const currentChatIndex = useStore((state) => state.currentChatIndex);
   const setChats = useStore((state) => state.setChats);
 
   const generateTitle = async (message: MessageInterface[]): Promise<string> => {
-    const currentProvider = providers[useStore.getState().provider];
-    const currentApiKey = useStore.getState().apiKeys[currentProvider.id];
-
     const data = await getChatCompletion(
       currentProvider,
       message,
-      _defaultChatConfig,
+      {
+        ...currentChat?.config.modelConfig,
+        stream: false
+      },
       currentApiKey
     );
-
     return data;
   };
 
@@ -58,33 +61,16 @@ const useSubmit = () => {
 
       const messages = limitMessageTokens(
         chats[currentChatIndex].messages,
-        chats[currentChatIndex].config.max_tokens,
-        chats[currentChatIndex].config.model
+        chats[currentChatIndex].config.modelConfig.max_tokens,
+        chats[currentChatIndex].config.modelConfig.model
       );
-      if (messages.length === 0) throw new Error('Message exceed max token!');
 
-      // no api key (free)
-      if (!currentApiKey || currentApiKey.length === 0) {
-        // official endpoint
-        if (currentEndpoint === officialAPIEndpoint) {
-          throw new Error(t('noApiKeyWarning') as string);
-        }
-
-        // other endpoints
-        stream = await getChatCompletionStream(
-          currentProvider,
-          messages,
-          chats[currentChatIndex].config
-        );
-      } else {
-        // using API key
-        stream = await getChatCompletionStream(
-          currentProvider,
-          messages,
-          chats[currentChatIndex].config,
-          currentApiKey
-        );
-      }
+      stream = await getChatCompletionStream(
+        currentProvider,
+        messages,
+        chats[currentChatIndex].config.modelConfig,
+        currentApiKey
+      );
 
       if (stream) {
         if (stream.locked)

@@ -13,6 +13,7 @@ import DownloadChat from './DownloadChat';
 import CloneChat from './CloneChat';
 import ShareGPT from '@components/ShareGPT';
 import { Role } from '@type/chat';
+import { providers } from '@type/providers';
 
 interface Message {
   role: Role;
@@ -20,6 +21,13 @@ interface Message {
 }
 
 const ChatContent = () => {
+  const currentChat = useStore((state) =>
+    state.chats?.[state.currentChatIndex]
+  );
+  const currentProvider = currentChat
+    ? providers[currentChat.config.provider]
+    : providers.openai;
+
   const inputRole = useStore((state) => state.inputRole);
   const setError = useStore((state) => state.setError);
   const messages = useStore((state) =>

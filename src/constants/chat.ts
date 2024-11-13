@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { ChatInterface, ConfigInterface, ModelOptions } from '@type/chat';
+import { ChatConfig, ModelConfig, ChatInterface } from '@type/chat';
 import useStore from '@store/store';
 
 const date = new Date();
@@ -53,7 +53,7 @@ export const modelCost = {
 
 export const defaultUserMaxToken = 16384;
 
-export const _defaultChatConfig: ConfigInterface = {
+export const _defaultModelConfig: ModelConfig = {
   model: defaultModel,
   max_tokens: defaultUserMaxToken,
   temperature: 1,
@@ -62,16 +62,26 @@ export const _defaultChatConfig: ConfigInterface = {
   frequency_penalty: 0,
 };
 
-export const generateDefaultChat = (title?: string, folder?: string): ChatInterface => ({
+export const _defaultChatConfig: ChatConfig = {
+  provider: 'openai',
+  modelConfig: _defaultModelConfig,
+};
+
+export const generateDefaultChat = (
+  title?: string,
+  folder?: string
+): ChatInterface => ({
   id: uuidv4(),
-  title: title ? title : 'New Chat',
-  messages:
-    useStore.getState().defaultSystemMessage.length > 0
-      ? [{ role: 'system', content: useStore.getState().defaultSystemMessage }]
-      : [],
-  config: { ...useStore.getState().defaultChatConfig },
+  title: title || 'New Chat',
+  messages: useStore.getState().defaultSystemMessage
+    ? [{ role: 'system', content: useStore.getState().defaultSystemMessage }]
+    : [],
+  config: {
+    provider: 'openai',
+    modelConfig: { ...useStore.getState().defaultChatConfig.modelConfig },
+  },
   titleSet: false,
-  folder
+  folder,
 });
 
 export const codeLanguageSubset = [
