@@ -10,6 +10,7 @@ import { officialAPIEndpoint } from '@constants/auth';
 import { providers } from '@type/providers';
 
 const useSubmit = () => {
+  const currentChatIndex = useStore((state) => state.currentChatIndex);
   const chats = useStore((state) => state.chats);
   const currentChat = chats?.[currentChatIndex];
   const currentProvider = providers[currentChat?.config.provider || 'openai'];
@@ -25,7 +26,6 @@ const useSubmit = () => {
   const setError = useStore((state) => state.setError);
   const setGenerating = useStore((state) => state.setGenerating);
   const generating = useStore((state) => state.generating);
-  const currentChatIndex = useStore((state) => state.currentChatIndex);
   const setChats = useStore((state) => state.setChats);
 
   const generateTitle = async (message: MessageInterface[]): Promise<string> => {

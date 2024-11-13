@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import useStore from '@store/store';
 import PopupModal from '@components/PopupModal';
 import DownChevronArrow from '@icon/DownChevronArrow';
-import { providers } from '@type/providers';
+import { provider } from '@type/provider';
 import { ProviderKey } from '@type/chat';
 
 const ApiMenu = ({ 

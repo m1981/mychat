@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { ChatConfig, ModelConfig, ChatInterface } from '@type/chat';
+import { ChatConfig, ModelConfig, ChatInterface, ModelOptions } from '@type/chat';
 import useStore from '@store/store';
 
 const date = new Date();
