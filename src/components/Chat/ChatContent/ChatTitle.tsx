@@ -5,7 +5,7 @@ import useStore from '@store/store';
 import ConfigMenu from '@components/ConfigMenu';
 import { ChatInterface, ChatConfig } from '@type/chat';
 import { _defaultChatConfig } from '@constants/chat';
-import { providers } from '@constants/providers';
+import { providers } from '@type/providers';
 
 const ChatTitle = React.memo(() => {
   const { t } = useTranslation('model');

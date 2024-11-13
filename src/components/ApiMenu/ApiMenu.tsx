@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useStore from '@store/store';
 import PopupModal from '@components/PopupModal';
-import { providers } from '@constants/providers'; // Change import
+import { providers } from '@type/providers';
 import { ProviderKey } from '@type/chat';
 
 const ApiMenu = ({
