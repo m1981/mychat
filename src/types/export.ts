@@ -5,8 +5,12 @@ export interface ExportBase {
 }
 
 export interface ExportV1 extends ExportBase {
-  chats?: ChatInterface[];
+  version: 1;
+  chats: ChatInterface[];
   folders: FolderCollection;
 }
 
-export default ExportV1;
+export type Export = ExportV1;
+
+// Legacy export type for backwards compatibility
+export type LegacyExport = ChatInterface[];
