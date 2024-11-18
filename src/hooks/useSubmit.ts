@@ -5,9 +5,10 @@ import { ChatInterface, MessageInterface, ProviderKey} from '@type/chat';
 import { getChatCompletion, getChatCompletionStream } from '@api/api';
 import { parseEventSource } from '@api/helper';
 import { limitMessageTokens } from '@utils/messageUtils';
-import { _defaultChatConfig } from '@constants/chat';
+import { _defaultModelConfig, _defaultChatConfig } from '@constants/chat';
 import { officialAPIEndpoint } from '@constants/auth';
 import { providers } from '@type/providers';
+
 
 const useSubmit = () => {
   const currentChatIndex = useStore((state) => state.currentChatIndex);
@@ -32,10 +33,7 @@ const useSubmit = () => {
     const data = await getChatCompletion(
       currentProvider,
       message,
-      {
-        ...currentChat?.config.modelConfig,
-        stream: false
-      },
+      currentChat?.config.modelConfig || _defaultModelConfig,
       currentApiKey
     );
     return data;
@@ -65,10 +63,11 @@ const useSubmit = () => {
         chats[currentChatIndex].config.modelConfig.model
       );
 
+      const { modelConfig } = chats[currentChatIndex].config;
       stream = await getChatCompletionStream(
         currentProvider,
         messages,
-        chats[currentChatIndex].config.modelConfig,
+        modelConfig,
         currentApiKey
       );
 

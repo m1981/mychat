@@ -16,13 +16,15 @@ import {
   LocalStorageInterfaceV9ToV10,
   CurrentLocalStorageInterface,
 } from '@type/chat';
-import {
-  _defaultChatConfig,
-  defaultModel,
-  defaultUserMaxToken,
-} from '@constants/chat';
+import { ModelConfig } from '@type/chat'
 import { officialAPIEndpoint } from '@constants/auth';
 import defaultPrompts from '@constants/prompt';
+
+import {
+  ChatConfig,
+  ProviderKey,
+} from '@type/chat';
+import { defaultModel, _defaultChatConfig, defaultUserMaxToken } from '@constants/chat';
 
 export const migrateV0 = (persistedState: LocalStorageInterfaceV0ToV1) => {
   persistedState.chats.forEach((chat) => {
@@ -56,10 +58,33 @@ export const migrateV3 = (persistedState: LocalStorageInterfaceV3ToV4) => {
 
 export const migrateV4 = (persistedState: LocalStorageInterfaceV4ToV5) => {
   persistedState.chats.forEach((chat) => {
-    chat.config = {
-      ...chat.config,
-      model: defaultModel,
-    };
+    if (!chat.config) {
+      chat.config = {
+        provider: 'openai',
+        modelConfig: {
+          model: defaultModel,
+          max_tokens: defaultUserMaxToken,
+          temperature: 1,
+          presence_penalty: 0,
+          top_p: 1,
+          frequency_penalty: 0,
+        },
+      };
+    }
+  });
+};
+
+export const migrateV5 = (persistedState: LocalStorageInterfaceV5ToV6) => {
+  persistedState.chats.forEach((chat) => {
+    if (chat.config) {
+      chat.config = {
+        provider: 'openai',
+        modelConfig: {
+          ...chat.config.modelConfig,
+          max_tokens: defaultUserMaxToken,
+        },
+      };
+    }
   });
 };
 
@@ -119,6 +144,16 @@ export const migrateV8 = (persistedState: LocalStorageInterfaceV8ToV9) => {
 export const migrateV9 = (
   state: LocalStorageInterfaceV9ToV10
 ): CurrentLocalStorageInterface => {
+  // Helper function to convert old config to ModelConfig
+  const convertToModelConfig = (oldConfig: any): ModelConfig => ({
+    model: oldConfig.model || defaultModel,
+    max_tokens: oldConfig.max_tokens || defaultUserMaxToken,
+    temperature: oldConfig.temperature || 1,
+    presence_penalty: oldConfig.presence_penalty || 0,
+    top_p: oldConfig.top_p || 1,
+    frequency_penalty: oldConfig.frequency_penalty || 0,
+  });
+
   return {
     ...state,
     apiKeys: {
@@ -133,13 +168,13 @@ export const migrateV9 = (
       ...chat,
       config: {
         provider: 'openai',
-        modelConfig: chat.config,
+        modelConfig: convertToModelConfig(chat.config),
       },
     })),
     defaultChatConfig: {
       provider: 'openai',
-      modelConfig: state.defaultChatConfig,
+      modelConfig: convertToModelConfig(state.defaultChatConfig),
     },
-    enterToSubmit: false,
+    enterToSubmit: state.enterToSubmit ?? false,
   } as CurrentLocalStorageInterface;
 };

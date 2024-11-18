@@ -1,7 +1,7 @@
 import { MessageInterface, ModelConfig, ProviderKey } from '@type/chat';
 
 export interface RequestConfig extends ModelConfig {
-  stream?: boolean;
+  stream: boolean;
 }
 
 export interface AIProvider {

@@ -11,6 +11,8 @@ const ApiMenu = ({
   setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>
 }) => {
   const { t } = useTranslation(['main', 'api']);
+  const currentProvider = useStore((state) => state.defaultChatConfig.provider);
+  const setProvider = useStore((state) => state.setProvider);
 
   const apiKeys = useStore((state) => state.apiKeys);
   const setApiKey = useStore((state) => state.setApiKey);
@@ -40,22 +42,6 @@ const ApiMenu = ({
       handleConfirm={handleSave}
     >
       <div className='p-6 border-b border-gray-200 dark:border-gray-600'>
-        {/* Provider Selection */}
-        <div className='mb-4'>
-          <label className='block text-sm font-medium text-gray-900 dark:text-white'>
-            {t('provider')}
-          </label>
-          <select
-            value={tempProvider}
-            onChange={(e) => setTempProvider(e.target.value as ProviderKey)}
-            className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
-          >
-            {Object.values(providers).map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        </div>
-
         {/* API Keys and Endpoints for each provider */}
         {Object.values(providers).map((p) => (
           <div key={p.id} className='mb-6'>

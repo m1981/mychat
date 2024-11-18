@@ -1,7 +1,7 @@
 import { StoreSlice } from './store';
 import { Theme } from '@type/theme';
-import { ConfigInterface } from '@type/chat';
-import { _defaultChatConfig, _defaultSystemMessage } from '@constants/chat';
+import { ChatConfig, ProviderKey } from '@type/chat';
+import { _defaultModelConfig, _defaultChatConfig, _defaultSystemMessage } from '@constants/chat';
 
 export interface ConfigSlice {
   openConfig: boolean;
@@ -15,6 +15,7 @@ export interface ConfigSlice {
   setOpenConfig: (openConfig: boolean) => void;
   setTheme: (theme: Theme) => void;
   setAutoTitle: (autoTitle: boolean) => void;
+  setProvider: (provider: ProviderKey) => void;
   setDefaultChatConfig: (config: ChatConfig) => void;
   setDefaultSystemMessage: (defaultSystemMessage: string) => void;
   setHideMenuOptions: (hideMenuOptions: boolean) => void;
@@ -31,7 +32,7 @@ export const createConfigSlice: StoreSlice<ConfigSlice> = (set, get) => ({
   enterToSubmit: true,
   defaultChatConfig: {
     provider: 'openai',
-    modelConfig: _defaultChatConfig,
+    modelConfig: _defaultModelConfig,
   },
   defaultSystemMessage: _defaultSystemMessage,
   setOpenConfig: (openConfig: boolean) => {
@@ -56,6 +57,15 @@ export const createConfigSlice: StoreSlice<ConfigSlice> = (set, get) => ({
     set((prev: ConfigSlice) => ({
       ...prev,
       defaultChatConfig: config,
+    }));
+  },
+  setProvider: (provider: ProviderKey) => {
+    set((prev) => ({
+      ...prev,
+      defaultChatConfig: {
+        ...prev.defaultChatConfig,
+        provider,
+      },
     }));
   },
   setDefaultSystemMessage: (defaultSystemMessage: string) => {

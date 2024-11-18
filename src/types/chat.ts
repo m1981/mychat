@@ -7,7 +7,7 @@ export type ProviderKey = 'openai' | 'anthropic';
 
 
 export interface ModelConfig {
-  model: ModelOptions;
+  model: string;
   max_tokens: number;
   temperature: number;
   presence_penalty: number;
@@ -133,7 +133,7 @@ export interface LocalStorageInterfaceV6ToV7 {
   theme: Theme;
   autoTitle: boolean;
   prompts: Prompt[];
-  defaultChatConfig: ConfigInterface;
+  defaultChatConfig: ChatConfig;
   defaultSystemMessage: string;
   hideMenuOptions: boolean;
   firstVisit: boolean;
