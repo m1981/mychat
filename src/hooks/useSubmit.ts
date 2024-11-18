@@ -79,52 +79,59 @@ const useSubmit = () => {
         const reader = stream.getReader();
         let reading = true;
         let partial = '';
-        while (reading && useStore.getState().generating) {
-          const { done, value } = await reader.read();
-          console.log('Raw value:', value);
-          const result = parseEventSource(
-            partial + new TextDecoder().decode(value)
-          );
-          console.log('Parsed result:', result);
-          partial = '';
+while (reading && useStore.getState().generating) {
+  const { done, value } = await reader.read();
 
-          if (result === '[DONE]' || done) {
-            reading = false;
-          } else {
-            const resultString = result.reduce((output: string, curr) => {
-              if (typeof curr === 'string') {
-                partial += curr;
-              } else {
-                try {
-                  const content = currentProvider.parseStreamingResponse(curr); // Changed from result to curr
-                  if (content) output += content;
-                } catch (err) {
-                  console.error('Error parsing streaming response:', err);
-                  console.log('Current chunk:', curr);
-                  // Continue without throwing to maintain the stream
-                  return output;
-                }
-              }
-              return output;
-            }, '');
+  if (done) {
+    reading = false;
+    break;
+  }
 
-            const updatedChats: ChatInterface[] = JSON.parse(
-              JSON.stringify(useStore.getState().chats)
-            );
-            const updatedMessages = updatedChats[currentChatIndex].messages;
-            updatedMessages[updatedMessages.length - 1].content += resultString;
-            setChats(updatedChats);
-          }
-        }
-        if (useStore.getState().generating) {
-          reader.cancel('Cancelled by user');
-        } else {
-          reader.cancel('Generation completed');
-        }
-        reader.releaseLock();
-        stream.cancel();
+  if (value) {
+    const decodedValue = new TextDecoder().decode(value);
+    console.log('Decoded chunk:', decodedValue);
+
+    const result = parseEventSource(decodedValue);
+    console.log('Parsed events:', result);
+
+    const resultString = result.reduce((output: string, curr) => {
+      if (curr === '[DONE]') {
+        reading = false;
+        return output;
       }
 
+      try {
+        const content = currentProvider.parseStreamingResponse(curr);
+        console.log('Parsed content:', content); // Debug log
+        return output + (content || '');
+      } catch (err) {
+        console.error('Error parsing streaming response:', err);
+        return output;
+      }
+    }, '');
+
+    console.log('Final result string:', resultString); // Debug log
+
+    if (resultString) {
+      const updatedChats: ChatInterface[] = JSON.parse(
+        JSON.stringify(useStore.getState().chats)
+      );
+      const updatedMessages = updatedChats[currentChatIndex].messages;
+      updatedMessages[updatedMessages.length - 1].content += resultString;
+      setChats(updatedChats);
+      console.log('Updated chat content:', updatedMessages[updatedMessages.length - 1].content); // Debug log
+    }
+  }
+}
+
+if (useStore.getState().generating) {
+  reader.cancel('Cancelled by user');
+} else {
+  reader.cancel('Generation completed');
+}
+reader.releaseLock();
+stream.cancel();
+ }
       // generate title for new chats
       const currChats = useStore.getState().chats;
       if (

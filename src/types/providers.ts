@@ -61,17 +61,16 @@ export const providers: Record<ProviderKey, AIProvider> = {
       }
       return '';
     },
-    parseStreamingResponse: (chunk) => {
-      console.log('Parsing streaming chunk:', chunk); // Add this for debugging
 
-      // Handle different event types from Anthropic's streaming response
-      if (chunk.type === 'message') {
-        return chunk.content?.[0]?.text || '';
-      }
-      if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-        return chunk.delta.text;
-      }
-      return '';
-    },
+parseStreamingResponse: (chunk) => {
+    // Handle content block delta events
+    if (chunk.type === 'content_block_delta' &&
+        chunk.delta?.type === 'text_delta' &&
+        typeof chunk.delta.text === 'string') {
+      return chunk.delta.text;
+    }
+
+  return '';
+ },
   },
 };

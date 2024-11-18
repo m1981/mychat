@@ -54,6 +54,7 @@ export const getChatCompletionStream = async (
     if (provider.id === 'anthropic') {
       headers['x-api-key'] = apiKey;
       headers['anthropic-version'] = '2023-06-01';
+      headers['accept'] = 'text/event-stream';
       headers['anthropic-dangerous-direct-browser-access'] = 'true';
     } else {
       headers['Authorization'] = `Bearer ${apiKey}`;
