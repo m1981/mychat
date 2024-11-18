@@ -54,8 +54,8 @@ export const modelCost = {
 export const defaultUserMaxToken = 16384;
 
 export const _defaultModelConfig: ModelConfig = {
-  model: defaultModel,
-  max_tokens: defaultUserMaxToken,
+  model: 'gpt-4o',
+  max_tokens: 16384,
   temperature: 1,
   presence_penalty: 0,
   top_p: 1,
