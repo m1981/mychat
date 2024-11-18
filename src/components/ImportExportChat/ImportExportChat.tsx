@@ -168,6 +168,8 @@ const ImportChat = () => {
 
 const ExportChat = () => {
   const { t } = useTranslation();
+  const chats = useStore.getState().chats;
+  const folders = useStore.getState().folders;
 
   return (
     <div className='mt-6'>
@@ -178,9 +180,9 @@ const ExportChat = () => {
         className='btn btn-small btn-primary'
         onClick={() => {
           const fileData: Export = {
-            chats: useStore.getState().chats,
-            folders: useStore.getState().folders,
             version: 1,
+            chats: chats || [], // Provide empty array as fallback
+            folders: folders || {},
           };
           downloadFile(fileData, getToday());
         }}

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import PopupModal from '@components/PopupModal';
 import { ChatConfig, ModelConfig, ProviderKey } from '@type/chat';
@@ -14,29 +14,17 @@ const ConfigMenu = ({
   config: ChatConfig;
   setConfig: (config: ChatConfig) => void;
 }) => {
-  const [tempProvider, setTempProvider] = useState<ProviderKey>(config.provider);
-  const [tempModelConfig, setTempModelConfig] = useState<ModelConfig>(config.modelConfig);
+  const [_provider, _setProvider] = useState<ProviderKey>(config.provider);
+  const [_modelConfig, _setModelConfig] = useState<ModelConfig>(config.modelConfig);
   const { t } = useTranslation('model');
 
   const handleConfirm = () => {
     setConfig({
-      provider: tempProvider,
-      modelConfig: tempModelConfig,
+      provider: _provider,
+      modelConfig: _modelConfig,
     });
     setIsModalOpen(false);
   };
-
-  // When provider changes, ensure model is valid for new provider
-  useEffect(() => {
-    const currentProvider = providers[tempProvider];
-    if (!currentProvider.models.includes(tempModelConfig.model)) {
-      setTempModelConfig({
-        ...tempModelConfig,
-        model: currentProvider.models[0],
-        max_tokens: currentProvider.maxTokens[currentProvider.models[0]],
-      });
-    }
-  }, [tempProvider]);
 
   return (
     <PopupModal
@@ -45,140 +33,129 @@ const ConfigMenu = ({
       handleConfirm={handleConfirm}
     >
       <div className='p-6 border-b border-gray-200 dark:border-gray-600'>
-        <ProviderSelector
-          provider={tempProvider}
-          setProvider={setTempProvider}
-        />
         <ModelSelector
-          provider={tempProvider}
-          modelConfig={tempModelConfig}
-          setModelConfig={setTempModelConfig}
+          provider={_provider}
+          setProvider={_setProvider}
+          modelConfig={_modelConfig}
+          setModelConfig={_setModelConfig}
         />
         <MaxTokenSlider
-          modelConfig={tempModelConfig}
-          setModelConfig={setTempModelConfig}
-          provider={tempProvider}
+          provider={_provider}
+          modelConfig={_modelConfig}
+          setModelConfig={_setModelConfig}
         />
         <TemperatureSlider
-          modelConfig={tempModelConfig}
-          setModelConfig={setTempModelConfig}
+          modelConfig={_modelConfig}
+          setModelConfig={_setModelConfig}
         />
         <TopPSlider
-          modelConfig={tempModelConfig}
-          setModelConfig={setTempModelConfig}
+          modelConfig={_modelConfig}
+          setModelConfig={_setModelConfig}
         />
         <PresencePenaltySlider
-          modelConfig={tempModelConfig}
-          setModelConfig={setTempModelConfig}
+          modelConfig={_modelConfig}
+          setModelConfig={_setModelConfig}
         />
         <FrequencyPenaltySlider
-          modelConfig={tempModelConfig}
-          setModelConfig={setTempModelConfig}
+          modelConfig={_modelConfig}
+          setModelConfig={_setModelConfig}
         />
       </div>
     </PopupModal>
   );
 };
 
-const ProviderSelector = ({
+export const ModelSelector = ({
   provider,
   setProvider,
-}: {
-  provider: ProviderKey;
-  setProvider: (provider: ProviderKey) => void;
-}) => {
-  const { t } = useTranslation('model');
-
-  return (
-    <div className='mb-4'>
-      <label className='block text-sm font-medium text-gray-900 dark:text-white'>
-        {t('provider')}
-      </label>
-      <select
-        value={provider}
-        onChange={(e) => setProvider(e.target.value as ProviderKey)}
-        className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
-      >
-        {Object.values(providers).map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-};
-
-const ModelSelector = ({
-  provider,
   modelConfig,
   setModelConfig,
 }: {
   provider: ProviderKey;
+  setProvider: (provider: ProviderKey) => void;
   modelConfig: ModelConfig;
   setModelConfig: (config: ModelConfig) => void;
 }) => {
   const [dropDown, setDropDown] = useState<boolean>(false);
   const currentProvider = providers[provider];
+  const { t } = useTranslation('model');
+
+  // Ensure selected model is valid for current provider
+  useEffect(() => {
+    if (!currentProvider.models.includes(modelConfig.model)) {
+      setModelConfig({
+        ...modelConfig,
+        model: currentProvider.models[0],
+        max_tokens: currentProvider.maxTokens[currentProvider.models[0]],
+      });
+    }
+  }, [provider]);
 
   return (
     <div className='mb-4'>
-      <label className='block text-sm font-medium text-gray-900 dark:text-white mb-2'>
-        Model
-      </label>
-      <div className='relative'>
+      <div className='flex gap-2 mb-2'>
+        <select
+          className='btn btn-neutral btn-small'
+          value={provider}
+          onChange={(e) => setProvider(e.target.value as ProviderKey)}
+        >
+          {Object.values(providers).map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
         <button
-          className='btn btn-neutral btn-small flex gap-1 w-full justify-between'
+          className='btn btn-neutral btn-small flex gap-1'
           type='button'
           onClick={() => setDropDown((prev) => !prev)}
         >
           {modelConfig.model}
           <DownChevronArrow />
         </button>
-        <div
-          className={`${
-            dropDown ? '' : 'hidden'
-          } absolute z-10 w-full bg-white rounded-lg shadow-xl dark:bg-gray-700`}
-        >
-          <ul className='text-sm text-gray-700 dark:text-gray-200'>
-            {currentProvider.models.map((model) => (
-              <li
-                key={model}
-                className='px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer'
-                onClick={() => {
-                  setModelConfig({
-                    ...modelConfig,
-                    model,
-                    max_tokens: currentProvider.maxTokens[model],
-                  });
-                  setDropDown(false);
-                }}
-              >
-                {model}
-              </li>
-            ))}
-          </ul>
-        </div>
+      </div>
+      <div
+        className={`${
+          dropDown ? '' : 'hidden'
+        } absolute z-10 bg-white rounded-lg shadow-xl...`}
+      >
+        <ul className='text-sm text-gray-700 dark:text-gray-200 p-0 m-0'>
+          {currentProvider.models.map((model) => (
+            <li
+              className='px-4 py-2 hover:bg-gray-700 dark:hover:bg-gray-200 cursor-pointer'
+              onClick={() => {
+                setModelConfig({
+                  ...modelConfig,
+                  model,
+                  max_tokens: currentProvider.maxTokens[model],
+                });
+                setDropDown(false);
+              }}
+              key={model}
+            >
+              {model}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
 };
 
-const MaxTokenSlider = ({
+export const MaxTokenSlider = ({
+  provider,
   modelConfig,
   setModelConfig,
-  provider,
 }: {
+  provider: ProviderKey;
   modelConfig: ModelConfig;
   setModelConfig: (config: ModelConfig) => void;
-  provider: ProviderKey;
 }) => {
   const { t } = useTranslation('model');
   const currentProvider = providers[provider];
-  const maxTokens = currentProvider.maxTokens[modelConfig.model];
 
   return (
-    <div className='mb-4'>
+    <div>
       <label className='block text-sm font-medium text-gray-900 dark:text-white'>
         {t('token.label')}: {modelConfig.max_tokens}
       </label>
@@ -192,18 +169,18 @@ const MaxTokenSlider = ({
           });
         }}
         min={1000}
-        max={maxTokens}
+        max={currentProvider.maxTokens[modelConfig.model] || 100000}
         step={1000}
         className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
       />
-      <div className='text-xs text-gray-500 dark:text-gray-300 mt-2'>
+      <div className='min-w-fit text-gray-500 dark:text-gray-300 text-sm mt-2'>
         {t('token.description')}
       </div>
     </div>
   );
 };
 
-const TemperatureSlider = ({
+export const TemperatureSlider = ({
   modelConfig,
   setModelConfig,
 }: {
@@ -213,7 +190,7 @@ const TemperatureSlider = ({
   const { t } = useTranslation('model');
 
   return (
-    <div className='mb-4'>
+    <div className='mt-5 pt-5 border-t border-gray-500'>
       <label className='block text-sm font-medium text-gray-900 dark:text-white'>
         {t('temperature.label')}: {modelConfig.temperature}
       </label>
@@ -231,14 +208,14 @@ const TemperatureSlider = ({
         step={0.1}
         className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
       />
-      <div className='text-xs text-gray-500 dark:text-gray-300 mt-2'>
+      <div className='min-w-fit text-gray-500 dark:text-gray-300 text-sm mt-2'>
         {t('temperature.description')}
       </div>
     </div>
   );
 };
 
-const TopPSlider = ({
+export const TopPSlider = ({
   modelConfig,
   setModelConfig,
 }: {
@@ -266,14 +243,14 @@ const TopPSlider = ({
         step={0.05}
         className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
       />
-      <div className='text-xs text-gray-500 dark:text-gray-300 mt-2'>
+      <div className='min-w-fit text-gray-500 dark:text-gray-300 text-sm mt-2'>
         {t('topP.description')}
       </div>
     </div>
   );
 };
 
-const PresencePenaltySlider = ({
+export const PresencePenaltySlider = ({
   modelConfig,
   setModelConfig,
 }: {
@@ -308,7 +285,7 @@ const PresencePenaltySlider = ({
   );
 };
 
-const FrequencyPenaltySlider = ({
+export const FrequencyPenaltySlider = ({
   modelConfig,
   setModelConfig,
 }: {
