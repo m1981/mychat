@@ -51,8 +51,13 @@ export const getChatCompletionStream = async (
   };
 
   if (apiKey) {
-    headers[provider.id === 'anthropic' ? 'x-api-key' : 'Authorization'] = 
-      provider.id === 'anthropic' ? apiKey : `Bearer ${apiKey}`;
+    if (provider.id === 'anthropic') {
+      headers['x-api-key'] = apiKey;
+      headers['anthropic-version'] = '2023-06-01';
+      headers['anthropic-dangerous-direct-browser-access'] = 'true';
+    } else {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
   }
 
   const endpoint = useStore.getState().apiEndpoints[provider.id];

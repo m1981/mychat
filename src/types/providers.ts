@@ -9,7 +9,7 @@ export const providers: Record<ProviderKey, AIProvider> = {
     endpoints: [officialAPIEndpoint],
     models: ['gpt-4o'],
     maxTokens: {
-      'gpt-4o': 100000,
+      'gpt-4o': 8192,
     },
     costs: {
       'gpt-4o': { price: 0.01, unit: 1000 },
@@ -54,7 +54,24 @@ export const providers: Record<ProviderKey, AIProvider> = {
       temperature: config.temperature,
       stream: config.stream,
     }),
-    parseResponse: (response) => response.content[0].text,
-    parseStreamingResponse: (chunk) => chunk.delta?.text || '',
+    parseResponse: (response) => {
+      // Handle non-streaming response
+      if (response.content && Array.isArray(response.content)) {
+        return response.content[0].text;
+      }
+      return '';
+    },
+    parseStreamingResponse: (chunk) => {
+      console.log('Parsing streaming chunk:', chunk); // Add this for debugging
+
+      // Handle different event types from Anthropic's streaming response
+      if (chunk.type === 'message') {
+        return chunk.content?.[0]?.text || '';
+      }
+      if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
+        return chunk.delta.text;
+      }
+      return '';
+    },
   },
 };
