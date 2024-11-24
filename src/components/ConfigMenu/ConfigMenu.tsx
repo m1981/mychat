@@ -154,6 +154,9 @@ export const MaxTokenSlider = ({
   const { t } = useTranslation('model');
   const currentProvider = providers[provider];
 
+  // Add these constants for min tokens
+  const MIN_TOKENS = 100;
+
   return (
     <div>
       <label className='block text-sm font-medium text-gray-900 dark:text-white'>
@@ -168,9 +171,9 @@ export const MaxTokenSlider = ({
             max_tokens: Number(e.target.value),
           });
         }}
-        min={1000}
-        max={currentProvider.maxTokens[modelConfig.model] || 100000}
-        step={1000}
+        min={MIN_TOKENS} // Changed from 1000
+        max={currentProvider.maxTokens[modelConfig.model]}
+        step={100} // Changed from 1000 for finer control
         className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
       />
       <div className='min-w-fit text-gray-500 dark:text-gray-300 text-sm mt-2'>

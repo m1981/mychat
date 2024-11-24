@@ -11,11 +11,11 @@ import { roles } from '@type/chat';
 import { _defaultChatConfig, _defaultModelConfig } from '@constants/chat';
 import { ExportV1, LegacyExport } from '@type/export';
 import { providers } from '@type/providers';
-import { ProviderKey } from '@type/provider';
+import { ProviderKey } from '@type/chat';
 
 const enforceTokenLimit = (config: ChatConfig): ChatConfig => {
   try {
-    const provider = providers[config.provider as ProviderKey];
+    const provider = providers[config.provider];
     if (!provider) return _defaultChatConfig; // Fallback to default if provider is invalid
 
     const maxAllowedTokens = provider.maxTokens[config.modelConfig.model];
@@ -70,7 +70,7 @@ const isLegacyConfig = (config: any): config is LegacyConfig => {
 // Convert legacy config to new format
 const convertLegacyConfig = (oldConfig: LegacyConfig | undefined): ChatConfig => {
   const config = {
-    provider: 'openai',
+    provider: 'openai' as ProviderKey,
     modelConfig: {
       model: oldConfig?.model || _defaultModelConfig.model,
       max_tokens: oldConfig?.max_tokens || _defaultModelConfig.max_tokens,
