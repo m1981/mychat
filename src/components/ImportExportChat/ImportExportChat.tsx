@@ -1,3 +1,4 @@
+//src/components/ImportExportChat/ImportExportChat.tsx
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { v4 as uuidv4 } from 'uuid';
@@ -57,47 +58,79 @@ const ImportChat = () => {
     success: boolean;
   } | null>(null);
 
-    const handleFileUpload = () => {
+  const handleFileUpload = () => {
     if (!inputRef || !inputRef.current) return;
     const file = inputRef.current.files?.[0];
 
-    if (file) {
-      const reader = new FileReader();
+    if (!file) {
+      setAlert({
+        message: 'Please select a file to import',
+        success: false,
+      });
+      return;
+    }
 
-      reader.onload = (event) => {
+    if (file.size > 100 * 1024 * 1024) { // 100MB limit
+      setAlert({
+        message: 'File size too large. Maximum size is 100MB',
+        success: false,
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      try {
         const data = event.target?.result as string;
+        if (!data) throw new Error('Failed to read file');
 
-        try {
-          const parsedData = JSON.parse(data);
-          if (isLegacyImport(parsedData)) {
-            if (validateAndFixChats(parsedData)) {
-              // Handle legacy import
-              handleLegacyImport(parsedData);
-              setAlert({ message: 'Successfully imported!', success: true });
-            } else {
-              setAlert({
-                message: 'Invalid chats data format',
-                success: false,
-              });
-            }
-          } else if (validateExportV1(parsedData)) {
-            // Handle v1 import
-            handleV1Import(parsedData);
-            setAlert({ message: 'Successfully imported!', success: true });
+        const parsedData = JSON.parse(data);
+
+        if (isLegacyImport(parsedData)) {
+          if (validateAndFixChats(parsedData)) {
+            handleLegacyImport(parsedData);
+            setAlert({
+              message: 'Successfully imported! Note: Some settings may have been adjusted to match current constraints.',
+              success: true,
+            });
           } else {
             setAlert({
-              message: 'Invalid format',
+              message: 'Invalid chat data format. Please check the file content.',
               success: false,
             });
           }
-        } catch (error: unknown) {
-          setAlert({ message: (error as Error).message, success: false });
+        } else if (validateExportV1(parsedData)) {
+          handleV1Import(parsedData);
+          setAlert({
+            message: 'Successfully imported! Note: Some settings may have been adjusted to match current constraints.',
+            success: true,
+          });
+        } else {
+          setAlert({
+            message: 'Invalid file format. Please use a valid export file.',
+            success: false,
+          });
         }
-      };
+      } catch (error: unknown) {
+        console.error('Import error:', error);
+        setAlert({
+          message: `Import failed: ${(error as Error).message || 'Unknown error'}`,
+          success: false,
+        });
+      }
+    };
 
-      reader.readAsText(file);
-    }
+    reader.onerror = () => {
+      setAlert({
+        message: 'Failed to read file',
+        success: false,
+      });
+    };
+
+    reader.readAsText(file);
   };
+
 
   const handleLegacyImport = (parsedData: ChatInterface[]) => {
     // Convert legacy configs if needed

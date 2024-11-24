@@ -9,7 +9,7 @@ export const providers: Record<ProviderKey, AIProvider> = {
     endpoints: [officialAPIEndpoint],
     models: ['gpt-4o'],
     maxTokens: {
-      'gpt-4o': 8192,
+      'gpt-4o': 128000,
     },
     costs: {
       'gpt-4o': { price: 0.01, unit: 1000 },
@@ -39,7 +39,7 @@ export const providers: Record<ProviderKey, AIProvider> = {
     endpoints: ['https://api.anthropic.com/v1/messages'],
     models: ['claude-3-5-sonnet-20241022'],
     maxTokens: {
-      'claude-3-5-sonnet-20241022': 100000,
+      'claude-3-5-sonnet-20241022': 8192,
     },
     costs: {
       'claude-3-5-sonnet-20241022': { price: 0.01, unit: 1000 },
