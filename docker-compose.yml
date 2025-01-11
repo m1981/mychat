@@ -1,26 +1,46 @@
+# docker-compose.yml
 version: '3.8'
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
-      target: base
+      target: development
     ports:
       - "5173:5173"
     volumes:
       - .:/home/appuser/app
-      - /home/appuser/app/node_modules
+      - node_modules:/home/appuser/app/node_modules  # Named volume
+      - yarn-cache:/usr/local/share/.cache/yarn
     environment:
       - CHOKIDAR_USEPOLLING=true
-    command: ["sh", "-c", "ls -al && yarn dev --host"]
+    command: ["sh", "-c", "yarn install && yarn dev --host"]  # Added yarn install
+    network_mode: "host"
+#    command: [ "yarn", "vite", "--host", "0.0.0.0", "--port", "5173" ]
 
 
   build:
     build:
       context: .
       dockerfile: Dockerfile
-      target: base
+      target: development
     volumes:
       - .:/home/appuser/app
-      - /home/appuser/app/node_modules
-    command: ["sh", "-c", "yarn run build"]
+      - node_modules:/home/appuser/app/node_modules  # Named volume
+    command: ["sh", "-c", "yarn install && yarn run build"]  # Added yarn install
+
+  # Dedicated service for package management
+  yarn:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - .:/home/appuser/app
+      - node_modules:/home/appuser/app/node_modules  # Named volume
+      - yarn-cache:/usr/local/share/.cache/yarn
+    command: ["sh", "-c", "yarn install && cp yarn.lock /home/appuser/app/"]
+
+volumes:
+  node_modules:
+  yarn-cache:
