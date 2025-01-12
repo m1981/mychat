@@ -1,30 +1,8 @@
 #!/bin/bash
 
-# Function to get relative path
-get_relative_path() {
-    local target="$1"
-    local base="$(pwd)"
-
-    # Remove common prefix
-    local prefix="$(echo "$base" | sed 's/[^/]//g')"  # Count leading slashes
-    local result="$target"
-
-    # While in different directory, add ../
-    while [ "${target#$base/}" = "${target}" ]; do
-        if [ "$base" = "/" ]; then
-            echo "$target"
-            return
-        fi
-        result="../${result#$base/}"
-        base="$(dirname "$base")"
-    done
-
-    echo "./${target#$base/}"
-}
-
 process_file() {
     local file="$1"
-    local relative_file=$(get_relative_path "$file")
+    local relative_file=$(basename "$file")
 
     echo "$relative_file"
 

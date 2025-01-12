@@ -1,4 +1,4 @@
-./tests/test-file.tsx
+test-file.tsx
 import ConfigMenu from '@components/ConfigMenu';
 import PopupModal from '@components/PopupModal';
 import React from 'react';
