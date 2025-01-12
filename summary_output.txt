@@ -1,8 +1,4 @@
-🔮 Ultimate File Analysis Magic V11 - FINAL PERFECTION ✨
-==================================================
-📁 Analyzing: ./test-file.tsxx
-==================================================
-Imports:
+./test-file.tsxx
 import ConfigMenu from '@components/ConfigMenu';
 import PopupModal from '@components/PopupModal';
 import React from 'react';
@@ -22,42 +18,26 @@ import { persist } from 'zustand/middleware';
 import { providers } from '@type/providers';
 import { shallow } from 'zustand/shallow';
 import { useTranslation } from 'react-i18next';
-
-Types and Interfaces:
 export interface ChatSlice {
 export type StoreState = ChatSlice &
 export type StoreSlice<T> = (
-
-Hook Definitions:
 const useInitialiseNewChat = () => {
-
-React Hooks Usage:
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [tempApiKeys, setTempApiKeys] = useState<Record<ProviderKey, string>>(apiKeys);
   const [tempEndpoints, setTempEndpoints] = useState<Record<ProviderKey, string>>(apiEndpoints);
-
-Custom Hooks Usage:
   const { t } = useTranslation('model');
   const { t } = useTranslation(['main', 'api']);
-
-Store Selectors:
   const apiEndpoints = useStore((state) => state.apiEndpoints);
   const apiKeys = useStore((state) => state.apiKeys);
   const currentChatIndex = useStore((state) => state.currentChatIndex);
   const currentProvider = useStore((state) => state.defaultChatConfig.provider);
-
-Store Actions:
   const setApiEndpoint = useStore((state) => state.setApiEndpoint);
   const setApiKey = useStore((state) => state.setApiKey);
   const setChats = useStore((state) => state.setChats);
   const setCurrentChatIndex = useStore((state) => state.setCurrentChatIndex);
   const setProvider = useStore((state) => state.setProvider);
-
-Store State Access:
       JSON.stringify(useStore.getState().chats)
     const chats = useStore.getState().chats;
-
-Exported Items:
 export const createChatSlice: StoreSlice<ChatSlice> = (set, get) => ({
 export const auth = getAuth(app);
 export default app;
@@ -65,9 +45,6 @@ export default useInitialiseNewChat;
 export default ApiMenu;
 export default useStore;
 export default ChatTitle;
-
-Component Definitions:
 const ChatTitle = React.memo(() => {
-
 
 
