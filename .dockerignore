@@ -1,2 +1,5 @@
 /.github
 /Dockerfile
+node_modules
+coverage
+

@@ -7,29 +7,24 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - .:/home/appuser/app
-      - node_modules:/home/appuser/app/node_modules
-      - yarn-cache:/usr/local/share/.cache/yarn
+      - .:/app:cached  # Source code for hot reloading
+      - /app/node_modules  # Keep modules in container
     environment:
-      - CHOKIDAR_USEPOLLING=true
-    command: ["sh", "-c", "yarn install && yarn dev --host"]
+      - NODE_ENV=development
+    command: yarn dev
     network_mode: "host"
 
-  yarn:
+  yarn-tools:
     build:
       context: .
-      dockerfile: Dockerfile
       target: development
     volumes:
-      - .:/home/appuser/app
-      - node_modules:/home/appuser/app/node_modules
-      - yarn-cache:/usr/local/share/.cache/yarn
-    command: >
-      sh -c "
-        yarn install &&
-        cp yarn.lock /home/appuser/app/ &&
-        chown -R node_modules
-      "
-volumes:
-  node_modules:
-  yarn-cache:
+      - .:/app:cached
+      - /app/node_modules
+    profiles: ["tools"]
+    environment:
+      - NODE_ENV=test
+    # Usage:
+    # docker compose --profile tools run yarn-tools yarn deps:update
+    # docker compose --profile tools run yarn-tools yarn deps:force
+    # docker compose --profile tools run yarn-tools yarn test
