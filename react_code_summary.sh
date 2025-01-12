@@ -1,19 +1,33 @@
 #!/bin/bash
 
-if [ -z "$1" ]; then
-    echo "Error: Please provide a directory path"
-    echo "Usage: $0 <directory_path>"
-    exit 1
-fi
+# Function to get relative path
+get_relative_path() {
+    local target="$1"
+    local base="$(pwd)"
 
-if [ ! -d "$1" ]; then
-    echo "Error: '$1' is not a valid directory"
-    exit 1
-fi
+    # Remove common prefix
+    local prefix="$(echo "$base" | sed 's/[^/]//g')"  # Count leading slashes
+    local result="$target"
+
+    # While in different directory, add ../
+    while [ "${target#$base/}" = "${target}" ]; do
+        if [ "$base" = "/" ]; then
+            echo "$target"
+            return
+        fi
+        result="../${result#$base/}"
+        base="$(dirname "$base")"
+    done
+
+    echo "./${target#$base/}"
+}
 
 process_file() {
     local file="$1"
-    echo "$file"
+    local relative_file=$(get_relative_path "$file")
+
+    echo "$relative_file"
+
     # Imports
     local imports=$(grep -E "^import .*" "$file" | sed 's/ as .*//g' | awk '!seen[$NF]++' | sort -u)
     if [ ! -z "$imports" ]; then
@@ -77,7 +91,70 @@ process_file() {
     echo -e "\n"
 }
 
-# Find all .ts and .tsx files and process them
-find "$1" -type f \( -name "*.ts" -o -name "*.tsx" \) -not -path "*/node_modules/*" | while read -r file; do
-    process_file "$file"
-done
+# Function to run regression test
+run_regression_test() {
+    local test_dir=$(realpath "$1")  # Changed from $2 to $1
+    echo "🧪 Running regression test from directory: $test_dir"
+
+    # Check if test directory exists
+    if [ ! -d "$test_dir" ]; then
+        echo "❌ Error: Test directory doesn't exist: $test_dir"
+        exit 1
+    fi
+
+    # Check if test files exist in the specified directory
+    if [ ! -f "$test_dir/test-file.tsx" ] || [ ! -f "$test_dir/summary_output.txt" ]; then
+        echo "❌ Error: Missing test files in $test_dir (test-file.tsx or summary_output.txt)"
+        exit 1
+    fi
+
+    # Create temporary output file
+    local temp_output=$(mktemp)
+
+    # Run analysis on test file
+    process_file "$test_dir/test-file.tsx" > "$temp_output"
+
+    # Compare with reference output
+    echo "=== Diff ================================================="
+    if diff -u "$test_dir/summary_output.txt" "$temp_output"; then
+        echo "✅ Regression test passed! Output matches reference."
+        rm "$temp_output"
+        exit 0
+    else
+        echo "❌ Regression test failed! See differences above."
+        rm "$temp_output"
+        exit 1
+    fi
+}
+
+
+# Main script logic
+if [ "$1" == "--test" ]; then
+    if [ -z "$2" ]; then
+        echo "Error: Please provide test directory path"
+        echo "Usage for test: $0 --test <test_directory_path>"
+        exit 1
+    fi
+    run_regression_test "$2"  # Pass the second argument to run_regression_test
+else
+    if [ -z "$1" ]; then
+        echo "Error: Please provide a directory path or use --test"
+        echo "Usage: $0 <directory_path>"
+        echo "       $0 --test <test_directory_path>"
+        exit 1
+    fi
+
+    if [ ! -d "$1" ]; then
+        echo "Error: '$1' is not a valid directory"
+        exit 1
+    fi
+
+    echo "🔮 Ultimate File Analysis Magic V11 - FINAL PERFECTION ✨"
+    echo "=================================================="
+
+    # Find all .ts and .tsx files and process them
+    find "$1" -type f \( -name "*.ts" -o -name "*.tsx" \) -not -path "*/node_modules/*" | while read -r file; do
+        process_file "$file"
+    done
+fi
+
