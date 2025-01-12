@@ -1,4 +1,7 @@
 import React, { useEffect } from 'react';
+import { auth } from '@src/config/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { UserProfile } from '@components/Auth/UserProfile';
 import useStore from '@store/store';
 import i18n from './i18n';
 
@@ -10,11 +13,20 @@ import { ChatInterface } from '@type/chat';
 import { Theme } from '@type/theme';
 
 function App() {
+  const setUser = useStore((state) => state.setUser);
   const initialiseNewChat = useInitialiseNewChat();
   const setChats = useStore((state) => state.setChats);
   const setTheme = useStore((state) => state.setTheme);
   const setApiKey = useStore((state) => state.setApiKey);
   const setCurrentChatIndex = useStore((state) => state.setCurrentChatIndex);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+
+    return () => unsubscribe();
+  }, [setUser]);
 
   useEffect(() => {
     document.documentElement.lang = i18n.language;
@@ -73,6 +85,7 @@ function App() {
 
   return (
     <div className='overflow-hidden w-full h-full relative'>
+      <UserProfile />
       <Menu />
       <Chat />
     </div>
