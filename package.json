@@ -10,10 +10,16 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "type-check": "tsc --noEmit",
+    "quick-build": "vite build --mode development",
     "preview": "vite preview",
     "electron": "concurrently -k \"BROWSER=none yarn dev\" \"wait-on tcp:5173 && electron .\"",
     "pack": "yarn build && electron-builder --dir",
-    "make": "yarn build && electron-builder"
+    "make": "yarn build && electron-builder",
+    "docker:add": "docker-compose run --rm yarn yarn add",
+    "docker:remove": "docker-compose run --rm yarn yarn remove",
+    "docker:upgrade": "docker-compose run --rm yarn yarn upgrade",
+    "docker:sync": "docker-compose run --rm yarn && docker-compose restart app"
   },
   "build": {
     "appId": "better-chatgpt",
@@ -40,10 +46,14 @@
     }
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "openai": "^4.73.0",
     "@dqbd/tiktoken": "^1.0.2",
     "electron-is-dev": "^2.0.0",
     "electron-squirrel-startup": "^1.0.0",
     "electron-updater": "^5.3.0",
+    "firebase": "11.0.1",
+    "@firebase/auth": "^1.8.1",
     "html2canvas": "^1.4.1",
     "i18next": "^22.4.11",
     "i18next-browser-languagedetector": "^7.0.1",
@@ -58,6 +68,8 @@
     "react-i18next": "^12.2.0",
     "react-markdown": "^8.0.5",
     "react-scroll-to-bottom": "^4.2.0",
+    "react-beautiful-dnd": "^13.1.1",
+    "@types/react-beautiful-dnd": "^13.1.8",
     "rehype-highlight": "^6.0.0",
     "rehype-katex": "^6.0.2",
     "remark-gfm": "^3.0.1",

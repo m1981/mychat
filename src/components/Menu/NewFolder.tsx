@@ -15,9 +15,9 @@ const NewFolder = () => {
     let folderIndex = 1;
     let name = `New Folder ${folderIndex}`;
 
-    const folders = useStore.getState().folders;
+    const folders: FolderCollection = useStore.getState().folders;
 
-    while (Object.values(folders).some((folder) => folder.name === name)) {
+    while (Object.values(folders).some((folder: Folder) => folder.name === name)) {
       folderIndex += 1;
       name = `New Folder ${folderIndex}`;
     }
@@ -34,7 +34,7 @@ const NewFolder = () => {
       order: 0,
     };
 
-    Object.values(updatedFolders).forEach((folder) => {
+    Object.values(updatedFolders).forEach((folder: Folder) => {
       folder.order += 1;
     });
 

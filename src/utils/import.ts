@@ -1,90 +1,187 @@
+// src/utils/import.ts
 import { v4 as uuidv4 } from 'uuid';
-
 import {
   ChatInterface,
-  ConfigInterface,
+  ChatConfig,
   FolderCollection,
   MessageInterface,
+  Role,
 } from '@type/chat';
 import { roles } from '@type/chat';
-import {
-  defaultModel,
-  modelOptions,
-  _defaultChatConfig,
-} from '@constants/chat';
-import { ExportV1 } from '@type/export';
+import { _defaultChatConfig, _defaultModelConfig } from '@constants/chat';
+import { ExportV1, LegacyExport } from '@type/export';
+import { providers } from '@type/providers';
+import { ProviderKey } from '@type/chat';
 
-export const validateAndFixChats = (chats: any): chats is ChatInterface[] => {
-  if (!Array.isArray(chats)) return false;
+const enforceTokenLimit = (config: ChatConfig): ChatConfig => {
+  try {
+    const provider = providers[config.provider];
+    if (!provider) return _defaultChatConfig; // Fallback to default if provider is invalid
 
-  for (const chat of chats) {
-    if (!(typeof chat.id === 'string')) chat.id = uuidv4();
-    if (!(typeof chat.title === 'string') || chat.title === '') return false;
+    const maxAllowedTokens = provider.maxTokens[config.modelConfig.model];
+    if (!maxAllowedTokens) {
+      // If model doesn't exist in provider's config, use default model
+      return {
+        ...config,
+        modelConfig: {
+          ..._defaultModelConfig,
+          model: _defaultModelConfig.model,
+        },
+      };
+    }
 
-    if (chat.titleSet === undefined) chat.titleSet = false;
-    if (!(typeof chat.titleSet === 'boolean')) return false;
-
-    if (!validateMessage(chat.messages)) return false;
-    if (!validateAndFixChatConfig(chat.config)) return false;
+    return {
+      ...config,
+      modelConfig: {
+        ...config.modelConfig,
+        max_tokens: Math.min(
+          Math.max(1, config.modelConfig.max_tokens || _defaultModelConfig.max_tokens),
+          maxAllowedTokens
+        ),
+      },
+    };
+  } catch (error) {
+    console.warn('Error enforcing token limit:', error);
+    return _defaultChatConfig;
   }
-
-  return true;
 };
 
-const validateMessage = (messages: MessageInterface[]) => {
+
+// Type guard for legacy config format
+interface LegacyConfig {
+  model: string;
+  max_tokens: number;
+  temperature: number;
+  presence_penalty: number;
+  top_p: number;
+  frequency_penalty: number;
+}
+
+const isLegacyConfig = (config: any): config is LegacyConfig => {
+  return (
+    config &&
+    typeof config === 'object' &&
+    'model' in config &&
+    'max_tokens' in config &&
+    'temperature' in config
+  );
+};
+
+// Convert legacy config to new format
+const convertLegacyConfig = (oldConfig: LegacyConfig | undefined): ChatConfig => {
+  const config = {
+    provider: 'openai' as ProviderKey,
+    modelConfig: {
+      model: oldConfig?.model || _defaultModelConfig.model,
+      max_tokens: oldConfig?.max_tokens || _defaultModelConfig.max_tokens,
+      temperature: oldConfig?.temperature || _defaultModelConfig.temperature,
+      presence_penalty: oldConfig?.presence_penalty || _defaultModelConfig.presence_penalty,
+      top_p: oldConfig?.top_p || _defaultModelConfig.top_p,
+      frequency_penalty: oldConfig?.frequency_penalty || _defaultModelConfig.frequency_penalty,
+    }
+  };
+
+  // Enforce token limits for converted config
+  return enforceTokenLimit(config);
+};
+
+export const validateAndFixChats = (chats: any[]): chats is ChatInterface[] => {
+  if (!Array.isArray(chats)) return false;
+
+  try {
+    for (const chat of chats) {
+      // Validate basic properties
+      if (!(typeof chat.id === 'string')) chat.id = uuidv4();
+      if (!(typeof chat.title === 'string') || chat.title.trim() === '') {
+        chat.title = 'Imported Chat';
+      }
+      if (chat.titleSet === undefined) chat.titleSet = false;
+      if (!(typeof chat.titleSet === 'boolean')) chat.titleSet = false;
+
+      // Ensure messages exist and are valid
+      if (!Array.isArray(chat.messages)) {
+        chat.messages = [];
+      }
+
+      if (!validateMessages(chat.messages)) {
+        return false;
+      }
+
+      // Handle config conversion and validation
+      try {
+        if (!chat.config) {
+          chat.config = _defaultChatConfig;
+        } else if (!chat.config.provider || !chat.config.modelConfig) {
+          if (isLegacyConfig(chat.config)) {
+            chat.config = convertLegacyConfig(chat.config);
+          } else {
+            chat.config = _defaultChatConfig;
+          }
+        }
+
+        chat.config = enforceTokenLimit(chat.config);
+      } catch (error) {
+        console.warn('Error processing chat config:', error);
+        chat.config = _defaultChatConfig;
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error validating chats:', error);
+    return false;
+  }
+};
+
+const validateMessages = (messages: MessageInterface[]): boolean => {
   if (!Array.isArray(messages)) return false;
+  
   for (const message of messages) {
     if (!(typeof message.content === 'string')) return false;
     if (!(typeof message.role === 'string')) return false;
-    if (!roles.includes(message.role)) return false;
+    if (!roles.includes(message.role as Role)) return false;
   }
-  return true;
-};
-
-const validateAndFixChatConfig = (config: ConfigInterface) => {
-  if (config === undefined) config = _defaultChatConfig;
-  if (!(typeof config === 'object')) return false;
-
-  if (!config.temperature) config.temperature = _defaultChatConfig.temperature;
-  if (!(typeof config.temperature === 'number')) return false;
-
-  if (!config.presence_penalty)
-    config.presence_penalty = _defaultChatConfig.presence_penalty;
-  if (!(typeof config.presence_penalty === 'number')) return false;
-
-  if (!config.top_p) config.top_p = _defaultChatConfig.top_p;
-  if (!(typeof config.top_p === 'number')) return false;
-
-  if (!config.frequency_penalty)
-    config.frequency_penalty = _defaultChatConfig.frequency_penalty;
-  if (!(typeof config.frequency_penalty === 'number')) return false;
-
-  if (!config.model) config.model = defaultModel;
-  if (!modelOptions.includes(config.model)) return false;
 
   return true;
 };
 
-export const isLegacyImport = (importedData: any) => {
-  if (Array.isArray(importedData)) return true;
-  return false;
+export const isLegacyImport = (importedData: any): importedData is LegacyExport => {
+  return (
+    Array.isArray(importedData) && 
+    importedData.every(item => 
+      typeof item === 'object' &&
+      'id' in item &&
+      'title' in item &&
+      'messages' in item
+    )
+  );
 };
 
-export const validateFolders = (
-  folders: FolderCollection
-): folders is FolderCollection => {
+export const validateFolders = (folders: FolderCollection): folders is FolderCollection => {
   if (typeof folders !== 'object') return false;
 
   for (const folderId in folders) {
-    if (typeof folders[folderId].id !== 'string') return false;
-    if (typeof folders[folderId].name !== 'string') return false;
-    if (typeof folders[folderId].order !== 'number') return false;
-    if (typeof folders[folderId].expanded !== 'boolean') return false;
+    const folder = folders[folderId];
+    if (!folder) return false;
+    if (typeof folder.id !== 'string') return false;
+    if (typeof folder.name !== 'string') return false;
+    if (typeof folder.order !== 'number') return false;
+    if (typeof folder.expanded !== 'boolean') return false;
   }
 
   return true;
 };
 
-export const validateExportV1 = (data: ExportV1): data is ExportV1 => {
-  return validateAndFixChats(data.chats) && validateFolders(data.folders);
+export const validateExportV1 = (data: any): data is ExportV1 => {
+  return (
+    data &&
+    typeof data === 'object' &&
+    'version' in data &&
+    data.version === 1 &&
+    'chats' in data &&
+    Array.isArray(data.chats) &&
+    validateAndFixChats(data.chats) &&
+    'folders' in data &&
+    validateFolders(data.folders)
+  );
 };

@@ -1,0 +1,50 @@
+test-file.tsx
+import ConfigMenu from '@components/ConfigMenu';
+import PopupModal from '@components/PopupModal';
+import React from 'react';
+import useStore from '@store/store';
+import { AuthSlice, createAuthSlice } from './auth-slice';
+import { ChatInterface, FolderCollection, MessageInterface } from '@type/chat';
+import { ChatSlice, createChatSlice } from './chat-slice';
+import { ConfigSlice, createConfigSlice } from './config-slice';
+import { InputSlice, createInputSlice } from './input-slice';
+import { PromptSlice, createPromptSlice } from './prompt-slice';
+import { StoreApi, create } from 'zustand';
+import { StoreSlice } from './store';
+import { generateDefaultChat } from '@constants/chat';
+import { getAuth } from 'firebase/auth';
+import { initializeApp } from 'firebase/app';
+import { persist } from 'zustand/middleware';
+import { providers } from '@type/providers';
+import { shallow } from 'zustand/shallow';
+import { useTranslation } from 'react-i18next';
+export interface ChatSlice {
+export type StoreState = ChatSlice &
+export type StoreSlice<T> = (
+const useInitialiseNewChat = () => {
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [tempApiKeys, setTempApiKeys] = useState<Record<ProviderKey, string>>(apiKeys);
+  const [tempEndpoints, setTempEndpoints] = useState<Record<ProviderKey, string>>(apiEndpoints);
+  const { t } = useTranslation('model');
+  const { t } = useTranslation(['main', 'api']);
+  const apiEndpoints = useStore((state) => state.apiEndpoints);
+  const apiKeys = useStore((state) => state.apiKeys);
+  const currentChatIndex = useStore((state) => state.currentChatIndex);
+  const currentProvider = useStore((state) => state.defaultChatConfig.provider);
+  const setApiEndpoint = useStore((state) => state.setApiEndpoint);
+  const setApiKey = useStore((state) => state.setApiKey);
+  const setChats = useStore((state) => state.setChats);
+  const setCurrentChatIndex = useStore((state) => state.setCurrentChatIndex);
+  const setProvider = useStore((state) => state.setProvider);
+      JSON.stringify(useStore.getState().chats)
+    const chats = useStore.getState().chats;
+export const createChatSlice: StoreSlice<ChatSlice> = (set, get) => ({
+export const auth = getAuth(app);
+export default app;
+export default useInitialiseNewChat;
+export default ApiMenu;
+export default useStore;
+export default ChatTitle;
+const ChatTitle = React.memo(() => {
+
+

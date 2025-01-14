@@ -5,26 +5,6 @@ import { InputSlice, createInputSlice } from './input-slice';
 import { AuthSlice, createAuthSlice } from './auth-slice';
 import { ConfigSlice, createConfigSlice } from './config-slice';
 import { PromptSlice, createPromptSlice } from './prompt-slice';
-import {
-  LocalStorageInterfaceV0ToV1,
-  LocalStorageInterfaceV1ToV2,
-  LocalStorageInterfaceV2ToV3,
-  LocalStorageInterfaceV3ToV4,
-  LocalStorageInterfaceV4ToV5,
-  LocalStorageInterfaceV5ToV6,
-  LocalStorageInterfaceV6ToV7,
-  LocalStorageInterfaceV7oV8,
-} from '@type/chat';
-import {
-  migrateV0,
-  migrateV1,
-  migrateV2,
-  migrateV3,
-  migrateV4,
-  migrateV5,
-  migrateV6,
-  migrateV7,
-} from './migrate';
 
 export type StoreState = ChatSlice &
   InputSlice &
@@ -48,11 +28,12 @@ const useStore = create<StoreState>()(
     }),
     {
       name: 'free-chat-gpt',
+      version: 1, // Reset to version 1
       partialize: (state) => ({
         chats: state.chats,
         currentChatIndex: state.currentChatIndex,
-        apiKey: state.apiKey,
-        apiEndpoint: state.apiEndpoint,
+        apiKeys: state.apiKeys,
+        apiEndpoints: state.apiEndpoints,
         theme: state.theme,
         autoTitle: state.autoTitle,
         prompts: state.prompts,
@@ -64,29 +45,6 @@ const useStore = create<StoreState>()(
         folders: state.folders,
         enterToSubmit: state.enterToSubmit,
       }),
-      version: 8,
-      migrate: (persistedState, version) => {
-        switch (version) {
-          case 0:
-            migrateV0(persistedState as LocalStorageInterfaceV0ToV1);
-          case 1:
-            migrateV1(persistedState as LocalStorageInterfaceV1ToV2);
-          case 2:
-            migrateV2(persistedState as LocalStorageInterfaceV2ToV3);
-          case 3:
-            migrateV3(persistedState as LocalStorageInterfaceV3ToV4);
-          case 4:
-            migrateV4(persistedState as LocalStorageInterfaceV4ToV5);
-          case 5:
-            migrateV5(persistedState as LocalStorageInterfaceV5ToV6);
-          case 6:
-            migrateV6(persistedState as LocalStorageInterfaceV6ToV7);
-          case 7:
-            migrateV7(persistedState as LocalStorageInterfaceV7oV8);
-            break;
-        }
-        return persistedState as StoreState;
-      },
     }
   )
 );

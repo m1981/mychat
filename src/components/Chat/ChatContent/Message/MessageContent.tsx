@@ -12,23 +12,14 @@ import rehypeHighlight from 'rehype-highlight';
 import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import useStore from '@store/store';
-
-import EditIcon2 from '@icon/EditIcon2';
-import DeleteIcon from '@icon/DeleteIcon';
-import TickIcon from '@icon/TickIcon';
-import CrossIcon from '@icon/CrossIcon';
-import RefreshIcon from '@icon/RefreshIcon';
-import DownChevronArrow from '@icon/DownChevronArrow';
-import CopyIcon from '@icon/CopyIcon';
-
 import useSubmit from '@hooks/useSubmit';
-
 import { ChatInterface } from '@type/chat';
 
 import PopupModal from '@components/PopupModal';
 import TokenCount from '@components/TokenCount';
 import CommandPrompt from './CommandPrompt';
 import CodeBlock from './CodeBlock';
+import MessageActionButtons from './MessageActionButtons'; // Make sure to import this
 import { codeLanguageSubset } from '@constants/chat';
 
 const MessageContent = ({
@@ -43,7 +34,7 @@ const MessageContent = ({
   sticky?: boolean;
 }) => {
   const [isEdit, setIsEdit] = useState<boolean>(sticky);
-
+  const [isEditing, setIsEditing] = useState<boolean>(false);
   return (
     <div className='relative flex flex-col gap-1 md:gap-3 lg:w-[calc(100%-115px)]'>
       <div className='flex flex-grow flex-col gap-3'></div>
@@ -53,6 +44,8 @@ const MessageContent = ({
           setIsEdit={setIsEdit}
           messageIndex={messageIndex}
           sticky={sticky}
+          isEditing={isEditing}
+          setIsEditing={setIsEditing}          
         />
       ) : (
         <ContentView
@@ -60,6 +53,7 @@ const MessageContent = ({
           content={content}
           setIsEdit={setIsEdit}
           messageIndex={messageIndex}
+          setIsEditing={setIsEditing}
         />
       )}
     </div>
@@ -72,11 +66,13 @@ const ContentView = React.memo(
     content,
     setIsEdit,
     messageIndex,
+    setIsEditing,
   }: {
     role: string;
     content: string;
     setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
     messageIndex: number;
+    setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
   }) => {
     const { handleSubmit } = useSubmit();
     const [isDelete, setIsDelete] = useState<boolean>(false);
@@ -94,6 +90,11 @@ const ContentView = React.memo(
       setChats(updatedChats);
     };
 
+    const handleEdit = () => {
+      setIsEdit(true);
+      setIsEditing(true);
+    };
+    
     const handleMove = (direction: 'up' | 'down') => {
       const updatedChats: ChatInterface[] = JSON.parse(
         JSON.stringify(useStore.getState().chats)
@@ -134,6 +135,18 @@ const ContentView = React.memo(
 
     return (
       <>
+        <MessageActionButtons
+          isDelete={isDelete}
+          role={role}
+          messageIndex={messageIndex}
+          setIsEdit={handleEdit}
+          setIsDelete={setIsDelete}
+          handleRefresh={handleRefresh}
+          handleMoveUp={() => handleMove('up')}
+          handleMoveDown={() => handleMove('down')}
+          handleDelete={handleDelete}
+          handleCopy={handleCopy}
+        />
         <div className='markdown prose w-full md:max-w-full break-words dark:prose-invert dark share-gpt-message'>
           <ReactMarkdown
             remarkPlugins={[
@@ -160,38 +173,18 @@ const ContentView = React.memo(
             {content}
           </ReactMarkdown>
         </div>
-        <div className='flex justify-end gap-2 w-full mt-2'>
-          {isDelete || (
-            <>
-              {!useStore.getState().generating &&
-                role === 'assistant' &&
-                messageIndex === lastMessageIndex && (
-                  <RefreshButton onClick={handleRefresh} />
-                )}
-              {messageIndex !== 0 && <UpButton onClick={handleMoveUp} />}
-              {messageIndex !== lastMessageIndex && (
-                <DownButton onClick={handleMoveDown} />
-              )}
-
-              <CopyButton onClick={handleCopy} />
-              <EditButton setIsEdit={setIsEdit} />
-              <DeleteButton setIsDelete={setIsDelete} />
-            </>
-          )}
-          {isDelete && (
-            <>
-              <button
-                className='p-1 hover:text-white'
-                onClick={() => setIsDelete(false)}
-              >
-                <CrossIcon />
-              </button>
-              <button className='p-1 hover:text-white' onClick={handleDelete}>
-                <TickIcon />
-              </button>
-            </>
-          )}
-        </div>
+        <MessageActionButtons
+          isDelete={isDelete}
+          role={role}
+          messageIndex={messageIndex}
+          setIsEdit={setIsEdit}
+          setIsDelete={setIsDelete}
+          handleRefresh={handleRefresh}
+          handleMoveUp={() => handleMove('up')}
+          handleMoveDown={() => handleMove('down')}
+          handleDelete={handleDelete}
+          handleCopy={handleCopy}
+        />
       </>
     );
   }
@@ -224,108 +217,20 @@ const p = React.memo(
   }
 );
 
-const MessageButton = ({
-  onClick,
-  icon,
-}: {
-  onClick: React.MouseEventHandler<HTMLButtonElement>;
-  icon: React.ReactElement;
-}) => {
-  return (
-    <div className='text-gray-400 flex self-end lg:self-center justify-center gap-3 md:gap-4  visible'>
-      <button
-        className='p-1 rounded-md hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 disabled:dark:hover:text-gray-400 md:invisible md:group-hover:visible'
-        onClick={onClick}
-      >
-        {icon}
-      </button>
-    </div>
-  );
-};
-
-const EditButton = React.memo(
-  ({
-    setIsEdit,
-  }: {
-    setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
-  }) => {
-    return (
-      <MessageButton icon={<EditIcon2 />} onClick={() => setIsEdit(true)} />
-    );
-  }
-);
-
-const DeleteButton = React.memo(
-  ({
-    setIsDelete,
-  }: {
-    setIsDelete: React.Dispatch<React.SetStateAction<boolean>>;
-  }) => {
-    return (
-      <MessageButton icon={<DeleteIcon />} onClick={() => setIsDelete(true)} />
-    );
-  }
-);
-
-const DownButton = ({
-  onClick,
-}: {
-  onClick: React.MouseEventHandler<HTMLButtonElement>;
-}) => {
-  return <MessageButton icon={<DownChevronArrow />} onClick={onClick} />;
-};
-const UpButton = ({
-  onClick,
-}: {
-  onClick: React.MouseEventHandler<HTMLButtonElement>;
-}) => {
-  return (
-    <MessageButton
-      icon={<DownChevronArrow className='rotate-180' />}
-      onClick={onClick}
-    />
-  );
-};
-
-const RefreshButton = ({
-  onClick,
-}: {
-  onClick: React.MouseEventHandler<HTMLButtonElement>;
-}) => {
-  return <MessageButton icon={<RefreshIcon />} onClick={onClick} />;
-};
-
-const CopyButton = ({
-  onClick,
-}: {
-  onClick: React.MouseEventHandler<HTMLButtonElement>;
-}) => {
-  const [isCopied, setIsCopied] = useState<boolean>(false);
-
-  return (
-    <MessageButton
-      icon={isCopied ? <TickIcon /> : <CopyIcon />}
-      onClick={(e) => {
-        onClick(e);
-        setIsCopied(true);
-        window.setTimeout(() => {
-          setIsCopied(false);
-        }, 3000);
-      }}
-    />
-  );
-};
-
 const EditView = ({
   content,
   setIsEdit,
   messageIndex,
   sticky,
+  isEditing,
+  setIsEditing,  
 }: {
   content: string;
   setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
   messageIndex: number;
   sticky?: boolean;
+  isEditing: boolean;
+  setIsEditing: React.Dispatch<React.SetStateAction<boolean>>; 
 }) => {
   const inputRole = useStore((state) => state.inputRole);
   const setChats = useStore((state) => state.setChats);
@@ -383,6 +288,7 @@ const EditView = ({
       setIsEdit(false);
     }
     setChats(updatedChats);
+    setIsEditing(false);
   };
 
   const { handleSubmit } = useSubmit();
@@ -407,6 +313,7 @@ const EditView = ({
       setIsEdit(false);
     }
     setChats(updatedChats);
+    setIsEditing(false);
     handleSubmit();
   };
 
@@ -424,6 +331,11 @@ const EditView = ({
     }
   }, []);
 
+  useEffect(() => {
+    setIsEditing(true);
+    return () => setIsEditing(false);
+  }, []);
+  
   return (
     <>
       <div
@@ -452,6 +364,7 @@ const EditView = ({
         setIsModalOpen={setIsModalOpen}
         setIsEdit={setIsEdit}
         _setContent={_setContent}
+        isEditing={isEditing}
       />
       {isModalOpen && (
         <PopupModal
@@ -473,6 +386,7 @@ const EditViewButtons = React.memo(
     setIsModalOpen,
     setIsEdit,
     _setContent,
+    isEditing,
   }: {
     sticky?: boolean;
     handleSaveAndSubmit: () => void;
@@ -480,19 +394,28 @@ const EditViewButtons = React.memo(
     setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
     _setContent: React.Dispatch<React.SetStateAction<string>>;
+    isEditing: boolean;
   }) => {
     const { t } = useTranslation();
-    const generating = useStore.getState().generating;
+    const generating = useStore((state) => state.generating);
+
+    const buttonContainerClass = sticky
+      ? 'flex-1 text-center mt-2 flex justify-center'
+      : 'fixed border-t z-50 bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 flex justify-center space-x-2 shadow-lg';
+
+    // For sticky buttons, we should disable them when generating or when another message is being edited
+    const disableSticky = generating || (isEditing && !sticky);
 
     return (
-      <div className='flex'>
-        <div className='flex-1 text-center mt-2 flex justify-center'>
+      <div className={`flex ${sticky ? '' : 'flex-col'}`}>
+        <div className={buttonContainerClass}>
           {sticky && (
             <button
               className={`btn relative mr-2 btn-primary ${
-                generating ? 'cursor-not-allowed opacity-40' : ''
+                disableSticky ? 'cursor-not-allowed opacity-40' : ''
               }`}
               onClick={handleSaveAndSubmit}
+              disabled={disableSticky}
             >
               <div className='flex items-center justify-center gap-2'>
                 {t('saveAndSubmit')}
@@ -504,39 +427,40 @@ const EditViewButtons = React.memo(
             className={`btn relative mr-2 ${
               sticky
                 ? `btn-neutral ${
-                    generating ? 'cursor-not-allowed opacity-40' : ''
+                    disableSticky ? 'cursor-not-allowed opacity-40' : ''
                   }`
                 : 'btn-primary'
             }`}
             onClick={handleSave}
+            disabled={sticky && disableSticky}
           >
             <div className='flex items-center justify-center gap-2'>
               {t('save')}
             </div>
           </button>
 
-          {sticky || (
-            <button
-              className='btn relative mr-2 btn-neutral'
-              onClick={() => {
-                !generating && setIsModalOpen(true);
-              }}
-            >
-              <div className='flex items-center justify-center gap-2'>
-                {t('saveAndSubmit')}
-              </div>
-            </button>
-          )}
+          {!sticky && (
+            <>
+              <button
+                className='btn relative mr-2 btn-neutral'
+                onClick={() => {
+                  !generating && setIsModalOpen(true);
+                }}
+              >
+                <div className='flex items-center justify-center gap-2'>
+                  {t('saveAndSubmit')}
+                </div>
+              </button>
 
-          {sticky || (
-            <button
-              className='btn relative btn-neutral'
-              onClick={() => setIsEdit(false)}
-            >
-              <div className='flex items-center justify-center gap-2'>
-                {t('cancel')}
-              </div>
-            </button>
+              <button
+                className='btn relative btn-neutral'
+                onClick={() => setIsEdit(false)}
+              >
+                <div className='flex items-center justify-center gap-2'>
+                  {t('cancel')}
+                </div>
+              </button>
+            </>
           )}
         </div>
         {sticky && <TokenCount />}

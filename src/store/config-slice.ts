@@ -1,21 +1,22 @@
 import { StoreSlice } from './store';
 import { Theme } from '@type/theme';
-import { ConfigInterface } from '@type/chat';
-import { _defaultChatConfig, _defaultSystemMessage } from '@constants/chat';
+import { ChatConfig, ProviderKey } from '@type/chat';
+import { _defaultModelConfig, _defaultChatConfig, _defaultSystemMessage } from '@constants/chat';
 
 export interface ConfigSlice {
   openConfig: boolean;
   theme: Theme;
   autoTitle: boolean;
   hideMenuOptions: boolean;
-  defaultChatConfig: ConfigInterface;
+  defaultChatConfig: ChatConfig;
   defaultSystemMessage: string;
   hideSideMenu: boolean;
   enterToSubmit: boolean;
   setOpenConfig: (openConfig: boolean) => void;
   setTheme: (theme: Theme) => void;
   setAutoTitle: (autoTitle: boolean) => void;
-  setDefaultChatConfig: (defaultChatConfig: ConfigInterface) => void;
+  setProvider: (provider: ProviderKey) => void;
+  setDefaultChatConfig: (config: ChatConfig) => void;
   setDefaultSystemMessage: (defaultSystemMessage: string) => void;
   setHideMenuOptions: (hideMenuOptions: boolean) => void;
   setHideSideMenu: (hideSideMenu: boolean) => void;
@@ -29,7 +30,10 @@ export const createConfigSlice: StoreSlice<ConfigSlice> = (set, get) => ({
   hideSideMenu: false,
   autoTitle: false,
   enterToSubmit: true,
-  defaultChatConfig: _defaultChatConfig,
+  defaultChatConfig: {
+    provider: 'openai',
+    modelConfig: _defaultModelConfig,
+  },
   defaultSystemMessage: _defaultSystemMessage,
   setOpenConfig: (openConfig: boolean) => {
     set((prev: ConfigSlice) => ({
@@ -49,10 +53,19 @@ export const createConfigSlice: StoreSlice<ConfigSlice> = (set, get) => ({
       autoTitle: autoTitle,
     }));
   },
-  setDefaultChatConfig: (defaultChatConfig: ConfigInterface) => {
+  setDefaultChatConfig: (config: ChatConfig) => {
     set((prev: ConfigSlice) => ({
       ...prev,
-      defaultChatConfig: defaultChatConfig,
+      defaultChatConfig: config,
+    }));
+  },
+  setProvider: (provider: ProviderKey) => {
+    set((prev) => ({
+      ...prev,
+      defaultChatConfig: {
+        ...prev.defaultChatConfig,
+        provider,
+      },
     }));
   },
   setDefaultSystemMessage: (defaultSystemMessage: string) => {

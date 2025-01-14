@@ -1,7 +1,7 @@
 import { ipcRenderer } from 'electron';
 import React, { useEffect, useRef, useState } from 'react';
 import useStore from '@store/store';
-
+import { Draggable } from 'react-beautiful-dnd';
 import DownChevronArrow from '@icon/DownChevronArrow';
 import FolderIcon from '@icon/FolderIcon';
 import {
@@ -21,14 +21,14 @@ import RefreshIcon from '@icon/RefreshIcon';
 
 import { folderColorOptions } from '@constants/color';
 
-const ChatFolder = ({
-  folderChats,
-  folderId,
-}: {
+
+interface ChatFolderProps {
   folderChats: ChatHistoryInterface[];
   folderId: string;
-}) => {
-  const folderName = useStore((state) => state.folders[folderId].name);
+}
+
+const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
+  const folderName = useStore((state) => state.folders[folderId]?.name);
   const isExpanded = useStore((state) => state.folders[folderId].expanded);
   const color = useStore((state) => state.folders[folderId].color);
 
@@ -45,7 +45,7 @@ const ChatFolder = ({
   const [isDelete, setIsDelete] = useState<boolean>(false);
   const [isHover, setIsHover] = useState<boolean>(false);
   const [showPalette, setShowPalette] = useState<boolean>(false);
- 
+
   const editTitle = () => {
     const updatedFolders: FolderCollection = JSON.parse(
       JSON.stringify(useStore.getState().folders)
@@ -63,7 +63,7 @@ const ChatFolder = ({
     const updatedChats: ChatInterface[] = JSON.parse(
       JSON.stringify(useStore.getState().chats)
     );
-    updatedChats.forEach((chat) => {
+    updatedChats.forEach((chat: ChatInterface) => {
       if (chat.folder === folderId) delete chat.folder;
     });
     setChats(updatedChats);
@@ -172,150 +172,155 @@ const ChatFolder = ({
   }, [paletteRef, showPalette]);
 
   return (
-    <div
-      className={`w-full transition-colors group/folder ${
-        isHover ? 'bg-gray-800/40' : ''
-      }`}
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-    >
-      <div
-        style={{ background: color || '' }}
-        className={`${
-          color ? '' : 'hover:bg-gray-850'
-        } transition-colors flex py-2 pl-2 pr-1 items-center gap-3 relative rounded-md break-all cursor-pointer parent-sibling`}
-        onClick={toggleExpanded}
-        ref={folderRef}
-        onMouseEnter={() => {
-          if (color && folderRef.current)
-            folderRef.current.style.background = `${color}dd`;
-          if (gradientRef.current) gradientRef.current.style.width = '0px';
-        }}
-        onMouseLeave={() => {
-          if (color && folderRef.current)
-            folderRef.current.style.background = color;
-          if (gradientRef.current) gradientRef.current.style.width = '1rem';
-        }}
-      >
-        <FolderIcon className='h-4 w-4' />
-        <div className='flex-1 text-ellipsis max-h-5 overflow-hidden break-all relative'>
-          {isEdit ? (
-            <input
-              type='text'
-              className='focus:outline-blue-600 text-sm border-none bg-transparent p-0 m-0 w-full'
-              value={_folderName}
-              onChange={(e) => {
-                _setFolderName(e.target.value);
-              }}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={handleKeyDown}
-              ref={inputRef}
-            />
-          ) : (
-            _folderName
-          )}
-          {isEdit || (
+    <Draggable draggableId={folderId} index={useStore.getState().folders[folderId].order}>
+      {(provided) => (
+        <div ref={provided.innerRef} {...provided.draggableProps}>
+          <div
+            className={`w-full transition-colors group/folder ${isHover ? 'bg-gray-800/40' : ''}`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+          >
             <div
-              ref={gradientRef}
-              className='absolute inset-y-0 right-0 w-4 z-10 transition-all'
-              style={{
-                background:
-                  color &&
-                  `linear-gradient(to left, ${
-                    color || 'var(--color-900)'
-                  }, rgb(32 33 35 / 0))`,
+              style={{ background: color || '' }}
+              className={`${
+                color ? '' : 'hover:bg-gray-850'
+              } transition-colors flex py-2 pl-2 pr-1 items-center gap-3 relative rounded-md break-all cursor-pointer parent-sibling`}
+              onClick={toggleExpanded}
+              ref={folderRef}
+              onMouseEnter={() => {
+                if (color && folderRef.current)
+                  folderRef.current.style.background = `${color}dd`;
+                if (gradientRef.current) gradientRef.current.style.width = '0px';
               }}
-            />
-          )}
-        </div>
-        <div
-          className='flex text-gray-300'
-          onClick={(e) => e.stopPropagation()}
-        >
-          {isDelete || isEdit ? (
-            <>
-              <button className='p-1 hover:text-white' onClick={handleTick}>
-                <TickIcon />
-              </button>
-              <button className='p-1 hover:text-white' onClick={handleCross}>
-                <CrossIcon />
-              </button>
-            </>
-          ) : (
-            <>
-              <div
-                className='relative md:hidden group-hover/folder:md:inline'
-                ref={paletteRef}
-              >
-                <button
-                  className='p-1 hover:text-white'
-                  onClick={() => {
-                    setShowPalette((prev) => !prev);
-                  }}
-                >
-                  <ColorPaletteIcon />
-                </button>
-                {showPalette && (
-                  <div className='absolute left-0 bottom-0 translate-y-full p-2 z-20 bg-gray-900 rounded border border-gray-600 flex flex-col gap-2 items-center'>
-                    <>
-                      {folderColorOptions.map((c) => (
-                        <button
-                          key={c}
-                          style={{ background: c }}
-                          className={`hover:scale-90 transition-transform h-4 w-4 rounded-full`}
-                          onClick={() => {
-                            updateColor(c);
-                          }}
-                        />
-                      ))}
-                      <button
-                        onClick={() => {
-                          updateColor();
-                        }}
-                      >
-                        <RefreshIcon />
-                      </button>
-                    </>
-                  </div>
+              onMouseLeave={() => {
+                if (color && folderRef.current)
+                  folderRef.current.style.background = color;
+                if (gradientRef.current) gradientRef.current.style.width = '1rem';
+              }}
+            >
+                <div {...provided.dragHandleProps}>
+                  <FolderIcon className='h-4 w-4' />
+                </div>
+                <div className='flex-1 text-ellipsis max-h-5 overflow-hidden break-all relative'>
+                {isEdit ? (
+                  <input
+                    type='text'
+                    className='focus:outline-blue-600 text-sm border-none bg-transparent p-0 m-0 w-full'
+                    value={_folderName}
+                    onChange={(e) => {
+                      _setFolderName(e.target.value);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={handleKeyDown}
+                    ref={inputRef}
+                  />
+                ) : (
+                  _folderName
+                )}
+                {isEdit || (
+                  <div
+                    ref={gradientRef}
+                    className='absolute inset-y-0 right-0 w-4 z-10 transition-all'
+                    style={{
+                      background:
+                        color &&
+                        `linear-gradient(to left, ${
+                          color || 'var(--color-900)'
+                        }, rgb(32 33 35 / 0))`,
+                    }}
+                  />
                 )}
               </div>
-
-              <button
-                className='p-1 hover:text-white md:hidden group-hover/folder:md:inline'
-                onClick={() => setIsEdit(true)}
+              <div
+                className='flex text-gray-300'
+                onClick={(e) => e.stopPropagation()}
               >
-                <EditIcon />
-              </button>
-              <button
-                className='p-1 hover:text-white md:hidden group-hover/folder:md:inline'
-                onClick={() => setIsDelete(true)}
-              >
-                <DeleteIcon />
-              </button>
-              <button className='p-1 hover:text-white' onClick={toggleExpanded}>
-                <DownChevronArrow
-                  className={`${
-                    isExpanded ? 'rotate-180' : ''
-                  } transition-transform`}
-                />
-              </button>
-            </>
-          )}
+                {isDelete || isEdit ? (
+                  <>
+                    <button className='p-1 hover:text-white' onClick={handleTick}>
+                      <TickIcon />
+                    </button>
+                    <button className='p-1 hover:text-white' onClick={handleCross}>
+                      <CrossIcon />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div
+                      className='relative md:hidden group-hover/folder:md:inline'
+                      ref={paletteRef}
+                    >
+                      <button
+                        className='p-1 hover:text-white'
+                        onClick={() => {
+                          setShowPalette((prev) => !prev);
+                        }}
+                      >
+                        <ColorPaletteIcon />
+                      </button>
+                      {showPalette && (
+                        <div className='absolute left-0 bottom-0 translate-y-full p-2 z-20 bg-gray-900 rounded border border-gray-600 flex flex-col gap-2 items-center'>
+                          <>
+                            {folderColorOptions.map((c) => (
+                              <button
+                                key={c}
+                                style={{ background: c }}
+                                className={`hover:scale-90 transition-transform h-4 w-4 rounded-full`}
+                                onClick={() => {
+                                  updateColor(c);
+                                }}
+                              />
+                            ))}
+                            <button
+                              onClick={() => {
+                                updateColor();
+                              }}
+                            >
+                              <RefreshIcon />
+                            </button>
+                          </>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      className='p-1 hover:text-white md:hidden group-hover/folder:md:inline'
+                      onClick={() => setIsEdit(true)}
+                    >
+                      <EditIcon />
+                    </button>
+                    <button
+                      className='p-1 hover:text-white md:hidden group-hover/folder:md:inline'
+                      onClick={() => setIsDelete(true)}
+                    >
+                      <DeleteIcon />
+                    </button>
+                    <button className='p-1 hover:text-white' onClick={toggleExpanded}>
+                      <DownChevronArrow
+                        className={`${
+                          isExpanded ? 'rotate-180' : ''
+                        } transition-transform`}
+                      />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className='ml-3 pl-1 border-l-2 border-gray-700 flex flex-col gap-1 parent'>
+              {isExpanded && <NewChat folder={folderId} />}
+              {isExpanded &&
+                folderChats.map((chat: ChatHistoryInterface) => (
+                  <ChatHistory
+                    title={chat.title}
+                    chatIndex={chat.index}
+                    key={`${chat.title}-${chat.index}`}
+                    />
+                  ))}
+            </div>
+          </div>
         </div>
-      </div>
-      <div className='ml-3 pl-1 border-l-2 border-gray-700 flex flex-col gap-1 parent'>
-        {isExpanded && <NewChat folder={folderId} />}
-        {isExpanded &&
-          folderChats.map((chat) => (
-            <ChatHistory
-              title={chat.title}
-              chatIndex={chat.index}
-              key={`${chat.title}-${chat.index}`}
-            />
-          ))}
-      </div>
-    </div>
+      )}
+    </Draggable>
   );
 };
 

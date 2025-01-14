@@ -13,13 +13,13 @@ import EnterToSubmitToggle from './EnterToSubmitToggle';
 
 const SettingsMenu = () => {
   const { t } = useTranslation();
-
   const theme = useStore.getState().theme;
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     document.documentElement.className = theme;
   }, [theme]);
+
   return (
     <>
       <a
