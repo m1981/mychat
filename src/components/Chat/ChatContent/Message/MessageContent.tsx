@@ -22,31 +22,68 @@ import CommandPrompt from './CommandPrompt';
 import CodeBlock from './CodeBlock';
 import MessageActionButtons from './MessageActionButtons'; // Make sure to import this
 import { codeLanguageSubset } from '@constants/chat';
-
+import { Theme } from '@type/theme';
 import mermaid from 'mermaid';
 
 const p = (props: DetailedHTMLProps<HTMLAttributes<HTMLParagraphElement>, HTMLParagraphElement>) => {
   return <p className="whitespace-pre-wrap">{props.children}</p>;
 };
 
-
-// Initialize mermaid
-mermaid.initialize({
-  startOnLoad: false,
-  theme: 'default',
-  securityLevel: 'loose',
-});
+// const getMermaidConfig = (theme: Theme) => ({
+//   startOnLoad: false,
+//   theme: theme === 'dark' ? 'dark' : 'default',
+//   securityLevel: 'loose',
+//   themeVariables: {
+//     // Base colors
+//     primaryColor: theme === 'dark' ? '#4380ea' : '#101071',
+//     primaryBorderColor: theme === 'dark' ? '#718096' : '#9370DB',
+//
+//     // Node specific
+//     nodeBorder: theme === 'dark' ? '#718096' : '#9370DB',
+//     nodeTextColor: theme === 'dark' ? '#ffffff' : '#3b68b8',
+//
+//     // Backgrounds
+//     mainBkg: theme === 'dark' ? '#4380ea' : '#ECECFF',
+//
+//     // Line/edge colors
+//     lineColor: theme === 'dark' ? '#718096' : '#9370DB',
+//
+//     // Text colors
+//     titleColor: theme === 'dark' ? '#ffffff' : '#333333',
+//     edgeLabelBackground: theme === 'dark' ? '#2d3748' : '#fff',
+//
+//     // Specific diagram elements
+//     clusterBkg: theme === 'dark' ? '#b8cff3' : '#ffffde',
+//     clusterBorder: theme === 'dark' ? '#718096' : '#9370DB',
+//
+//     // State diagram specific
+//     labelBoxBkgColor: theme === 'dark' ? '#4380ea' : '#ECECFF',
+//     labelBoxBorderColor: theme === 'dark' ? '#718096' : '#9370DB',
+//
+//     // Class diagram specific
+//     classText: theme === 'dark' ? '#ffffff' : '#333333'
+//   }
+// });
 
 const MermaidDiagram = ({ content }: { content: string }) => {
   const elementRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const theme = useStore((state) => state.theme);
 
   useEffect(() => {
     const renderDiagram = async () => {
       if (!elementRef.current) return;
 
       try {
+        // Reinitialize mermaid with current theme
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: 'forest',  // Using 'base' as it's the only customizable theme
+          securityLevel: 'loose',
+        });
+
+
         const { svg } = await mermaid.render(
           `mermaid-${Math.random().toString(36).substr(2, 9)}`,
           content
@@ -60,7 +97,7 @@ const MermaidDiagram = ({ content }: { content: string }) => {
     };
 
     renderDiagram();
-  }, [content]);
+  }, [content, theme]); // Add theme as dependency
 
   if (error) {
     return (
@@ -206,7 +243,7 @@ const ContentView = React.memo(
           handleDelete={handleDelete}
           handleCopy={handleCopy}
         />
-        <div className='markdown prose w-full md:max-w-full break-words dark:prose-invert dark share-gpt-message'>
+        <div className=''>
           <ReactMarkdown
             remarkPlugins={[
               remarkGfm,
