@@ -332,3 +332,16 @@
   .hljs-strong {
     font-weight: 700;
   }
+
+.mermaid-container {
+  @apply my-4 w-full;
+}
+
+.mermaid-container svg {
+  @apply mx-auto max-w-full;
+}
+
+/* Dark mode adjustments */
+.dark .mermaid-container svg {
+  filter: invert(0.9) hue-rotate(180deg);
+}

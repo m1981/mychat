@@ -3,6 +3,7 @@ import React, {
   HTMLAttributes,
   useEffect,
   useState,
+  useRef
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
@@ -21,6 +22,64 @@ import CommandPrompt from './CommandPrompt';
 import CodeBlock from './CodeBlock';
 import MessageActionButtons from './MessageActionButtons'; // Make sure to import this
 import { codeLanguageSubset } from '@constants/chat';
+
+import mermaid from 'mermaid';
+
+const p = (props: DetailedHTMLProps<HTMLAttributes<HTMLParagraphElement>, HTMLParagraphElement>) => {
+  return <p className="whitespace-pre-wrap">{props.children}</p>;
+};
+
+
+// Initialize mermaid
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'default',
+  securityLevel: 'loose',
+});
+
+const MermaidDiagram = ({ content }: { content: string }) => {
+  const elementRef = useRef<HTMLDivElement>(null);
+  const [svg, setSvg] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const renderDiagram = async () => {
+      if (!elementRef.current) return;
+
+      try {
+        const { svg } = await mermaid.render(
+          `mermaid-${Math.random().toString(36).substr(2, 9)}`,
+          content
+        );
+        setSvg(svg);
+        setError(null);
+      } catch (err) {
+        console.error('Mermaid rendering failed:', err);
+        setError(err instanceof Error ? err.message : 'Failed to render diagram');
+      }
+    };
+
+    renderDiagram();
+  }, [content]);
+
+  if (error) {
+    return (
+      <div className="text-red-500 p-4 border border-red-300 rounded">
+        <p>Error rendering diagram: {error}</p>
+        <pre className="mt-2 text-sm">{content}</pre>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={elementRef}
+      className="mermaid-diagram"
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+};
+
 
 const MessageContent = ({
   role,
@@ -197,25 +256,30 @@ const code = React.memo((props: CodeProps) => {
 
   if (inline) {
     return <code className={className}>{children}</code>;
-  } else {
-    return <CodeBlock lang={lang || 'text'} codeChildren={children} />;
   }
-});
 
-const p = React.memo(
-  (
-    props?: Omit<
-      DetailedHTMLProps<
-        HTMLAttributes<HTMLParagraphElement>,
-        HTMLParagraphElement
-      >,
-      'ref'
-    > &
-      ReactMarkdownProps
-  ) => {
-    return <p className='whitespace-pre-wrap'>{props?.children}</p>;
+  if (lang === 'mermaid') {
+    const mermaidContent = String(children).trim();
+
+    return (
+      <div className="mermaid-container">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
+          <MermaidDiagram content={mermaidContent} />
+        </div>
+        <details className="mt-2">
+          <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+            Show diagram source
+          </summary>
+          <pre className="mt-2 text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded">
+            <code>{mermaidContent}</code>
+          </pre>
+        </details>
+      </div>
+    );
   }
-);
+
+    return <CodeBlock lang={lang || 'text'} codeChildren={children} />;
+});
 
 const EditView = ({
   content,
