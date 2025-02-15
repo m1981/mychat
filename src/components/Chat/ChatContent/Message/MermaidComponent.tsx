@@ -16,7 +16,7 @@ const getMermaidLiveLink = (code: string) => {
       pan: { x: 168.09754057939372, y: 116.10714911357914 },
       zoom: 0.6777827739715576
     };
-    return `https://mermaid.live/edit#pako:${LZString.compressToEncodedURIComponent(JSON.stringify(state))}`;
+    return `https://mermaid.live/edit#pako:${compressToEncodedURIComponent(JSON.stringify(state))}`;
   } catch (error) {
     console.error('Error generating link:', error);
     return '#error';
