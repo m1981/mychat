@@ -2,12 +2,11 @@ import React, {
   DetailedHTMLProps,
   HTMLAttributes,
   useEffect,
-  useState,
-  useRef
+  useState
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
-import { CodeProps, ReactMarkdownProps } from 'react-markdown/lib/ast-to-react';
+import { CodeProps } from 'react-markdown/lib/ast-to-react';
 import rehypeKatex from 'rehype-katex';
 import rehypeHighlight from 'rehype-highlight';
 import remarkMath from 'remark-math';
@@ -21,183 +20,12 @@ import TokenCount from '@components/TokenCount';
 import CommandPrompt from './CommandPrompt';
 import CodeBlock from './CodeBlock';
 import MessageActionButtons from './MessageActionButtons';
+import { MermaidDiagram } from './MermaidComponent';
 import { codeLanguageSubset } from '@constants/chat';
-import mermaid from 'mermaid';
-import * as LZString from 'lz-string';
 
 const p = (props: DetailedHTMLProps<HTMLAttributes<HTMLParagraphElement>, HTMLParagraphElement>) => {
   return <p className="whitespace-pre-wrap">{props.children}</p>;
 };
-
-const MermaidDiagram = ({ content }: { content: string }) => {
-  const elementRef = useRef<HTMLDivElement>(null);
-  const [svg, setSvg] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
-
-  // Function to generate mermaid.live link
-  const getMermaidLiveLink = (code: string) => {
-    try {
-      // Normalize the code to use \n for line breaks
-      const normalizedCode = code
-        .replace(/\r\n/g, '\n')
-        .replace(/\n\s+/g, '\n    '); // Ensure consistent indentation
-
-      const state = {
-        code: normalizedCode,
-        mermaid: '{\n  "theme": "default"\n}',
-        autoSync: true,
-        rough: false,
-        updateDiagram: false,
-        panZoom: true,
-        pan: {
-          x: 168.09754057939372,
-          y: 116.10714911357914
-        },
-        zoom: 0.6777827739715576
-      };
-
-      // Simple JSON.stringify without any replacements
-      const jsonString = JSON.stringify(state);
-      console.log('JSON state:', jsonString);
-
-      // Compress using lz-string
-      const compressed = LZString.compressToEncodedURIComponent(jsonString);
-      console.log('Compressed state:', compressed);
-
-      const link = `https://mermaid.live/edit#pako:${compressed}`;
-      return link;
-    } catch (error) {
-      console.error('Error generating link:', error);
-      return '#error';
-    }
-  };
-
-// Function to download SVG
-  const downloadSVG = () => {
-    if (!svg) return;
-
-    const blob = new Blob([svg], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'diagram.svg';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  // Function to download PNG
-  const downloadPNG = async () => {
-    if (!svg) return;
-
-    const svgElement = elementRef.current?.querySelector('svg');
-    if (!svgElement) return;
-
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const img = new Image();
-    img.src = 'data:image/svg+xml;base64,' + btoa(svg);
-
-    await new Promise((resolve) => {
-      img.onload = () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-
-        const url = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'diagram.png';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        resolve(null);
-      };
-    });
-  };
-
-  useEffect(() => {
-    const renderDiagram = async () => {
-      if (!elementRef.current) return;
-
-      try {
-        // Reinitialize mermaid with current theme
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: 'forest',  // Using 'base' as it's the only customizable theme
-          securityLevel: 'loose',
-        });
-
-
-        const { svg } = await mermaid.render(
-          `mermaid-${Math.random().toString(36).substr(2, 9)}`,
-          content
-        );
-        setSvg(svg);
-        setError(null);
-      } catch (err) {
-        console.error('Mermaid rendering failed:', err);
-        setError(err instanceof Error ? err.message : 'Failed to render diagram');
-      }
-    };
-
-    renderDiagram();
-  }, [content]);
-
-    return (
-    <div className="mermaid-container">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
-    <div
-      ref={elementRef}
-      className="mermaid-diagram"
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
-
-        {/* Export options */}
-        <div className="mt-4 flex gap-2 justify-end">
-          <button
-            onClick={() => window.open(getMermaidLiveLink(content), '_blank')}
-            className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Edit in Mermaid Live
-          </button>
-          <button
-            onClick={downloadSVG}
-            className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
-          >
-            Download SVG
-          </button>
-          <button
-            onClick={downloadPNG}
-            className="px-3 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600"
-          >
-            Download PNG
-          </button>
-        </div>
-      </div>
-
-      <details className="mt-2">
-        <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-          Show diagram source
-        </summary>
-        <pre className="mt-2 text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded">
-          <code>{content}</code>
-        </pre>
-      </details>
-
-      {error && (
-        <div className="text-red-500 p-4 border border-red-300 rounded mt-2">
-          <p>Error rendering diagram: {error}</p>
-          <pre className="mt-2 text-sm">{content}</pre>
-        </div>
-      )}
-    </div>
-  );
-};
-
 
 const MessageContent = ({
   role,
@@ -288,14 +116,6 @@ const ContentView = React.memo(
       setChats(updatedChats);
     };
 
-    const handleMoveUp = () => {
-      handleMove('up');
-    };
-
-    const handleMoveDown = () => {
-      handleMove('down');
-    };
-
     const handleRefresh = () => {
       const updatedChats: ChatInterface[] = JSON.parse(
         JSON.stringify(useStore.getState().chats)
@@ -377,23 +197,7 @@ const code = React.memo((props: CodeProps) => {
   }
 
   if (lang === 'mermaid') {
-    const mermaidContent = String(children).trim();
-
-    return (
-      <div className="mermaid-container">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
-          <MermaidDiagram content={mermaidContent} />
-        </div>
-        <details className="mt-2">
-          <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-            Show diagram source
-          </summary>
-          <pre className="mt-2 text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded">
-            <code>{mermaidContent}</code>
-          </pre>
-        </details>
-      </div>
-    );
+    return <MermaidDiagram content={String(children).trim()} />;
   }
 
     return <CodeBlock lang={lang || 'text'} codeChildren={children} />;
