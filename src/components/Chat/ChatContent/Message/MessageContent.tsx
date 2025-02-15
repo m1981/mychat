@@ -20,56 +20,104 @@ import PopupModal from '@components/PopupModal';
 import TokenCount from '@components/TokenCount';
 import CommandPrompt from './CommandPrompt';
 import CodeBlock from './CodeBlock';
-import MessageActionButtons from './MessageActionButtons'; // Make sure to import this
+import MessageActionButtons from './MessageActionButtons';
 import { codeLanguageSubset } from '@constants/chat';
-import { Theme } from '@type/theme';
 import mermaid from 'mermaid';
+import * as LZString from 'lz-string';
 
 const p = (props: DetailedHTMLProps<HTMLAttributes<HTMLParagraphElement>, HTMLParagraphElement>) => {
   return <p className="whitespace-pre-wrap">{props.children}</p>;
 };
 
-// const getMermaidConfig = (theme: Theme) => ({
-//   startOnLoad: false,
-//   theme: theme === 'dark' ? 'dark' : 'default',
-//   securityLevel: 'loose',
-//   themeVariables: {
-//     // Base colors
-//     primaryColor: theme === 'dark' ? '#4380ea' : '#101071',
-//     primaryBorderColor: theme === 'dark' ? '#718096' : '#9370DB',
-//
-//     // Node specific
-//     nodeBorder: theme === 'dark' ? '#718096' : '#9370DB',
-//     nodeTextColor: theme === 'dark' ? '#ffffff' : '#3b68b8',
-//
-//     // Backgrounds
-//     mainBkg: theme === 'dark' ? '#4380ea' : '#ECECFF',
-//
-//     // Line/edge colors
-//     lineColor: theme === 'dark' ? '#718096' : '#9370DB',
-//
-//     // Text colors
-//     titleColor: theme === 'dark' ? '#ffffff' : '#333333',
-//     edgeLabelBackground: theme === 'dark' ? '#2d3748' : '#fff',
-//
-//     // Specific diagram elements
-//     clusterBkg: theme === 'dark' ? '#b8cff3' : '#ffffde',
-//     clusterBorder: theme === 'dark' ? '#718096' : '#9370DB',
-//
-//     // State diagram specific
-//     labelBoxBkgColor: theme === 'dark' ? '#4380ea' : '#ECECFF',
-//     labelBoxBorderColor: theme === 'dark' ? '#718096' : '#9370DB',
-//
-//     // Class diagram specific
-//     classText: theme === 'dark' ? '#ffffff' : '#333333'
-//   }
-// });
-
 const MermaidDiagram = ({ content }: { content: string }) => {
   const elementRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-  const theme = useStore((state) => state.theme);
+
+  // Function to generate mermaid.live link
+  const getMermaidLiveLink = (code: string) => {
+    try {
+      // Normalize the code to use \n for line breaks
+      const normalizedCode = code
+        .replace(/\r\n/g, '\n')
+        .replace(/\n\s+/g, '\n    '); // Ensure consistent indentation
+
+      const state = {
+        code: normalizedCode,
+        mermaid: '{\n  "theme": "default"\n}',
+        autoSync: true,
+        rough: false,
+        updateDiagram: false,
+        panZoom: true,
+        pan: {
+          x: 168.09754057939372,
+          y: 116.10714911357914
+        },
+        zoom: 0.6777827739715576
+      };
+
+      // Simple JSON.stringify without any replacements
+      const jsonString = JSON.stringify(state);
+      console.log('JSON state:', jsonString);
+
+      // Compress using lz-string
+      const compressed = LZString.compressToEncodedURIComponent(jsonString);
+      console.log('Compressed state:', compressed);
+
+      const link = `https://mermaid.live/edit#pako:${compressed}`;
+      return link;
+    } catch (error) {
+      console.error('Error generating link:', error);
+      return '#error';
+    }
+  };
+
+// Function to download SVG
+  const downloadSVG = () => {
+    if (!svg) return;
+
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'diagram.svg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Function to download PNG
+  const downloadPNG = async () => {
+    if (!svg) return;
+
+    const svgElement = elementRef.current?.querySelector('svg');
+    if (!svgElement) return;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const img = new Image();
+    img.src = 'data:image/svg+xml;base64,' + btoa(svg);
+
+    await new Promise((resolve) => {
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'diagram.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        resolve(null);
+      };
+    });
+  };
 
   useEffect(() => {
     const renderDiagram = async () => {
@@ -97,23 +145,56 @@ const MermaidDiagram = ({ content }: { content: string }) => {
     };
 
     renderDiagram();
-  }, [content, theme]); // Add theme as dependency
+  }, [content]);
 
-  if (error) {
     return (
-      <div className="text-red-500 p-4 border border-red-300 rounded">
-        <p>Error rendering diagram: {error}</p>
-        <pre className="mt-2 text-sm">{content}</pre>
-      </div>
-    );
-  }
-
-  return (
+    <div className="mermaid-container">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
     <div
       ref={elementRef}
       className="mermaid-diagram"
       dangerouslySetInnerHTML={{ __html: svg }}
     />
+
+        {/* Export options */}
+        <div className="mt-4 flex gap-2 justify-end">
+          <button
+            onClick={() => window.open(getMermaidLiveLink(content), '_blank')}
+            className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Edit in Mermaid Live
+          </button>
+          <button
+            onClick={downloadSVG}
+            className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
+          >
+            Download SVG
+          </button>
+          <button
+            onClick={downloadPNG}
+            className="px-3 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600"
+          >
+            Download PNG
+          </button>
+        </div>
+      </div>
+
+      <details className="mt-2">
+        <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+          Show diagram source
+        </summary>
+        <pre className="mt-2 text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded">
+          <code>{content}</code>
+        </pre>
+      </details>
+
+      {error && (
+        <div className="text-red-500 p-4 border border-red-300 rounded mt-2">
+          <p>Error rendering diagram: {error}</p>
+          <pre className="mt-2 text-sm">{content}</pre>
+        </div>
+      )}
+    </div>
   );
 };
 
