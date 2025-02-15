@@ -3,6 +3,37 @@ import React, { useRef, useState, useEffect } from 'react';
 import mermaid from 'mermaid';
 import { compressToEncodedURIComponent } from 'lz-string';
 
+
+declare module 'mermaid' {
+  export interface MermaidConfig {
+    startOnLoad?: boolean;
+    theme?: 'default' | 'forest' | 'dark' | 'neutral' | string;
+    securityLevel?: 'strict' | 'loose' | 'antiscript' | 'sandbox';
+    flowchart?: {
+      htmlLabels?: boolean;
+      curve?: string;
+    };
+    sequence?: {
+      diagramMarginX?: number;
+      diagramMarginY?: number;
+      actorMargin?: number;
+    };
+    // Add more configuration options as needed
+  }
+
+  export interface MermaidAPI {
+    render: (id: string, text: string) => Promise<{ svg: string }>;
+    initialize: (config: MermaidConfig) => void;
+  }
+
+  const mermaid: MermaidAPI;
+  export default mermaid;
+}
+
+interface DangerousHTML {
+  __html: string;
+}
+
 // Utility functions
 const getMermaidLiveLink = (code: string) => {
   try {
@@ -43,9 +74,36 @@ const ExportButtons = ({ content, svg, elementRef }: {
   };
 
   const downloadPNG = async () => {
-    if (!svg || !elementRef.current?.querySelector('svg')) return;
-    // ... existing PNG download logic ...
+    if (!svg) return;
+
+    const svgElement = elementRef.current?.querySelector('svg');
+    if (!svgElement) return;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const img = new Image();
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+
+    await new Promise<void>((resolve) => {
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'diagram.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        resolve();
+      };
+    });
   };
+
 
   return (
     <div className="mt-4 flex gap-2 justify-end">
@@ -94,11 +152,13 @@ export const MermaidDiagram = ({ content }: { content: string }) => {
       if (!elementRef.current) return;
 
       try {
-        mermaid.initialize({
+        const config: MermaidConfig = {
           startOnLoad: false,
           theme: 'forest',
           securityLevel: 'loose',
-        });
+        };
+
+        mermaid.initialize(config);
 
         const { svg } = await mermaid.render(
           `mermaid-${Math.random().toString(36).substr(2, 9)}`,
@@ -121,7 +181,7 @@ export const MermaidDiagram = ({ content }: { content: string }) => {
         <div
           ref={elementRef}
           className="mermaid-diagram"
-          dangerouslySetInnerHTML={{ __html: svg }}
+      dangerouslySetInnerHTML={{ __html: svg } as DangerousHTML}
         />
         <ExportButtons content={content} svg={svg} elementRef={elementRef} />
       </div>
