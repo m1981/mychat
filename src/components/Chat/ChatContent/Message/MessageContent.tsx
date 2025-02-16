@@ -21,8 +21,6 @@ import CommandPrompt from './CommandPrompt';
 import CodeBlock from './CodeBlock';
 import MessageActionButtons from './MessageActionButtons';
 import { MermaidDiagram } from './MermaidComponent';
-import { codeLanguageSubset } from '@constants/chat';
-
 const p = (props: DetailedHTMLProps<HTMLAttributes<HTMLParagraphElement>, HTMLParagraphElement>) => {
   return <p className="whitespace-pre-wrap">{props.children}</p>;
 };
@@ -130,6 +128,10 @@ const ContentView = React.memo(
       navigator.clipboard.writeText(content);
     };
 
+    const transformMarkdown = (content: string) => {
+      return content.replace(/```svelte/g, '```');
+    };
+
     return (
       <>
         <MessageActionButtons
@@ -156,8 +158,7 @@ const ContentView = React.memo(
                 rehypeHighlight,
                 {
                   detect: true,
-                  ignoreMissing: true,
-                  subset: codeLanguageSubset,
+                  ignoreMissing: true
                 },
               ],
             ]}
@@ -167,7 +168,7 @@ const ContentView = React.memo(
               p,
             }}
           >
-            {content}
+            {transformMarkdown(content)}
           </ReactMarkdown>
         </div>
         <MessageActionButtons
