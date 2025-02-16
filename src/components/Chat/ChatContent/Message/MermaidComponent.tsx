@@ -1,6 +1,5 @@
 // MermaidComponents.tsx
 import React, { useRef, useState, useEffect } from 'react';
-import mermaid from 'mermaid';
 import { compressToEncodedURIComponent } from 'lz-string';
 
 
@@ -152,10 +151,14 @@ export const MermaidDiagram = ({ content }: { content: string }) => {
       if (!elementRef.current) return;
 
       try {
+        const mermaid = (await import('mermaid')).default;
+
         const config: MermaidConfig = {
           startOnLoad: false,
           theme: 'forest',
           securityLevel: 'loose',
+          ssrMode: true,
+          htmlLabels: true
         };
 
         mermaid.initialize(config);
