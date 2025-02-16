@@ -2,33 +2,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { compressToEncodedURIComponent } from 'lz-string';
 
-
-declare module 'mermaid' {
-  export interface MermaidConfig {
-    startOnLoad?: boolean;
-    theme?: 'default' | 'forest' | 'dark' | 'neutral' | string;
-    securityLevel?: 'strict' | 'loose' | 'antiscript' | 'sandbox';
-    flowchart?: {
-      htmlLabels?: boolean;
-      curve?: string;
-    };
-    sequence?: {
-      diagramMarginX?: number;
-      diagramMarginY?: number;
-      actorMargin?: number;
-    };
-    // Add more configuration options as needed
-  }
-
-  export interface MermaidAPI {
-    render: (id: string, text: string) => Promise<{ svg: string }>;
-    initialize: (config: MermaidConfig) => void;
-  }
-
-  const mermaid: MermaidAPI;
-  export default mermaid;
-}
-
 interface DangerousHTML {
   __html: string;
 }
