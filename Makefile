@@ -36,7 +36,7 @@ logs: ## Show logs
 	$(DOCKER_COMPOSE) logs -f
 
 ##@ Package Management
-.PHONY: pkg-add pkg-add-dev pkg-remove pkg-update pkg-outdated pkg-clean
+.PHONY: pkg-add pkg-add-dev pkg-remove pkg-check pkg-update pkg-sync
 
 pkg-add: ## Add production package(s). Usage: make pkg-add p=package-name
 	@if [ -z "$(p)" ]; then \
@@ -59,18 +59,14 @@ pkg-remove: ## Remove package(s). Usage: make pkg-remove p=package-name
 	fi
 	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) remove $(p)
 
-pkg-gui: ## Update packages interactively
+pkg-check: ## Check for unused and missing dependencies
+	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) deps:check
+
+pkg-update: ## Update packages interactively (with GUI)
 	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) upgrade-interactive --latest
 
-pkg-lock: ## Update yarn.lock to match package.json
+pkg-sync: ## Sync yarn.lock with package.json (fix lock file issues)
 	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) install
-
-pkg-outdated: ## Check for outdated packages
-	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) outdated
-
-pkg-clean: ## Clean and reinstall all packages
-	$(DOCKER_COMPOSE) down -v
-	$(DOCKER_COMPOSE) build --no-cache app
 
 ##@ Building
 .PHONY: build build-quick

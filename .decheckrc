@@ -1,0 +1,15 @@
+{
+  "ignores": [
+    "@types/*",
+    "typescript",
+    "vite",
+    "@vitejs/plugin-react-swc"
+  ],
+  "skipMissing": false,
+  "ignoreBinPackage": false,
+  "ignorePatterns": [
+    "dist/*",
+    "build/*",
+    "node_modules/*"
+  ]
+}
