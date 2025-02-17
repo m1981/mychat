@@ -9,13 +9,20 @@
   "description": "Play and chat smarter with BetterChatGPT - an amazing open-source web app with a better UI for exploring OpenAI's ChatGPT API!",
   "scripts": {
     "dev": "vite",
+    "dev:host": "vite --host 0.0.0.0",
+
     "build": "yarn type-check && NODE_ENV=production yarn build:vite",
-    "type-check": "tsc --noEmit",
     "build:vite": "NODE_OPTIONS='--max_old_space_size=8192' vite build",
-    "quick-build": "vite build --mode development",
+    "build:quick": "vite build --mode development",
+
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+
+    "type-check": "tsc --noEmit",
+
+    "deps:check": "depcheck",
+    "deps:update": "yarn upgrade-interactive --latest"
   },
   "build": {
     "appId": "better-chatgpt",
@@ -45,6 +52,7 @@
     "@anthropic-ai/sdk": "^0.32.1",
     "openai": "^4.73.0",
     "@dqbd/tiktoken": "^1.0.2",
+    "depcheck": "^1.4.7",
     "electron-is-dev": "^2.0.0",
     "electron-squirrel-startup": "^1.0.0",
     "electron-updater": "^5.3.0",

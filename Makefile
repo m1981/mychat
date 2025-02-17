@@ -22,50 +22,78 @@ help: ## Display this help
 		/^[a-zA-Z0-9_-]+:.*?##/ { printf "  $(YELLOW)%-20s$(RESET) %s\n", $$1, $$2 } \
 		/^##@/ { printf "\n$(GREEN)%s$(RESET)\n", substr($$0, 5) }' $(MAKEFILE_LIST)
 
+
 ##@ Development
-.PHONY: dev build type-check quick-build preview electron pack install clean
+.PHONY: app-up down logs
 
-dev: ## Start development server
-	$(DOCKER_COMPOSE) up app
+app-up: ## Start development environment
+	$(DOCKER_COMPOSE) up --build app
 
-build: type-check ## Build for production (colima stop && colima start --memory 8 --cpu 4)
-	$(DOCKER_COMPOSE) run --rm --build app $(NODE_PACKAGE_MANAGER) build
+app-down: ## Stop development environment
+	$(DOCKER_COMPOSE) down
 
-type-check: ## Run TypeScript type checking
-	$(DOCKER_COMPOSE) run --rm --build app $(NODE_PACKAGE_MANAGER) type-check
+logs: ## Show logs
+	$(DOCKER_COMPOSE) logs -f
 
-quick-build: ## Quick build for development
-	$(DOCKER_COMPOSE) run --rm --build app $(NODE_PACKAGE_MANAGER) quick-build
+##@ Package Management
+.PHONY: pkg-add pkg-add-dev pkg-remove pkg-update pkg-outdated pkg-clean
 
-preview: ## Preview production build
-	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) preview
+pkg-add: ## Add production package(s). Usage: make pkg-add p=package-name
+	@if [ -z "$(p)" ]; then \
+		echo "Error: Package name required. Usage: make pkg-add p=package-name"; \
+		exit 1; \
+	fi
+	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) add $(p)
 
-electron: ## Run electron app
-	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) electron
+pkg-add-dev: ## Add development package(s). Usage: make pkg-add-dev p=package-name
+	@if [ -z "$(p)" ]; then \
+		echo "Error: Package name required. Usage: make pkg-add-dev p=package-name"; \
+		exit 1; \
+	fi
+	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) add -D $(p)
 
-pack: ## Build electron package
-	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) pack
+pkg-remove: ## Remove package(s). Usage: make pkg-remove p=package-name
+	@if [ -z "$(p)" ]; then \
+		echo "Error: Package name required. Usage: make pkg-remove p=package-name"; \
+		exit 1; \
+	fi
+	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) remove $(p)
 
-install: ## Install dependencies
+pkg-gui: ## Update packages interactively
+	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) upgrade-interactive --latest
+
+pkg-lock: ## Update yarn.lock to match package.json
 	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) install
 
-##@ Colima Management
-.PHONY: colima-start colima-stop colima-status colima-list colima-delete
+pkg-outdated: ## Check for outdated packages
+	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) outdated
 
-colima-start: ## Start Colima with development profile
-	colima start --cpu $(COLIMA_CPU) --memory $(COLIMA_MEMORY) --disk $(COLIMA_DISK) --profile $(COLIMA_PROFILE)
+pkg-clean: ## Clean and reinstall all packages
+	$(DOCKER_COMPOSE) down -v
+	$(DOCKER_COMPOSE) build --no-cache app
 
-colima-stop: ## Stop Colima development profile
-	colima stop --profile $(COLIMA_PROFILE)
+##@ Building
+.PHONY: build build-quick
 
-colima-status: ## Check Colima status
-	colima status
+build: ## Production build
+	$(DOCKER_COMPOSE) run --rm --build app $(NODE_PACKAGE_MANAGER) build
 
-colima-list: ## List all Colima profiles
-	colima list
+build-quick: ## Development build
+	$(DOCKER_COMPOSE) run --rm --build app $(NODE_PACKAGE_MANAGER) build:quick
 
-colima-delete: ## Delete Colima development profile
-	colima delete --profile $(COLIMA_PROFILE)
+
+##@ Testing
+.PHONY: test test-watch test-coverage
+
+test: ## Run tests
+	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) test
+
+test-watch: ## Run tests in watch mode
+	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) test:watch
+
+test-coverage: ## Run tests with coverage
+	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) test:coverage
+
 
 ##@ Utility
 .PHONY: stop restart logs clean
@@ -81,3 +109,17 @@ logs: ## View development logs
 
 clean: ## Clean up containers and volumes
 	$(DOCKER_COMPOSE) down -v
+
+##@ Colima Management
+.PHONY: colima-start colima-stop colima-status colima-list colima-delete
+
+colima-start: ## Start Colima with development profile
+	colima start --cpu $(COLIMA_CPU) --memory $(COLIMA_MEMORY) --disk $(COLIMA_DISK) --profile $(COLIMA_PROFILE)
+
+colima-stop: ## Stop Colima development profile
+	colima stop --profile $(COLIMA_PROFILE)
+
+colima-list: ## List all Colima profiles
+	colima list
+
+
