@@ -1,7 +1,7 @@
 // MermaidComponents.tsx
 import React, { useRef, useState, useEffect } from 'react';
 import { compressToEncodedURIComponent } from 'lz-string';
-import { MermaidConfig } from 'mermaid';
+import type { MermaidConfig } from 'mermaid';
 interface DangerousHTML {
   __html: string;
 }
@@ -126,13 +126,19 @@ export const MermaidDiagram = ({ content }: { content: string }) => {
       try {
         const mermaid = (await import('mermaid')).default;
 
-        const config: MermaidConfig = {
+      // Using Partial<MermaidConfig> since we don't need all properties
+      const config: Partial<MermaidConfig> = {
           startOnLoad: false,
           theme: 'forest',
-          securityLevel: 'loose',
-          htmlLabels: true
+        securityLevel: 'loose' as const,
+        htmlLabels: true,
+        themeVariables: {
+          fontFamily: 'arial',
+          fontSize: '16px'
+        }
         };
 
+      // Initialize with the config
         mermaid.initialize(config);
 
         const { svg } = await mermaid.render(
