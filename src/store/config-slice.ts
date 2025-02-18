@@ -3,6 +3,8 @@ import { Theme } from '@type/theme';
 import { ChatConfig, ProviderKey } from '@type/chat';
 import { _defaultModelConfig, _defaultChatConfig, _defaultSystemMessage } from '@constants/chat';
 
+export type LayoutWidth = 'normal' | 'wide';
+
 export interface ConfigSlice {
   openConfig: boolean;
   theme: Theme;
@@ -12,6 +14,7 @@ export interface ConfigSlice {
   defaultSystemMessage: string;
   hideSideMenu: boolean;
   enterToSubmit: boolean;
+  layoutWidth: LayoutWidth;
   setOpenConfig: (openConfig: boolean) => void;
   setTheme: (theme: Theme) => void;
   setAutoTitle: (autoTitle: boolean) => void;
@@ -21,6 +24,8 @@ export interface ConfigSlice {
   setHideMenuOptions: (hideMenuOptions: boolean) => void;
   setHideSideMenu: (hideSideMenu: boolean) => void;
   setEnterToSubmit: (enterToSubmit: boolean) => void;
+  setLayoutWidth: (width: LayoutWidth) => void;
+
 }
 
 export const createConfigSlice: StoreSlice<ConfigSlice> = (set, get) => ({
@@ -30,6 +35,7 @@ export const createConfigSlice: StoreSlice<ConfigSlice> = (set, get) => ({
   hideSideMenu: false,
   autoTitle: false,
   enterToSubmit: true,
+  layoutWidth: 'normal',
   defaultChatConfig: {
     provider: 'openai',
     modelConfig: _defaultModelConfig,
@@ -90,6 +96,12 @@ export const createConfigSlice: StoreSlice<ConfigSlice> = (set, get) => ({
     set((prev: ConfigSlice) => ({
       ...prev,
       enterToSubmit: enterToSubmit,
+    }));
+  },
+  setLayoutWidth: (layoutWidth: LayoutWidth) => {
+    set((prev: ConfigSlice) => ({
+      ...prev,
+      layoutWidth,
     }));
   },
 });

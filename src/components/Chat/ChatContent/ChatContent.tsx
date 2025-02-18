@@ -47,9 +47,14 @@ const ChatContent = () => {
   );
   const generating = useStore.getState().generating;
   const hideSideMenu = useStore((state) => state.hideSideMenu);
-
   const saveRef = useRef<HTMLDivElement>(null);
-
+  const layoutWidth = useStore((state) => state.layoutWidth);
+  const getWidthClass = () => {
+    if (layoutWidth === 'wide') {
+      return hideSideMenu ? 'w-[85%]' : 'w-[65%]';
+    }
+    return hideSideMenu ? 'w-[75%]' : 'w-[55%]';
+  };
   // clear error at the start of generating new messages
   useEffect(() => {
     if (generating) {
@@ -109,11 +114,7 @@ const ChatContent = () => {
             </div>
           )}
           <div
-            className={`mt-4 w-full m-auto  ${
-              hideSideMenu
-                ? 'md:max-w-5xl lg:max-w-5xl xl:max-w-6xl'
-                : 'md:max-w-3xl lg:max-w-3xl xl:max-w-4xl'
-            }`}
+        className={`mt-4 m-auto ${getWidthClass()}`}
           >
             {useStore.getState().generating || (
               <div className='md:w-[calc(100%-50px)] flex gap-4 flex-wrap justify-center'>

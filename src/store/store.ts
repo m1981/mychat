@@ -44,6 +44,7 @@ const useStore = create<StoreState>()(
         hideSideMenu: state.hideSideMenu,
         folders: state.folders,
         enterToSubmit: state.enterToSubmit,
+        layoutWidth: state.layoutWidth,
       }),
     }
   )
