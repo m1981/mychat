@@ -1,7 +1,7 @@
 // MermaidComponents.tsx
 import React, { useRef, useState, useEffect } from 'react';
 import { compressToEncodedURIComponent } from 'lz-string';
-
+import { MermaidConfig } from 'mermaid';
 interface DangerousHTML {
   __html: string;
 }
@@ -130,7 +130,6 @@ export const MermaidDiagram = ({ content }: { content: string }) => {
           startOnLoad: false,
           theme: 'forest',
           securityLevel: 'loose',
-          ssrMode: true,
           htmlLabels: true
         };
 
