@@ -1,6 +1,6 @@
 # Configuration
 DOCKER_COMPOSE = docker compose
-NODE_PACKAGE_MANAGER = yarn
+NODE_PACKAGE_MANAGER = pnpm
 CONTAINER_NAME = mychat-app
 COLIMA_PROFILE = dev
 COLIMA_CPU = 4
@@ -62,9 +62,6 @@ pkg-remove: ## Remove package(s). Usage: make pkg-remove p=package-name
 pkg-check: ## Check for unused and missing dependencies
 	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) deps:check
 
-pkg-update: ## Update packages interactively (with GUI)
-	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) upgrade-interactive --latest
-
 pkg-sync: ## Sync yarn.lock with package.json (fix lock file issues)
 	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) install
 
@@ -90,21 +87,6 @@ test-watch: ## Run tests in watch mode
 test-coverage: ## Run tests with coverage
 	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) test:coverage
 
-
-##@ Utility
-.PHONY: stop restart logs clean
-
-stop: ## Stop all services
-	$(DOCKER_COMPOSE) down
-
-restart: ## Restart development environment
-	$(DOCKER_COMPOSE) down && $(DOCKER_COMPOSE) up app
-
-logs: ## View development logs
-	$(DOCKER_COMPOSE) logs -f
-
-clean: ## Clean up containers and volumes
-	$(DOCKER_COMPOSE) down -v
 
 ##@ Colima Management
 .PHONY: colima-start colima-stop colima-status colima-list colima-delete

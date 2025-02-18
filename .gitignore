@@ -26,3 +26,7 @@ dist-ssr
 release/
 
 .env
+
+# Add PNPM specific entries
+.pnpm-store/
+pnpm-debug.log

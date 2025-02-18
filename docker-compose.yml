@@ -10,8 +10,7 @@ services:
     volumes:
       - .:/home/appuser/app
       - /home/appuser/app/node_modules # This excludes node_modules from host mounting
-    mem_limit: 8g
     environment:
       - NODE_ENV=development
     working_dir: /home/appuser/app
-    command: yarn dev:host
+    command: pnpm dev:host
