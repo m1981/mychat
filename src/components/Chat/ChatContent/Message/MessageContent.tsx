@@ -146,7 +146,7 @@ const ContentView = React.memo(
           handleDelete={handleDelete}
           handleCopy={handleCopy}
         />
-        <div className=''>
+        <div className='markdown prose w-full md:max-w-full break-words dark:prose-invert dark share-gpt-message'>
           <ReactMarkdown
             remarkPlugins={[
               remarkGfm,
