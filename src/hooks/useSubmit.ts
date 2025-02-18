@@ -89,11 +89,7 @@ while (reading && useStore.getState().generating) {
 
   if (value) {
     const decodedValue = new TextDecoder().decode(value);
-    console.log('Decoded chunk:', decodedValue);
-
     const result = parseEventSource(decodedValue);
-    console.log('Parsed events:', result);
-
     const resultString = result.reduce((output: string, curr) => {
       if (curr === '[DONE]') {
         reading = false;
@@ -102,15 +98,11 @@ while (reading && useStore.getState().generating) {
 
       try {
         const content = currentProvider.parseStreamingResponse(curr);
-        console.log('Parsed content:', content); // Debug log
         return output + (content || '');
       } catch (err) {
-        console.error('Error parsing streaming response:', err);
         return output;
       }
     }, '');
-
-    console.log('Final result string:', resultString); // Debug log
 
     if (resultString) {
       const updatedChats: ChatInterface[] = JSON.parse(
@@ -119,7 +111,6 @@ while (reading && useStore.getState().generating) {
       const updatedMessages = updatedChats[currentChatIndex].messages;
       updatedMessages[updatedMessages.length - 1].content += resultString;
       setChats(updatedChats);
-      console.log('Updated chat content:', updatedMessages[updatedMessages.length - 1].content); // Debug log
     }
   }
 }
