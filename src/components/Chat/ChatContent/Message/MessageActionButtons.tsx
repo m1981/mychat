@@ -102,24 +102,25 @@ const MessageActionButtons: React.FC<MessageActionButtonsProps> = ({
   const isGenerating = useStore(state => state.generating);
 
   return (
-    <div className="flex justify-end gap-2 w-full mt-2 group">
-      {isDelete ? (
-        <>
-          <MessageButton icon={<CrossIcon />} onClick={() => setIsDelete(false)} />
-          <MessageButton icon={<TickIcon />} onClick={handleDelete} />
-        </>
-      ) : (
-        <>
-          {!isGenerating && role === 'assistant' && messageIndex === lastMessageIndex && <RefreshButton onClick={handleRefresh} />}
-          {messageIndex > 0 && <UpButton onClick={handleMoveUp} />}
-          {messageIndex < lastMessageIndex && <DownButton onClick={handleMoveDown} />}
-          <CopyButton handleCopy={handleCopy} />
-          <EditButton setIsActive={setIsEdit} />
-          <DeleteButton setIsActive={setIsDelete} />
-        </>
-      )}
-    </div>
-  );
-};
+    <div className="flex justify-end  w-full mt-2 group">
+        {isDelete ? (
+          <>
+            <MessageButton icon={<CrossIcon />} onClick={() => setIsDelete(false)} />
+            <MessageButton icon={<TickIcon />} onClick={handleDelete} />
+          </>
+        ) : (
+          <>
+            {!isGenerating && role === 'assistant' && messageIndex === lastMessageIndex &&
+              <RefreshButton onClick={handleRefresh} />}
+            {messageIndex > 0 && <UpButton onClick={handleMoveUp} />}
+            {messageIndex < lastMessageIndex && <DownButton onClick={handleMoveDown} />}
+            <CopyButton handleCopy={handleCopy} />
+            <EditButton setIsActive={setIsEdit} />
+            <DeleteButton setIsActive={setIsDelete} />
+          </>
+        )}
+      </div>
+      );
+      };
 
-export default MessageActionButtons;
+      export default MessageActionButtons;
