@@ -19,16 +19,44 @@ interface Message {
   content: string;
 }
 
+interface ErrorMessageProps {
+  error: string;
+  onClose: () => void;
+}
+
+const ErrorMessage: React.FC<ErrorMessageProps> = ({ error, onClose }) => (
+  <div className='relative py-2 px-3 w-3/5 mt-3 max-md:w-11/12 border rounded-md border-red-500 bg-red-500/10'>
+    <div className='text-gray-600 dark:text-gray-100 text-sm whitespace-pre-wrap'>
+      {error}
+    </div>
+    <button
+      className='text-white absolute top-1 right-1 cursor-pointer'
+      onClick={onClose}
+      aria-label="Close error message"
+    >
+      <CrossIcon />
+    </button>
+  </div>
+);
+
 const ChatContent = () => {
+  // Store hooks
   const currentChat = useStore((state) =>
     state.chats?.[state.currentChatIndex]
   );
+  const inputRole = useStore((state) => state.inputRole);
+  const error = useStore((state) => state.error);
+  const setError = useStore((state) => state.setError);
+  const generating = useStore((state) => state.generating);
+  const hideSideMenu = useStore((state) => state.hideSideMenu);
+  const layoutWidth = useStore((state) => state.layoutWidth);
+
+  // Get current provider
   const currentProvider = currentChat
     ? providers[currentChat.config.provider]
     : providers.openai;
 
-  const inputRole = useStore((state) => state.inputRole);
-  const setError = useStore((state) => state.setError);
+  // Get messages
   const messages = useStore((state) =>
     state.chats &&
     state.chats.length > 0 &&
@@ -37,6 +65,8 @@ const ChatContent = () => {
       ? state.chats[state.currentChatIndex].messages
       : []
   );
+
+  // Get sticky index
   const stickyIndex = useStore((state) =>
     state.chats &&
     state.chats.length > 0 &&
@@ -45,24 +75,27 @@ const ChatContent = () => {
       ? state.chats[state.currentChatIndex].messages.length
       : 0
   );
-  const generating = useStore.getState().generating;
-  const hideSideMenu = useStore((state) => state.hideSideMenu);
+
+  // Refs
   const saveRef = useRef<HTMLDivElement>(null);
-  const layoutWidth = useStore((state) => state.layoutWidth);
+
+  // Custom hooks
+  const { error: submitError } = useSubmit();
+
+  // Layout width helper
   const getWidthClass = () => {
     if (layoutWidth === 'wide') {
       return hideSideMenu ? 'w-[85%]' : 'w-[65%]';
     }
     return hideSideMenu ? 'w-[75%]' : 'w-[55%]';
   };
-  // clear error at the start of generating new messages
+
+  // Clear error when generating starts
   useEffect(() => {
     if (generating) {
       setError('');
     }
-  }, [generating]);
-
-  const { error } = useSubmit();
+  }, [generating, setError]);
 
   return (
     <div className='flex-1 overflow-hidden'>
@@ -77,9 +110,13 @@ const ChatContent = () => {
             ref={saveRef}
           >
             <ChatTitle />
+
+            {/* New Message Button when no messages */}
             {!generating && messages?.length === 0 && (
               <NewMessageButton messageIndex={-1} />
             )}
+
+            {/* Message List */}
             {messages?.map((message: Message, index: number) => (
               <React.Fragment key={index}>
                 <Message
@@ -92,38 +129,34 @@ const ChatContent = () => {
             ))}
           </div>
 
+          {/* Sticky Message */}
           <Message
             role={inputRole}
             content=''
             messageIndex={stickyIndex}
             sticky
           />
-          {error !== '' && (
-            <div className='relative py-2 px-3 w-3/5 mt-3 max-md:w-11/12 border rounded-md border-red-500 bg-red-500/10'>
-              <div className='text-gray-600 dark:text-gray-100 text-sm whitespace-pre-wrap'>
-                {error}
-              </div>
-              <div
-                className='text-white absolute top-1 right-1 cursor-pointer'
-                onClick={() => {
-                  setError('');
-                }}
-              >
-                <CrossIcon />
-              </div>
-            </div>
+
+          {/* Error Message */}
+          {error && (
+            <ErrorMessage
+              error={error}
+              onClose={() => setError('')}
+            />
           )}
-          <div
-        className={`mt-4 m-auto ${getWidthClass()}`}
-          >
-            {useStore.getState().generating || (
+
+          {/* Download and Clone Buttons */}
+          <div className={`mt-4 m-auto ${getWidthClass()}`}>
+            {!generating && (
               <div className='md:w-[calc(100%-50px)] flex gap-4 flex-wrap justify-center'>
                 <DownloadChat saveRef={saveRef} />
                 <CloneChat />
               </div>
             )}
           </div>
-          <div className='w-full h-36'></div>
+
+          {/* Bottom Spacing */}
+          <div className='w-full h-36' />
         </div>
       </ScrollToBottom>
     </div>

@@ -1,14 +1,14 @@
 import React from 'react';
 import useStore from '@store/store';
 import { useTranslation } from 'react-i18next';
-import { ChatInterface, MessageInterface, ProviderKey} from '@type/chat';
+import { ChatInterface, MessageInterface, ProviderKey } from '@type/chat';
 import { getChatCompletion, getChatCompletionStream } from '@api/api';
 import { parseEventSource } from '@api/helper';
 import { limitMessageTokens } from '@utils/messageUtils';
 import { _defaultModelConfig, _defaultChatConfig } from '@constants/chat';
 import { officialAPIEndpoint } from '@constants/auth';
 import { providers } from '@type/providers';
-
+import { checkStorageQuota } from '@utils/storage';
 
 const useSubmit = () => {
   const currentChatIndex = useStore((state) => state.currentChatIndex);
@@ -43,16 +43,25 @@ const useSubmit = () => {
     const chats = useStore.getState().chats;
     if (generating || !chats) return;
 
-    const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(chats));
-    updatedChats[currentChatIndex].messages.push({
-      role: 'assistant',
-      content: '',
-    });
-
-    setChats(updatedChats);
-    setGenerating(true);
-
     try {
+      // Check storage quota before proceeding
+      console.log("before")
+      await checkStorageQuota();
+      console.log("after")
+      // If there's a storage-related error, don't proceed
+      if (useStore.getState().error) {
+        return;
+      }
+
+      const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(chats));
+      updatedChats[currentChatIndex].messages.push({
+        role: 'assistant',
+        content: '',
+      });
+
+      setChats(updatedChats);
+      setGenerating(true);
+
       let stream;
       if (chats[currentChatIndex].messages.length === 0)
         throw new Error('No messages submitted!');
@@ -79,50 +88,52 @@ const useSubmit = () => {
         const reader = stream.getReader();
         let reading = true;
         let partial = '';
-while (reading && useStore.getState().generating) {
-  const { done, value } = await reader.read();
 
-  if (done) {
-    reading = false;
-    break;
-  }
+        while (reading && useStore.getState().generating) {
+          const { done, value } = await reader.read();
 
-  if (value) {
-    const decodedValue = new TextDecoder().decode(value);
-    const result = parseEventSource(decodedValue);
-    const resultString = result.reduce((output: string, curr) => {
-      if (curr === '[DONE]') {
-        reading = false;
-        return output;
+          if (done) {
+            reading = false;
+            break;
+          }
+
+          if (value) {
+            const decodedValue = new TextDecoder().decode(value);
+            const result = parseEventSource(decodedValue);
+            const resultString = result.reduce((output: string, curr) => {
+              if (curr === '[DONE]') {
+                reading = false;
+                return output;
+              }
+
+              try {
+                const content = currentProvider.parseStreamingResponse(curr);
+                return output + (content || '');
+              } catch (err) {
+                return output;
+              }
+            }, '');
+
+            if (resultString) {
+              const updatedChats: ChatInterface[] = JSON.parse(
+                JSON.stringify(useStore.getState().chats)
+              );
+              const updatedMessages = updatedChats[currentChatIndex].messages;
+              updatedMessages[updatedMessages.length - 1].content += resultString;
+              setChats(updatedChats);
+            }
+          }
+        }
+
+        if (useStore.getState().generating) {
+          reader.cancel('Cancelled by user');
+        } else {
+          reader.cancel('Generation completed');
+        }
+        reader.releaseLock();
+        stream.cancel();
       }
 
-      try {
-        const content = currentProvider.parseStreamingResponse(curr);
-        return output + (content || '');
-      } catch (err) {
-        return output;
-      }
-    }, '');
-
-    if (resultString) {
-      const updatedChats: ChatInterface[] = JSON.parse(
-        JSON.stringify(useStore.getState().chats)
-      );
-      const updatedMessages = updatedChats[currentChatIndex].messages;
-      updatedMessages[updatedMessages.length - 1].content += resultString;
-      setChats(updatedChats);
-    }
-  }
-}
-
-if (useStore.getState().generating) {
-  reader.cancel('Cancelled by user');
-} else {
-  reader.cancel('Generation completed');
-}
-reader.releaseLock();
-stream.cancel();
- }
       // generate title for new chats
       const currChats = useStore.getState().chats;
       if (
