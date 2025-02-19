@@ -1,7 +1,7 @@
 import React, { useState, MouseEvent, Dispatch, SetStateAction } from 'react';
 import RefreshIcon from '@icon/RefreshIcon';
 import DownChevronArrow from '@icon/DownChevronArrow';
-import CrossIcon from '@icon/CrossIcon';
+import CancelIcon from '@icon/CancelIcon';
 import TickIcon from '@icon/TickIcon';
 import CopyIcon from '@icon/CopyIcon';
 import EditIcon2 from '@icon/EditIcon2';
@@ -105,7 +105,7 @@ const MessageActionButtons: React.FC<MessageActionButtonsProps> = ({
     <div className="flex justify-end  w-full mt-2 group">
         {isDelete ? (
           <>
-            <MessageButton icon={<CrossIcon />} onClick={() => setIsDelete(false)} />
+            <MessageButton icon={<CancelIcon />} onClick={() => setIsDelete(false)} />
             <MessageButton icon={<TickIcon />} onClick={handleDelete} />
           </>
         ) : (

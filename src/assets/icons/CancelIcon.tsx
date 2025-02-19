@@ -1,6 +1,6 @@
 import React from 'react';
 
-const CrossIcon = () => {
+const CancelIcon = () => {
   return (
     <span className="px-2 py-1 text-xs
     text-gray-600 dark:text-gray-300
@@ -13,4 +13,4 @@ const CrossIcon = () => {
   );
 };
 
-export default CrossIcon;
+export default CancelIcon;

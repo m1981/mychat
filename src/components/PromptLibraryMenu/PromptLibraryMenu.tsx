@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import PopupModal from '@components/PopupModal';
 import { Prompt } from '@type/prompt';
 import PlusIcon from '@icon/PlusIcon';
-import CrossIcon from '@icon/CrossIcon';
+import CrossIcon from '@icon/CrossIcon2';
 import { v4 as uuidv4 } from 'uuid';
 import ImportPrompt from './ImportPrompt';
 import ExportPrompt from './ExportPrompt';

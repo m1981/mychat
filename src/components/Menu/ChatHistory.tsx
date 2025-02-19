@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
 
 import ChatIcon from '@icon/ChatIcon';
-import CrossIcon from '@icon/CrossIcon';
+import CancelIcon from '@icon/CancelIcon';
 import DeleteIcon from '@icon/DeleteIcon';
 import EditIcon from '@icon/EditIcon';
 import TickIcon from '@icon/TickIcon';
@@ -134,7 +134,7 @@ const ChatHistory = React.memo(
                   <TickIcon />
                 </button>
                 <button className='p-1 hover:text-white' onClick={handleCross}>
-                  <CrossIcon />
+                  <CancelIcon />
                 </button>
               </>
             ) : (

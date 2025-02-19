@@ -6,7 +6,7 @@ import ScrollToBottomButton from './ScrollToBottomButton';
 import ChatTitle from './ChatTitle';
 import Message from './Message';
 import NewMessageButton from './Message/NewMessageButton';
-import CrossIcon from '@icon/CrossIcon';
+import CrossIcon from '@icon/CrossIcon2';
 
 import useSubmit from '@hooks/useSubmit';
 import DownloadChat from './DownloadChat';
