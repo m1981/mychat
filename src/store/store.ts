@@ -18,27 +18,29 @@ export type StoreSlice<T> = (
 ) => T;
 
 // Custom storage with error handling
-const createCustomStorage = (): PersistStorage<StoreState> => ({
+const createCustomStorage = (): PersistStorage<Partial<StoreState>> => ({
   getItem: (name) => {
     try {
       const item = localStorage.getItem(name);
       return item ? JSON.parse(item) : null;
-    } catch (err) {
-      console.warn('Error reading from localStorage:', err);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.warn('Error reading from localStorage:', error);
       return null;
     }
   },
   setItem: (name, value) => {
     try {
       localStorage.setItem(name, JSON.stringify(value));
-    } catch (err) {
-      if (err.name === 'QuotaExceededError') {
+    } catch (err: unknown) {
+      const error = err as Error;
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
         useStore.getState().setError(
           'Storage limit reached. Please delete some chats to continue saving new messages.'
         );
       } else {
         useStore.getState().setError(
-          'Failed to save to localStorage. ' + err.message
+          'Failed to save to localStorage. ' + error.message
         );
       }
     }
@@ -46,8 +48,9 @@ const createCustomStorage = (): PersistStorage<StoreState> => ({
   removeItem: (name) => {
     try {
       localStorage.removeItem(name);
-    } catch (err) {
-      console.warn('Error removing from localStorage:', err);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.warn('Error removing from localStorage:', error);
     }
   },
 });
