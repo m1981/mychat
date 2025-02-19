@@ -2,14 +2,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { ChatConfig, ModelConfig, ChatInterface, ModelOptions } from '@type/chat';
 import useStore from '@store/store';
 
-const date = new Date();
-const dateString =
-  date.getFullYear() +
-  '-' +
-  ('0' + (date.getMonth() + 1)).slice(-2) +
-  '-' +
-  ('0' + date.getDate()).slice(-2);
-
 // default system message obtained using the following method: https://twitter.com/DeminDimin/status/1619935545144279040
 export const _defaultSystemMessage =
   import.meta.env.VITE_DEFAULT_SYSTEM_MESSAGE ??
@@ -25,15 +17,6 @@ export const modelOptions: ModelOptions[] = [
 ];
 
 export const defaultModel = 'gpt-4o';
-/*
-GPT-4 Turbo 128K
-Input: $0.01
-Output: $0.03
-
-GPT-3.5 Turbo 16K
-Input: $0.001
-Output: $0.002
-*/
 
 export const modelMaxToken = {
   'gpt-3.5-turbo': 16384,
@@ -54,16 +37,16 @@ export const modelCost = {
 export const defaultUserMaxToken = 16384;
 
 export const _defaultModelConfig: ModelConfig = {
-  model: 'gpt-4o',
+  model: 'claude-3-opus-latest',
   max_tokens: 16384,
-  temperature: 1,
+  temperature: 0,
   presence_penalty: 0,
   top_p: 1,
   frequency_penalty: 0,
 };
 
 export const _defaultChatConfig: ChatConfig = {
-  provider: 'openai',
+  provider: 'anthropic',
   modelConfig: _defaultModelConfig,
 };
 

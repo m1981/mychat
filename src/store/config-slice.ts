@@ -1,7 +1,7 @@
 import { StoreSlice } from './store';
 import { Theme } from '@type/theme';
 import { ChatConfig, ProviderKey } from '@type/chat';
-import { _defaultModelConfig, _defaultChatConfig, _defaultSystemMessage } from '@constants/chat';
+import { _defaultModelConfig, _defaultSystemMessage } from '@constants/chat';
 
 export type LayoutWidth = 'normal' | 'wide';
 
@@ -28,7 +28,7 @@ export interface ConfigSlice {
 
 }
 
-export const createConfigSlice: StoreSlice<ConfigSlice> = (set, get) => ({
+export const createConfigSlice: StoreSlice<ConfigSlice> = (set) => ({
   openConfig: false,
   theme: 'dark',
   hideMenuOptions: false,
@@ -37,7 +37,7 @@ export const createConfigSlice: StoreSlice<ConfigSlice> = (set, get) => ({
   enterToSubmit: true,
   layoutWidth: 'normal',
   defaultChatConfig: {
-    provider: 'openai',
+    provider: 'anthropic',
     modelConfig: _defaultModelConfig,
   },
   defaultSystemMessage: _defaultSystemMessage,
