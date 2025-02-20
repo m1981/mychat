@@ -21,6 +21,8 @@ import CommandPrompt from './CommandPrompt';
 import CodeBlock from './CodeBlock';
 import MessageActionButtons from './MessageActionButtons';
 import { MermaidDiagram } from './MermaidComponent';
+import { usePasteHandler } from '@hooks/usePasteHandler';
+
 const p = (props: DetailedHTMLProps<HTMLAttributes<HTMLParagraphElement>, HTMLParagraphElement>) => {
   return <p className="whitespace-pre-wrap">{props.children}</p>;
 };
@@ -81,9 +83,6 @@ const ContentView = React.memo(
     const [isDelete, setIsDelete] = useState<boolean>(false);
     const currentChatIndex = useStore((state) => state.currentChatIndex);
     const setChats = useStore((state) => state.setChats);
-    const lastMessageIndex = useStore((state) =>
-      state.chats ? state.chats[state.currentChatIndex].messages.length - 1 : 0
-    );
 
     const handleDelete = () => {
       const updatedChats: ChatInterface[] = JSON.parse(
@@ -229,6 +228,11 @@ const EditView = ({
 
   const { t } = useTranslation();
 
+  const { handlePaste } = usePasteHandler({
+    onContentUpdate: _setContent,
+    currentContent: _content
+  });
+
   const resetTextAreaHeight = () => {
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
   };
@@ -338,6 +342,7 @@ const EditView = ({
           onChange={(e) => {
             _setContent(e.target.value);
           }}
+          onPaste={handlePaste}
           value={_content}
           placeholder={t('submitPlaceholder') as string}
           onKeyDown={handleKeyDown}
