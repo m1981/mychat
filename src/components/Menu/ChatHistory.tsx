@@ -4,6 +4,7 @@ import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
 
 import ChatIcon from '@icon/ChatIcon';
 import CancelIcon from '@icon/CancelIcon';
+import CrossIcon from '@icon/CrossIcon';
 import DeleteIcon from '@icon/DeleteIcon';
 import EditIcon from '@icon/EditIcon';
 import TickIcon from '@icon/TickIcon';
@@ -127,14 +128,15 @@ const ChatHistory = React.memo(
           )}
         </div>
         {active && (
-          <div className='absolute flex right-1 z-10 text-gray-300 visible'>
+          <div className='absolute flex right-1 z-10 text-gray-300 visible pl-[5px] bg-gray-800'>
             {isDelete || isEdit ? (
               <>
                 <button className='p-1 hover:text-white' onClick={handleTick}>
                   <TickIcon />
                 </button>
                 <button className='p-1 hover:text-white' onClick={handleCross}>
-                  <CancelIcon />
+                  {isDelete && <CancelIcon />}
+                  {isEdit && <CrossIcon />}
                 </button>
               </>
             ) : (

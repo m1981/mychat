@@ -2,7 +2,7 @@ import React from 'react';
 
 const TickIcon = () => {
   return (
-    <div className="p-1.5 rounded-md
+    <div className="p-0.5 rounded-md
       border border-transparent
       hover:border-gray-300 dark:hover:border-gray-600
       hover:bg-gray-100 dark:hover:bg-gray-800
@@ -22,7 +22,7 @@ const TickIcon = () => {
         <polyline points='20 6 9 17 4 12'></polyline>
       </svg>
     </div>
-      );
-      };
+  );
+};
 
-      export default TickIcon;
+export default TickIcon;
