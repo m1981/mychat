@@ -105,12 +105,6 @@ const ChatContent: React.FC = () => {
     }
   }, [generating, setError]);
 
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    if (generating || messages?.length) {
-      scrollToBottom('auto');
-    }
-  }, [messages, generating, scrollToBottom]);
 
   // Setup scroll listener
   useEffect(() => {
