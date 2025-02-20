@@ -8,6 +8,7 @@ import Menu from '@components/Menu';
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
 import { ChatInterface } from '@type/chat';
 import { Theme } from '@type/theme';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   const initialiseNewChat = useInitialiseNewChat();
@@ -75,6 +76,7 @@ function App() {
     <div className='overflow-hidden w-full h-full relative'>
       <Menu />
       <Chat />
+      <Toaster />
     </div>
   );
 }
