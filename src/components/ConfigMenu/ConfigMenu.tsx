@@ -176,7 +176,7 @@ export const MaxTokenSlider = ({
         step={100} // Changed from 1000 for finer control
         className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
       />
-      <div className='min-w-fit text-gray-500 dark:text-gray-300 text-sm mt-2'>
+      <div className='min-w-fit text-gray-500 dark:text-gray-300 text-xs mt-2'>
         {t('token.description')}
       </div>
     </div>
@@ -211,7 +211,7 @@ export const TemperatureSlider = ({
         step={0.1}
         className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
       />
-      <div className='min-w-fit text-gray-500 dark:text-gray-300 text-sm mt-2'>
+      <div className='min-w-fit text-gray-500 dark:text-gray-300 text-xs mt-2'>
         {t('temperature.description')}
       </div>
     </div>
@@ -246,7 +246,7 @@ export const TopPSlider = ({
         step={0.05}
         className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
       />
-      <div className='min-w-fit text-gray-500 dark:text-gray-300 text-sm mt-2'>
+      <div className='min-w-fit text-gray-500 dark:text-gray-300 text-xs mt-2'>
         {t('topP.description')}
       </div>
     </div>
