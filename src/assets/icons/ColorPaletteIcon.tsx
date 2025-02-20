@@ -8,9 +8,8 @@ const ColorPaletteIcon = (props: React.SVGProps<SVGSVGElement>) => {
       hover:bg-gray-100 dark:hover:bg-gray-800
       transition-all duration-200 cursor-pointer">
       <svg
-        fillColor='currentColor'
-        viewBox='0 0 24 24'
         fill='currentColor'
+        viewBox='0 0 24 24'
         height='1em'
         width='1em'
         {...props}
