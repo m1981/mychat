@@ -1,29 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useAtBottom, useScrollToBottom } from 'react-scroll-to-bottom';
 
 import DownArrow from '@icon/DownArrow';
 
 const ScrollToBottomButton = React.memo(() => {
-  const [atBottom, setAtBottom] = useState(false);
-
-  const handleScroll = () => {
-    const isAtBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight;
-    setAtBottom(isAtBottom);
-  };
-
-  // Set up an effect to add and remove the scroll event listener
-  useEffect(() => {
-    window.addEventListener('scroll', handleScroll);
-    // Call handleScroll initially in case the page is already scrolled to bottom
-    handleScroll();
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
-
-  const scrollToBottom = () => {
-    window.scrollTo(0, document.body.scrollHeight);
-  };
+  const scrollToBottom = useScrollToBottom();
+  const [atBottom] = useAtBottom();
 
   return (
     <button
