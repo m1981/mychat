@@ -1,5 +1,4 @@
-import React, { useEffect, useRef } from 'react';
-import ScrollToBottom from 'react-scroll-to-bottom';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import useStore from '@store/store';
 
 import ScrollToBottomButton from './ScrollToBottomButton';
@@ -8,11 +7,9 @@ import Message from './Message';
 import NewMessageButton from './Message/NewMessageButton';
 import CrossIcon from '@icon/CrossIcon2';
 
-import useSubmit from '@hooks/useSubmit';
 import DownloadChat from './DownloadChat';
 import CloneChat from './CloneChat';
 import { Role } from '@type/chat';
-import { providers } from '@type/providers';
 
 interface Message {
   role: Role;
@@ -39,22 +36,19 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({ error, onClose }) => (
   </div>
 );
 
-const ChatContent = () => {
-  // Store hooks
-  const currentChat = useStore((state) =>
-    state.chats?.[state.currentChatIndex]
-  );
+const ChatContent: React.FC = () => {
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
+  const saveRef = useRef<HTMLDivElement | null>(null);
+
+  // State
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
   const inputRole = useStore((state) => state.inputRole);
   const error = useStore((state) => state.error);
   const setError = useStore((state) => state.setError);
   const generating = useStore((state) => state.generating);
   const hideSideMenu = useStore((state) => state.hideSideMenu);
   const layoutWidth = useStore((state) => state.layoutWidth);
-
-  // Get current provider
-  const currentProvider = currentChat
-    ? providers[currentChat.config.provider]
-    : providers.openai;
 
   // Get messages
   const messages = useStore((state) =>
@@ -76,11 +70,25 @@ const ChatContent = () => {
       : 0
   );
 
-  // Refs
-  const saveRef = useRef<HTMLDivElement>(null);
+  // Scroll handlers
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    const container = chatContainerRef.current;
+    if (container instanceof HTMLDivElement) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior,
+      });
+    }
+  }, []);
 
-  // Custom hooks
-  const { error: submitError } = useSubmit();
+  const handleScroll = useCallback(() => {
+    const container = chatContainerRef.current;
+    if (container instanceof HTMLDivElement) {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setShowScrollButton(!isNearBottom);
+    }
+  }, []);
 
   // Layout width helper
   const getWidthClass = () => {
@@ -90,20 +98,35 @@ const ChatContent = () => {
     return hideSideMenu ? 'w-[75%]' : 'w-[55%]';
   };
 
-  // Clear error when generating starts
+  // Effects
   useEffect(() => {
     if (generating) {
       setError('');
     }
   }, [generating, setError]);
 
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    if (generating || messages?.length) {
+      scrollToBottom('auto');
+    }
+  }, [messages, generating, scrollToBottom]);
+
+  // Setup scroll listener
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, [handleScroll]);
+
   return (
     <div className='flex-1 overflow-hidden'>
-      <ScrollToBottom
-        className='h-full dark:bg-gray-800'
-        followButtonClassName='hidden'
+      <div
+        ref={chatContainerRef}
+        className="h-full overflow-y-auto dark:bg-gray-800 scroll-smooth"
       >
-        <ScrollToBottomButton />
         <div className='flex flex-col items-center text-sm dark:bg-gray-800'>
           <div
             className='flex flex-col items-center text-sm dark:bg-gray-800 w-full'
@@ -127,38 +150,43 @@ const ChatContent = () => {
                 {!generating && <NewMessageButton messageIndex={index} />}
               </React.Fragment>
             ))}
-          </div>
 
-          {/* Sticky Message */}
-          <Message
-            role={inputRole}
-            content=''
-            messageIndex={stickyIndex}
-            sticky
-          />
-
-          {/* Error Message */}
-          {error && (
-            <ErrorMessage
-              error={error}
-              onClose={() => setError('')}
+            {/* Sticky Message */}
+            <Message
+              role={inputRole}
+              content=''
+              messageIndex={stickyIndex}
+              sticky
             />
-          )}
 
-          {/* Download and Clone Buttons */}
-          <div className={`mt-4 m-auto ${getWidthClass()}`}>
-            {!generating && (
-              <div className='md:w-[calc(100%-50px)] flex gap-4 flex-wrap justify-center'>
-                <DownloadChat saveRef={saveRef} />
-                <CloneChat />
-              </div>
+            {/* Error Message */}
+            {error && (
+              <ErrorMessage
+                error={error}
+                onClose={() => setError('')}
+              />
             )}
-          </div>
 
-          {/* Bottom Spacing */}
-          <div className='w-full h-36' />
+            {/* Download and Clone Buttons */}
+            <div className={`mt-4 m-auto ${getWidthClass()}`}>
+              {!generating && (
+                <div className='md:w-[calc(100%-50px)] flex gap-4 flex-wrap justify-center'>
+                  <DownloadChat saveRef={saveRef} />
+                  <CloneChat />
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Spacing */}
+            <div className='w-full h-36' />
+          </div>
         </div>
-      </ScrollToBottom>
+      </div>
+
+      <ScrollToBottomButton
+        show={showScrollButton}
+        onClick={() => scrollToBottom()}
+      />
     </div>
   );
 };
