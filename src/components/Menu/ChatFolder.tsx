@@ -15,6 +15,7 @@ import NewChat from './NewChat';
 import EditIcon from '@icon/EditIcon';
 import DeleteIcon from '@icon/DeleteIcon';
 import CancelIcon from '@icon/CancelIcon';
+import CrossIcon from '@icon/CrossIcon';
 import TickIcon from '@icon/TickIcon';
 import ColorPaletteIcon from '@icon/ColorPaletteIcon';
 import RefreshIcon from '@icon/RefreshIcon';
@@ -238,7 +239,8 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
                       <TickIcon />
                     </button>
                     <button className='p-1 hover:text-white' onClick={handleCross}>
-                      <CancelIcon />
+                  {isDelete && <CancelIcon />}
+                  {isEdit && <CrossIcon />}
                     </button>
                   </>
                 ) : (
