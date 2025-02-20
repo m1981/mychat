@@ -199,7 +199,7 @@ const ChatHistoryList = () => {
               <div
                   {...provided.droppableProps}
                   ref={provided.innerRef}
-                  className="flex flex-col gap-2"
+                  className="flex flex-col gap-1"
               >
                 {Object.keys(chatFolders).map((folderId, index) => (
                   <ChatFolder
