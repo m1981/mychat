@@ -22,6 +22,7 @@ import CodeBlock from './CodeBlock';
 import MessageActionButtons from './MessageActionButtons';
 import { MermaidDiagram } from './MermaidComponent';
 import { usePasteHandler } from '@hooks/usePasteHandler';
+import { useFileDropHandler } from '@hooks/useFileDropHandler';
 
 const p = (props: DetailedHTMLProps<HTMLAttributes<HTMLParagraphElement>, HTMLParagraphElement>) => {
   return <p className="whitespace-pre-wrap">{props.children}</p>;
@@ -233,6 +234,11 @@ const EditView = ({
     currentContent: _content
   });
 
+  const { handleDragOver, handleDrop } = useFileDropHandler({
+    onContentUpdate: _setContent,
+    currentContent: _content
+  });
+
   const resetTextAreaHeight = () => {
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
   };
@@ -343,6 +349,8 @@ const EditView = ({
             _setContent(e.target.value);
           }}
           onPaste={handlePaste}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
           value={_content}
           placeholder={t('submitPlaceholder') as string}
           onKeyDown={handleKeyDown}
