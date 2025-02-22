@@ -18,15 +18,43 @@ export const useFileDropHandler = ({ onContentUpdate, currentContent }: UseFileD
     e.stopPropagation();
 
     const files = Array.from(e.dataTransfer.files);
-    const cursorPosition = e.currentTarget.selectionStart;
+    let cursorPosition = e.currentTarget.selectionStart;
+    let accumulatedContent = currentContent;
 
+    try {
     for (const file of files) {
       if (file.type.startsWith('text/') ||
         file.name.match(/\.(txt|md|js|ts|jsx|tsx|json|css|html|svg)$/)) {
-        const content = await file.text();
-        const newContent = processContent(content, cursorPosition, currentContent);
-        onContentUpdate(newContent);
+          const fileContent = await file.text();
+
+          // Get the file path or name
+          // Note: For security reasons, browsers only provide the file name,
+          // not the full path
+          const filePath = file.webkitRelativePath || file.name;
+
+          // Process this file's content
+          accumulatedContent = processContent(
+            fileContent,
+            cursorPosition,
+            accumulatedContent,
+            filePath
+          );
+
+          // Add a newline between files
+          if (files.indexOf(file) < files.length - 1) {
+            accumulatedContent += '\n\n';
+          }
+
+          // Update cursor position for next file
+          cursorPosition = accumulatedContent.length;
       }
+    }
+
+      // Update content only once after processing all files
+      onContentUpdate(accumulatedContent);
+    } catch (error) {
+      console.error('Error processing dropped files:', error);
+      // Optionally show user-friendly error message
     }
   }, [currentContent, onContentUpdate]);
 

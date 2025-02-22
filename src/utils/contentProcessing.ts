@@ -4,37 +4,53 @@ import { detectCodeContent } from '@utils/languageDetection';
 export const processContent = (
   content: string,
   cursorPosition: number,
-  currentContent: string
-) => {
-  const detection = detectCodeContent(content);
+  currentContent: string,
+  filePath?: string // New parameter
+): string => {
+  try {
+    const detection = detectCodeContent(content);
 
-  if (detection?.isCode) {
-    let codeBlock: string;
+    let processedContent = content;
 
-    switch (detection.type) {
-      case 'mermaid':
-        codeBlock = `\`\`\`mermaid\n${content}\n\`\`\``;
-        break;
+    // Add file path if provided
+    const filePathSection = filePath ? `${filePath}\n` : '';
 
-      case 'patch':
-        codeBlock = `\`\`\`diff\n${content}\n\`\`\``;
-        break;
+    if (detection?.isCode) {
+      switch (detection.type) {
+        case 'mermaid':
+          processedContent = `${filePathSection}\`\`\`mermaid\n${content}\n\`\`\``;
+          break;
 
-      case 'mixed':
-        codeBlock = `\`\`\`${detection.subLanguages?.[0] || 'svelte'}\n${content}\n\`\`\``;
-        break;
+        case 'patch':
+          processedContent = `${filePathSection}\`\`\`diff\n${content}\n\`\`\``;
+          break;
 
-      default:
-        codeBlock = `\`\`\`${detection.language}\n${content}\n\`\`\``;
+        case 'mixed':
+          processedContent = `${filePathSection}\`\`\`${detection.subLanguages?.[0] || 'svelte'}\n${content}\n\`\`\``;
+          break;
+
+        default:
+          processedContent = `${filePathSection}\`\`\`${detection.language}\n${content}\n\`\`\``;
+      }
+    } else {
+      // For non-code content, still add the file path and wrap in code block
+      processedContent = `${filePathSection}\`\`\`\n${content}\n\`\`\``;
     }
 
-    return currentContent.slice(0, cursorPosition) +
-      codeBlock +
-      currentContent.slice(cursorPosition);
+    // Handle insertion at cursor position
+    return [
+      currentContent.slice(0, cursorPosition),
+      processedContent,
+      currentContent.slice(cursorPosition)
+    ].join('');
+  } catch (error) {
+    console.error('Error processing content:', error);
+    // Fallback with file path
+    const filePathSection = filePath ? `${filePath}\n` : '';
+    return [
+      currentContent.slice(0, cursorPosition),
+      `${filePathSection}${content}`,
+      currentContent.slice(cursorPosition)
+    ].join('');
   }
-
-  // If not code, just insert the content normally
-  return currentContent.slice(0, cursorPosition) +
-    content +
-    currentContent.slice(cursorPosition);
 };
