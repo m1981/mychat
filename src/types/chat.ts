@@ -1,6 +1,6 @@
 export type Role = 'user' | 'assistant' | 'system';
 export const roles: Role[] = ['user', 'assistant', 'system'];
-export type ProviderKey = 'openai' | 'anthropic';
+export type ProviderKey = 'anthropic' | 'openai' | string;
 
 export interface ModelConfig {
   model: string;

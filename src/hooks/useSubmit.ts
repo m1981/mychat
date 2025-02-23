@@ -5,22 +5,25 @@ import { ChatInterface, MessageInterface, ProviderKey } from '@type/chat';
 import { getChatCompletion, getChatCompletionStream } from '@api/api';
 import { parseEventSource } from '@api/helper';
 import { limitMessageTokens } from '@utils/messageUtils';
-import { _defaultModelConfig, _defaultChatConfig } from '@constants/chat';
+import { _defaultModelConfig, _defaultChatConfig, DEFAULT_PROVIDER } from '@constants/chat';
 import { officialAPIEndpoint } from '@constants/auth';
-import { providers } from '@type/providers';
+import { ProviderRegistry } from '@config/providers/provider.registry';
+import { ModelRegistry } from '@config/models/model.registry';
 import { checkStorageQuota } from '@utils/storage';
 
 const useSubmit = () => {
   const currentChatIndex = useStore((state) => state.currentChatIndex);
   const chats = useStore((state) => state.chats);
   const currentChat = chats?.[currentChatIndex];
-  const currentProvider = providers[currentChat?.config.provider || 'openai'];
+  
+  const currentProvider = currentChat?.config.provider || DEFAULT_PROVIDER;
+  const providerConfig = ProviderRegistry.getProvider(currentProvider);
 
   // Get API credentials based on chat's provider
   const apiKeys = useStore((state) => state.apiKeys);
   const apiEndpoints = useStore((state) => state.apiEndpoints);
-  const currentApiKey = apiKeys[currentChat?.config.provider || 'openai'];
-  const currentEndpoint = apiEndpoints[currentChat?.config.provider || 'openai'];
+  const currentApiKey = apiKeys[currentProvider];
+  const currentEndpoint = apiEndpoints[currentProvider];
 
   const { t, i18n } = useTranslation('api');
   const error = useStore((state) => state.error);
@@ -107,7 +110,7 @@ const useSubmit = () => {
               }
 
               try {
-                const content = currentProvider.parseStreamingResponse(curr);
+                const content =  currentProvider.parseStreamingResponse(curr);
                 return output + (content || '');
               } catch (err) {
                 return output;

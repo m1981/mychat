@@ -48,6 +48,7 @@ export default defineConfig({
       '@components/': new URL('./src/components/', import.meta.url).pathname,
       '@utils/': new URL('./src/utils/', import.meta.url).pathname,
       '@src/': new URL('./src/', import.meta.url).pathname,
+      '@config/': new URL('./src/config/', import.meta.url).pathname,
     },
   },
   base: '/',

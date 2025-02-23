@@ -1,22 +1,26 @@
 import { ModelConfig, MessageInterface } from '@type/chat';
-import { AIProvider, RequestConfig } from '@type/provider';
-import useStore from '@store/store';
+import { ProviderRegistry } from '@config/providers/provider.registry';
+import { ProviderKey } from '@type/chat';
+import { AIProvider } from '@type/provider';
 
 export const getChatCompletion = async (
-  provider: AIProvider,
+  providerKey: ProviderKey,
   messages: MessageInterface[],
   config: ModelConfig,
   apiKey?: string,
   customHeaders?: Record<string, string>
 ) => {
-  const response = await fetch(`/api/chat/${provider.id}`, {
+  const provider = ProviderRegistry.getProvider(providerKey);
+  const endpoint = provider.endpoints[0]; // Use first endpoint as default
+
+  const response = await fetch(`/api/${endpoint}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...customHeaders,
     },
     body: JSON.stringify({
-      messages: provider.formatRequest(messages, { ...config, stream: false }).messages,
+      messages,
       config,
       apiKey,
     }),
@@ -25,7 +29,7 @@ export const getChatCompletion = async (
   if (!response.ok) throw new Error(await response.text());
 
   const data = await response.json();
-  return provider.parseResponse(data);
+  return data.content;
 };
 
 export const getChatCompletionStream = async (
@@ -52,6 +56,4 @@ export const getChatCompletionStream = async (
     const text = await response.text();
     throw new Error(text);
   }
-
-  return response.body;
-};
+}

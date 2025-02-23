@@ -6,6 +6,7 @@ import { AuthSlice, createAuthSlice } from './auth-slice';
 import { ConfigSlice, createConfigSlice } from './config-slice';
 import { PromptSlice, createPromptSlice } from './prompt-slice';
 import { _defaultChatConfig } from '@constants/chat';
+import { ProviderRegistry } from '@config/providers/provider.registry';
 
 export type StoreState = ChatSlice &
   InputSlice &
@@ -67,7 +68,7 @@ const useStore = create<StoreState>()(
     }),
     {
       name: 'free-chat-gpt',
-      version: 1,
+      version: 2, // Increment version for new provider implementation
       storage: createCustomStorage(),
       partialize: (state) => ({
         chats: state.chats,
@@ -89,6 +90,28 @@ const useStore = create<StoreState>()(
       onRehydrateStorage: () => (state) => {
         // Optional: Log when storage is rehydrated
         console.log('Storage rehydrated');
+      },
+      migrate: (persistedState: any, version: number) => {
+        if (version === 1) {
+          // Migrate old provider configuration to new format
+          const chats = persistedState.chats?.map((chat: any) => ({
+            ...chat,
+            config: {
+              provider: chat.config?.provider || 'anthropic',
+              modelConfig: {
+                ...chat.config?.modelConfig,
+                model: ProviderRegistry.getProvider('anthropic').defaultModel,
+              },
+            },
+          }));
+
+          return {
+            ...persistedState,
+            chats,
+            defaultChatConfig: _defaultChatConfig,
+          };
+        }
+        return persistedState;
       },
     })
   );
