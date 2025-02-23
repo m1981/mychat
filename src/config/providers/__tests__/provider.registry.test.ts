@@ -1,6 +1,7 @@
 // src/config/providers/__tests__/provider.registry.test.ts
 import { describe, it, expect } from 'vitest';
 import { ProviderRegistry } from '../provider.registry';
+import { ProviderKey } from '@type/chat';
 
 describe('ProviderRegistry', () => {
   describe('getDefaultModelForProvider', () => {
@@ -17,8 +18,7 @@ describe('ProviderRegistry', () => {
     it('should throw error for invalid provider', () => {
       // TypeScript will catch this at compile time, but we test runtime behavior
       expect(() => {
-        // @ts-expect-error - Testing invalid provider
-        ProviderRegistry.getDefaultModelForProvider('invalid-provider');
+        ProviderRegistry.getDefaultModelForProvider('invalid-provider' as ProviderKey)
       }).toThrow('Provider invalid-provider not found');
     });
   });

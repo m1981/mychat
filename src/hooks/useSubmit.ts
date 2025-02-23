@@ -5,8 +5,8 @@ import { getChatCompletion, getChatCompletionStream } from '@api/api';
 import { parseEventSource } from '@api/helper';
 import { limitMessageTokens } from '@utils/messageUtils';
 import { _defaultModelConfig, DEFAULT_PROVIDER } from '@constants/chat';
-import { ProviderRegistry } from '@config/providers/provider.registry';
 import { checkStorageQuota } from '@utils/storage';
+import { providers} from '@type/providers';
 
 const useSubmit = () => {
   const currentChatIndex = useStore((state) => state.currentChatIndex);
@@ -14,7 +14,7 @@ const useSubmit = () => {
   const currentChat = chats?.[currentChatIndex];
   
   const providerKey = currentChat?.config.provider || DEFAULT_PROVIDER;
-  const provider = ProviderRegistry.getProvider(providerKey);
+  const provider = providers[providerKey]; // Use providers map instead of ProviderRegistry
 
   const apiKeys = useStore((state) => state.apiKeys);
   const currentApiKey = apiKeys[providerKey];
@@ -71,7 +71,7 @@ const useSubmit = () => {
         currentApiKey
       );
 
-      if (response && 'getReader' in response) {
+      if (response instanceof ReadableStream) {  // Type check for stream
         const reader = response.getReader();
         let reading = true;
 
@@ -94,7 +94,7 @@ const useSubmit = () => {
 
               try {
                 const content = provider.parseStreamingResponse(curr);
-                return output + content;
+                return output + (content || '');
               } catch (err) {
                 console.error('Error parsing stream response:', err);
                 return output;
@@ -118,7 +118,7 @@ const useSubmit = () => {
           reader.cancel('Generation completed');
         }
         reader.releaseLock();
-        stream.cancel();
+        response.cancel();  // Change 'stream' to 'response'
       }
 
       // generate title for new chats

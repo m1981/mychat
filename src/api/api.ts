@@ -1,7 +1,6 @@
 import { ModelConfig, MessageInterface } from '@type/chat';
-import { ProviderRegistry } from '@config/providers/provider.registry';
 import { ProviderKey } from '@type/chat';
-import { AIProvider } from '@type/provider';
+import { providers } from '@type/providers';
 
 export const getChatCompletion = async (
   providerKey: ProviderKey,
@@ -10,7 +9,7 @@ export const getChatCompletion = async (
   apiKey?: string,
   customHeaders?: Record<string, string>
 ) => {
-  const provider = ProviderRegistry.getProvider(providerKey);
+  const provider = providers[providerKey];  // Use providers map instead of ProviderRegistry
   const endpoint = provider.endpoints[0]; // Use first endpoint as default
 
   const response = await fetch(`/api/${endpoint}`, {
@@ -33,12 +32,14 @@ export const getChatCompletion = async (
 };
 
 export const getChatCompletionStream = async (
-  provider: AIProvider,
+  providerKey: ProviderKey,  // Change from AIProvider to ProviderKey
   messages: MessageInterface[],
   config: ModelConfig,
   apiKey?: string,
   customHeaders?: Record<string, string>
-) => {
+): Promise<ReadableStream | null> => {  // Add the => here
+  const provider = providers[providerKey];  // Use providers map instead of ProviderRegistry
+
   const response = await fetch(`/api/chat/${provider.id}`, {
     method: 'POST',
     headers: {
@@ -56,4 +57,6 @@ export const getChatCompletionStream = async (
     const text = await response.text();
     throw new Error(text);
   }
+
+  return response.body;  // Return the ReadableStream
 }
