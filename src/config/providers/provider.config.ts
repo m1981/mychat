@@ -7,8 +7,10 @@ export interface ProviderModel {
   name: string;
   maxTokens: number;
   cost: {
-    price: number;
-    unit: number;
+    input?: { price: number; unit: number };
+    output?: { price: number; unit: number };
+    price?: number;  // Legacy support
+    unit?: number;   // Legacy support
   };
 }
 

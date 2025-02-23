@@ -34,6 +34,19 @@ const TokenCount = React.memo(() => {
       return '0.00';
     }
 
+    // Handle new cost structure with input/output pricing
+    if (modelCosts.input && modelCosts.output) {
+      // For now, we'll assume 20% of tokens are output and 80% are input
+      // This is a rough estimate and should be refined based on actual usage patterns
+      const inputTokens = tokenCount * 0.8;
+      const outputTokens = tokenCount * 0.2;
+      const inputCost = modelCosts.input.price * (inputTokens / modelCosts.input.unit);
+      const outputCost = modelCosts.output.price * (outputTokens / modelCosts.output.unit);
+      const totalCost = (inputCost + outputCost) * 4.4; // Convert to PLN
+      return totalCost.toPrecision(2);
+    }
+
+    // Legacy cost calculation
     const price = modelCosts.price * 4.4 * (tokenCount / modelCosts.unit);
     return price.toPrecision(2);
   }, [model, tokenCount, provider]);

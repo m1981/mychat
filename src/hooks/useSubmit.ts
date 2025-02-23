@@ -13,11 +13,11 @@ const useSubmit = () => {
   const chats = useStore((state) => state.chats);
   const currentChat = chats?.[currentChatIndex];
   
-  const currentProvider = ProviderRegistry.getProvider(currentChat?.config.provider || DEFAULT_PROVIDER);
+  const providerKey = currentChat?.config.provider || DEFAULT_PROVIDER;
+  const provider = ProviderRegistry.getProvider(providerKey);
 
-  // Get API credentials based on chat's provider
   const apiKeys = useStore((state) => state.apiKeys);
-  const currentApiKey = apiKeys[currentProvider];
+  const currentApiKey = apiKeys[providerKey];
 
   const { i18n } = useTranslation('api');
   const error = useStore((state) => state.error);
@@ -28,7 +28,7 @@ const useSubmit = () => {
 
   const generateTitle = async (message: MessageInterface[]): Promise<string> => {
     return await getChatCompletion(
-      currentProvider,
+      providerKey,
       message,
       currentChat?.config.modelConfig || _defaultModelConfig,
       currentApiKey
@@ -40,14 +40,8 @@ const useSubmit = () => {
     if (generating || !chats) return;
 
     try {
-      // Check storage quota before proceeding
-      console.log("before")
       await checkStorageQuota();
-      console.log("after")
-      // If there's a storage-related error, don't proceed
-      if (useStore.getState().error) {
-        return;
-      }
+      if (useStore.getState().error) return;
 
       const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(chats));
       updatedChats[currentChatIndex].messages.push({
@@ -58,7 +52,6 @@ const useSubmit = () => {
       setChats(updatedChats);
       setGenerating(true);
 
-      let stream;
       if (chats[currentChatIndex].messages.length === 0) {
         setError('No messages submitted!');
         return;
@@ -71,19 +64,15 @@ const useSubmit = () => {
       );
 
       const { modelConfig } = chats[currentChatIndex].config;
-      stream = await getChatCompletionStream(
-        currentProvider,
+      const response = await getChatCompletionStream(
+        providerKey,
         messages,
         modelConfig,
         currentApiKey
       );
 
-      if (stream instanceof ReadableStream) {
-        if ('locked' in stream && stream.locked) {
-          setError('Oops, the stream is locked right now. Please try again');
-          return;
-        }
-        const reader = stream.getReader();
+      if (response && 'getReader' in response) {
+        const reader = response.getReader();
         let reading = true;
 
         while (reading && useStore.getState().generating) {
@@ -104,9 +93,10 @@ const useSubmit = () => {
               }
 
               try {
-                const content = currentProvider.parseStreamingResponse(curr);
-                return output + (content || '');
+                const content = provider.parseStreamingResponse(curr);
+                return output + content;
               } catch (err) {
+                console.error('Error parsing stream response:', err);
                 return output;
               }
             }, '');
