@@ -7,7 +7,7 @@ const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
     id: 'anthropic',
     name: 'Anthropic',
     defaultModel: 'claude-3-5-sonnet-20241022',
-    endpoints: ['api/chat/anthropic'],
+    endpoints: ['/chat/anthropic'],
     models: [
       {
         id: 'claude-3-5-sonnet-20241022',
