@@ -5,6 +5,7 @@ import { InputSlice, createInputSlice } from './input-slice';
 import { AuthSlice, createAuthSlice } from './auth-slice';
 import { ConfigSlice, createConfigSlice } from './config-slice';
 import { PromptSlice, createPromptSlice } from './prompt-slice';
+import { _defaultChatConfig } from '@constants/chat';
 
 export type StoreState = ChatSlice &
   InputSlice &

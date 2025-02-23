@@ -53,19 +53,24 @@ export const _defaultChatConfig: ChatConfig = {
 export const generateDefaultChat = (
   title?: string,
   folder?: string
-): ChatInterface => ({
-  id: uuidv4(),
-  title: title || 'New Chat',
-  messages: useStore.getState().defaultSystemMessage
-    ? [{ role: 'system', content: useStore.getState().defaultSystemMessage }]
-    : [],
-  config: {
-    provider: 'openai',
-    modelConfig: { ...useStore.getState().defaultChatConfig.modelConfig },
-  },
-  titleSet: false,
-  folder,
-});
+): ChatInterface => {
+  const storeState = useStore.getState();
+  console.log('Default chat config:', storeState.defaultChatConfig);
+
+  return {
+    id: uuidv4(),
+    title: title || 'New Chat',
+    messages: storeState.defaultSystemMessage
+      ? [{ role: 'system', content: storeState.defaultSystemMessage }]
+      : [],
+    config: {
+      provider: storeState.defaultChatConfig.provider,
+      modelConfig: { ...storeState.defaultChatConfig.modelConfig },
+    },
+    titleSet: false,
+    folder,
+  };
+};
 
 export const codeLanguageSubset = [
   'dockerfile',
