@@ -4,6 +4,7 @@ import PopupModal from '@components/PopupModal';
 import { ChatConfig, ModelConfig, ProviderKey } from '@type/chat';
 import DownChevronArrow from '@icon/DownChevronArrow';
 import { providers } from '@type/providers';
+import { ProviderRegistry } from '@config/providers/provider.registry';
 
 const ConfigMenu = ({
   setIsModalOpen,
@@ -78,15 +79,16 @@ export const ModelSelector = ({
 }) => {
   const [dropDown, setDropDown] = useState<boolean>(false);
   const currentProvider = providers[provider];
-  const { t } = useTranslation('model');
+  const providerConfig = ProviderRegistry.getProvider(provider);
 
   // Ensure selected model is valid for current provider
   useEffect(() => {
     if (!currentProvider.models.includes(modelConfig.model)) {
+      const defaultModel = providerConfig.models[0];
       setModelConfig({
         ...modelConfig,
-        model: currentProvider.models[0],
-        max_tokens: currentProvider.maxTokens[currentProvider.models[0]],
+        model: defaultModel.id,
+        max_tokens: defaultModel.maxTokens,
       });
     }
   }, [provider]);
@@ -120,20 +122,20 @@ export const ModelSelector = ({
         } absolute z-10 bg-white rounded-lg shadow-xl...`}
       >
         <ul className='text-sm text-gray-700 dark:text-gray-200 p-0 m-0'>
-          {currentProvider.models.map((model) => (
+          {providerConfig.models.map((model) => (
             <li
               className='px-4 py-2 hover:bg-gray-700 dark:hover:bg-gray-200 cursor-pointer'
               onClick={() => {
                 setModelConfig({
                   ...modelConfig,
-                  model,
-                  max_tokens: currentProvider.maxTokens[model],
+                  model: model.id,
+                  max_tokens: model.maxTokens,
                 });
                 setDropDown(false);
               }}
-              key={model}
+              key={model.id}
             >
-              {model}
+              {model.id}
             </li>
           ))}
         </ul>
@@ -152,7 +154,8 @@ export const MaxTokenSlider = ({
   setModelConfig: (config: ModelConfig) => void;
 }) => {
   const { t } = useTranslation('model');
-  const currentProvider = providers[provider];
+  const providerConfig = ProviderRegistry.getProvider(provider);
+  const currentModelConfig = providerConfig.models.find(m => m.id === modelConfig.model);
 
   // Add these constants for min tokens
   const MIN_TOKENS = 100;
@@ -171,9 +174,9 @@ export const MaxTokenSlider = ({
             max_tokens: Number(e.target.value),
           });
         }}
-        min={MIN_TOKENS} // Changed from 1000
-        max={currentProvider.maxTokens[modelConfig.model]}
-        step={100} // Changed from 1000 for finer control
+        min={MIN_TOKENS}
+        max={currentModelConfig?.maxTokens ?? 2048} // Fallback to 2048 if not found
+        step={100}
         className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
       />
       <div className='min-w-fit text-gray-500 dark:text-gray-300 text-xs mt-2'>

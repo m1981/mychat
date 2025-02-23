@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import useStore from '@store/store';
 import { shallow } from 'zustand/shallow';
 import countTokens from '@utils/messageUtils';
-import { providers } from '@type/providers';
+import { ProviderRegistry } from '@config/providers/provider.registry';
 
 const TokenCount = React.memo(() => {
   const [tokenCount, setTokenCount] = useState<number>(0);
@@ -18,7 +18,7 @@ const TokenCount = React.memo(() => {
 
   const { provider, model } = useMemo(() => {
     if (!currentChat) {
-      return { provider: 'openai' as const, model: providers.openai.models[0] };
+      return { provider: 'openai' as const, model: ProviderRegistry.getProvider('openai').models[0].id };
     }
     return {
       provider: currentChat.config.provider,
@@ -27,28 +27,30 @@ const TokenCount = React.memo(() => {
   }, [currentChat]);
 
   const cost = useMemo(() => {
-    const currentProvider = providers[provider];
-    const modelCosts = currentProvider.costs[model];
+    const providerConfig = ProviderRegistry.getProvider(provider);
+    const modelConfig = providerConfig.models.find(m => m.id === model);
     
-    if (!modelCosts) {
+    if (!modelConfig?.cost) {
       return '0.00';
     }
 
-    // Handle new cost structure with input/output pricing
-    if (modelCosts.input && modelCosts.output) {
-      // For now, we'll assume 20% of tokens are output and 80% are input
-      // This is a rough estimate and should be refined based on actual usage patterns
+    // Handle new input/output cost structure
+    if (modelConfig.cost.input && modelConfig.cost.output) {
       const inputTokens = tokenCount * 0.8;
       const outputTokens = tokenCount * 0.2;
-      const inputCost = modelCosts.input.price * (inputTokens / modelCosts.input.unit);
-      const outputCost = modelCosts.output.price * (outputTokens / modelCosts.output.unit);
+      const inputCost = modelConfig.cost.input.price * (inputTokens / modelConfig.cost.input.unit);
+      const outputCost = modelConfig.cost.output.price * (outputTokens / modelConfig.cost.output.unit);
       const totalCost = (inputCost + outputCost) * 4.4; // Convert to PLN
       return totalCost.toPrecision(2);
     }
 
-    // Legacy cost calculation
-    const price = modelCosts.price * 4.4 * (tokenCount / modelCosts.unit);
-    return price.toPrecision(2);
+    // Handle legacy price/unit structure
+    if (modelConfig.cost.price && modelConfig.cost.unit) {
+      const totalCost = (modelConfig.cost.price * (tokenCount / modelConfig.cost.unit)) * 4.4;
+      return totalCost.toPrecision(2);
+    }
+
+    return '0.00';
   }, [model, tokenCount, provider]);
 
   useEffect(() => {

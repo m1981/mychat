@@ -1,19 +1,13 @@
 import { AIProvider, RequestConfig } from '@type/provider';
 import { MessageInterface, ProviderKey } from '@type/chat';
-import { officialAPIEndpoint } from './../constants/auth';
+import { ProviderRegistry } from '@config/providers/provider.registry';
 
 export const providers: Record<ProviderKey, AIProvider> = {
   openai: {
     id: 'openai',
-    name: 'OpenAI',
-    endpoints: [officialAPIEndpoint],
-    models: ['gpt-4o'],
-    maxTokens: {
-      'gpt-4o': 128000,
-    },
-    costs: {
-      'gpt-4o': { price: 0.01, unit: 1000 },
-    },
+    name: ProviderRegistry.getProvider('openai').name,
+    endpoints: ProviderRegistry.getProvider('openai').endpoints,
+    models: ProviderRegistry.getProvider('openai').models.map(m => m.id),
     formatRequest: (messages: MessageInterface[], config: RequestConfig) => ({
       messages,
       model: config.model,
@@ -26,24 +20,15 @@ export const providers: Record<ProviderKey, AIProvider> = {
     }),
     parseResponse: (response) => response.choices[0].message.content,
         parseStreamingResponse: (chunk) => {
-      // Add defensive checking
-      if (!chunk?.choices?.[0]?.delta?.content) {
-        return '';
-      }
+      if (!chunk?.choices?.[0]?.delta?.content) return '';
       return chunk.choices[0].delta.content;
     },
   },
   anthropic: {
     id: 'anthropic',
-    name: 'Anthropic',
-    endpoints: ['https://api.anthropic.com/v1/messages'],
-    models: ['claude-3-5-sonnet-20241022'],
-    maxTokens: {
-      'claude-3-5-sonnet-20241022': 8192,
-    },
-    costs: {
-      'claude-3-5-sonnet-20241022': { price: 0.01, unit: 1000 },
-    },
+    name: ProviderRegistry.getProvider('anthropic').name,
+    endpoints: ProviderRegistry.getProvider('anthropic').endpoints,
+    models: ProviderRegistry.getProvider('anthropic').models.map(m => m.id),
     formatRequest: (messages: MessageInterface[], config: RequestConfig) => ({
       messages: messages.map(m => ({
         role: m.role === 'assistant' ? 'assistant' : 'user',

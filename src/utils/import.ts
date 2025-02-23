@@ -10,16 +10,17 @@ import {
 import { roles } from '@type/chat';
 import { _defaultChatConfig, _defaultModelConfig } from '@constants/chat';
 import { ExportV1, LegacyExport } from '@type/export';
-import { providers } from '@type/providers';
+import { ProviderRegistry } from '@config/providers/provider.registry';
 import { ProviderKey } from '@type/chat';
+import { ProviderModel } from '@config/providers/provider.config';
 
 const enforceTokenLimit = (config: ChatConfig): ChatConfig => {
   try {
-    const provider = providers[config.provider];
-    if (!provider) return _defaultChatConfig; // Fallback to default if provider is invalid
+    const providerConfig = ProviderRegistry.getProvider(config.provider);
+    if (!providerConfig) return _defaultChatConfig; // Fallback to default if provider is invalid
 
-    const maxAllowedTokens = provider.maxTokens[config.modelConfig.model];
-    if (!maxAllowedTokens) {
+    const model = providerConfig.models.find((m: ProviderModel) => m.id === config.modelConfig.model);
+    if (!model) {
       // If model doesn't exist in provider's config, use default model
       return {
         ...config,
@@ -36,7 +37,7 @@ const enforceTokenLimit = (config: ChatConfig): ChatConfig => {
         ...config.modelConfig,
         max_tokens: Math.min(
           Math.max(1, config.modelConfig.max_tokens || _defaultModelConfig.max_tokens),
-          maxAllowedTokens
+          model.maxTokens
         ),
       },
     };
@@ -137,8 +138,7 @@ const validateMessages = (messages: MessageInterface[]): boolean => {
   if (!Array.isArray(messages)) return false;
   
   for (const message of messages) {
-    if (!(typeof message.content === 'string')) return false;
-    if (!(typeof message.role === 'string')) return false;
+    if (!message.content || !message.role) return false;
     if (!roles.includes(message.role as Role)) return false;
   }
 
@@ -158,15 +158,19 @@ export const isLegacyImport = (importedData: any): importedData is LegacyExport 
 };
 
 export const validateFolders = (folders: FolderCollection): folders is FolderCollection => {
-  if (typeof folders !== 'object') return false;
+  if (typeof folders !== 'object' || folders === null) return false;
 
   for (const folderId in folders) {
     const folder = folders[folderId];
     if (!folder) return false;
-    if (typeof folder.id !== 'string') return false;
-    if (typeof folder.name !== 'string') return false;
-    if (typeof folder.order !== 'number') return false;
-    if (typeof folder.expanded !== 'boolean') return false;
+
+    // Check if all required properties exist and are not null/undefined
+    if (!('id' in folder) ||
+        !('name' in folder) ||
+        !('order' in folder) ||
+        !('expanded' in folder)) {
+      return false;
+    }
   }
 
   return true;
