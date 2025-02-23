@@ -50,9 +50,12 @@ export const limitMessageTokens = (
   const limitedMessages: MessageInterface[] = [];
   let tokenCount = 0;
 
+  // Reserve 20% of the context window for the response
+  const maxInputTokens = Math.floor(limit * 0.8);
+
   for (let i = messages.length - 1; i >= 0; i--) {
     const count = countTokens([messages[i]], model);
-    if (count + tokenCount > limit) break;
+    if (count + tokenCount > maxInputTokens) break;
     tokenCount += count;
     limitedMessages.unshift({ ...messages[i] });
   }

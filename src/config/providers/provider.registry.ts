@@ -38,7 +38,7 @@ const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
       {
         id: 'gpt-4o',
         name: 'GPT-4o',
-        maxTokens: 128000,
+        maxTokens: 127000,  // Slightly reduced to provide safety margin
         cost: {
           input: { price: 0.0025, unit: 1000 },
           output: { price: 0.01, unit: 1000 }
