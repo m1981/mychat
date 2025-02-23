@@ -5,7 +5,7 @@ export const processContent = (
   content: string,
   cursorPosition: number,
   currentContent: string,
-  filePath?: string // New parameter
+  filePath?: string
 ): string => {
   try {
     const detection = detectCodeContent(content);
@@ -15,26 +15,27 @@ export const processContent = (
     // Add file path if provided
     const filePathSection = filePath ? `${filePath}\n` : '';
 
+    // Check if content is already wrapped in code blocks
+    if (content.trim().startsWith('```') && content.trim().endsWith('```')) {
+      return [
+        currentContent.slice(0, cursorPosition),
+        content,
+        currentContent.slice(cursorPosition)
+      ].join('');
+    }
+
     if (detection?.isCode) {
-      switch (detection.type) {
-        case 'mermaid':
-          processedContent = `${filePathSection}\`\`\`mermaid\n${content}\n\`\`\``;
-          break;
+      const language = detection.type === 'mixed'
+        ? detection.subLanguages?.[0] || 'text'
+        : detection.language;
 
-        case 'patch':
-          processedContent = `${filePathSection}\`\`\`diff\n${content}\n\`\`\``;
-          break;
-
-        case 'mixed':
-          processedContent = `${filePathSection}\`\`\`${detection.subLanguages?.[0] || 'svelte'}\n${content}\n\`\`\``;
-          break;
-
-        default:
-          processedContent = `${filePathSection}\`\`\`${detection.language}\n${content}\n\`\`\``;
-      }
+      processedContent = `${filePathSection}\`\`\`${language}\n${content}\n\`\`\``;
+    } else if (content.includes('\n')) {
+      // Multi-line non-code content should still be wrapped
+      processedContent = `${filePathSection}\`\`\`text\n${content}\n\`\`\``;
     } else {
-      // For non-code content, still add the file path and wrap in code block
-      processedContent = `${filePathSection}\`\`\`\n${content}\n\`\`\``;
+      // Single line content doesn't need wrapping
+      processedContent = `${filePathSection}${content}`;
     }
 
     // Handle insertion at cursor position
@@ -45,11 +46,9 @@ export const processContent = (
     ].join('');
   } catch (error) {
     console.error('Error processing content:', error);
-    // Fallback with file path
-    const filePathSection = filePath ? `${filePath}\n` : '';
     return [
       currentContent.slice(0, cursorPosition),
-      `${filePathSection}${content}`,
+      content,
       currentContent.slice(cursorPosition)
     ].join('');
   }
