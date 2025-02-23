@@ -8,15 +8,15 @@ export class ModelRegistry {
       modelId: 'claude-3-5-sonnet-20241022',
       provider: 'anthropic',
       contextWindow: 200000,
-      maxResponseTokens: 8192,
-      defaultResponseTokens: 2024
+      maxResponseTokens: 8192,  // Corrected from previous value
+      defaultResponseTokens: 1024
     }],
     ['gpt-4o', {
       modelId: 'gpt-4o',
       provider: 'openai',
-      contextWindow: 128000,
-      maxResponseTokens: 16384,
-      defaultResponseTokens: 2024
+      contextWindow: 127000,  // Slightly reduced for safety
+      maxResponseTokens: 4096,
+      defaultResponseTokens: 1024
     }]
   ]);
 

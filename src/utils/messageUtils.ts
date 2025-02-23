@@ -44,14 +44,20 @@ const countTokens = (messages: MessageInterface[], model: ModelOptions) => {
 
 export const limitMessageTokens = (
   messages: MessageInterface[],
-  limit: number = 4096,
+  limit: number,
   model: ModelOptions
 ): MessageInterface[] => {
   const limitedMessages: MessageInterface[] = [];
   let tokenCount = 0;
 
-  // Reserve 20% of the context window for the response
-  const maxInputTokens = Math.floor(limit * 0.8);
+  const modelCapabilities = ModelRegistry.getModelCapabilities(model);
+  const maxInputTokens = Math.min(
+    // For Anthropic, reserve space for max response tokens
+    modelCapabilities.provider === 'anthropic'
+      ? modelCapabilities.contextWindow - modelCapabilities.maxResponseTokens
+      : Math.floor(modelCapabilities.contextWindow * 0.8),
+    limit
+  );
 
   for (let i = messages.length - 1; i >= 0; i--) {
     const count = countTokens([messages[i]], model);
