@@ -1,5 +1,6 @@
 // src/utils/messageUtils.ts
 import { MessageInterface, ModelOptions } from '@type/chat';
+import { ModelRegistry } from '@config/models/model.registry';
 
 import { Tiktoken } from '@dqbd/tiktoken/lite';
 const cl100k_base = await import('@dqbd/tiktoken/encoders/cl100k_base.json');
