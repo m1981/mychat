@@ -1,14 +1,11 @@
-import React from 'react';
 import useStore from '@store/store';
 import { useTranslation } from 'react-i18next';
-import { ChatInterface, MessageInterface, ProviderKey } from '@type/chat';
+import { ChatInterface, MessageInterface } from '@type/chat';
 import { getChatCompletion, getChatCompletionStream } from '@api/api';
 import { parseEventSource } from '@api/helper';
 import { limitMessageTokens } from '@utils/messageUtils';
-import { _defaultModelConfig, _defaultChatConfig, DEFAULT_PROVIDER } from '@constants/chat';
-import { officialAPIEndpoint } from '@constants/auth';
+import { _defaultModelConfig, DEFAULT_PROVIDER } from '@constants/chat';
 import { ProviderRegistry } from '@config/providers/provider.registry';
-import { ModelRegistry } from '@config/models/model.registry';
 import { checkStorageQuota } from '@utils/storage';
 
 const useSubmit = () => {
@@ -16,16 +13,13 @@ const useSubmit = () => {
   const chats = useStore((state) => state.chats);
   const currentChat = chats?.[currentChatIndex];
   
-  const currentProvider = currentChat?.config.provider || DEFAULT_PROVIDER;
-  const providerConfig = ProviderRegistry.getProvider(currentProvider);
+  const currentProvider = ProviderRegistry.getProvider(currentChat?.config.provider || DEFAULT_PROVIDER);
 
   // Get API credentials based on chat's provider
   const apiKeys = useStore((state) => state.apiKeys);
-  const apiEndpoints = useStore((state) => state.apiEndpoints);
   const currentApiKey = apiKeys[currentProvider];
-  const currentEndpoint = apiEndpoints[currentProvider];
 
-  const { t, i18n } = useTranslation('api');
+  const { i18n } = useTranslation('api');
   const error = useStore((state) => state.error);
   const setError = useStore((state) => state.setError);
   const setGenerating = useStore((state) => state.setGenerating);
@@ -33,13 +27,12 @@ const useSubmit = () => {
   const setChats = useStore((state) => state.setChats);
 
   const generateTitle = async (message: MessageInterface[]): Promise<string> => {
-    const data = await getChatCompletion(
+    return await getChatCompletion(
       currentProvider,
       message,
       currentChat?.config.modelConfig || _defaultModelConfig,
       currentApiKey
     );
-    return data;
   };
 
   const handleSubmit = async () => {
@@ -66,8 +59,10 @@ const useSubmit = () => {
       setGenerating(true);
 
       let stream;
-      if (chats[currentChatIndex].messages.length === 0)
-        throw new Error('No messages submitted!');
+      if (chats[currentChatIndex].messages.length === 0) {
+        setError('No messages submitted!');
+        return;
+      }
 
       const messages = limitMessageTokens(
         chats[currentChatIndex].messages,
@@ -83,14 +78,13 @@ const useSubmit = () => {
         currentApiKey
       );
 
-      if (stream) {
-        if (stream.locked)
-          throw new Error(
-            'Oops, the stream is locked right now. Please try again'
-          );
+      if (stream instanceof ReadableStream) {
+        if ('locked' in stream && stream.locked) {
+          setError('Oops, the stream is locked right now. Please try again');
+          return;
+        }
         const reader = stream.getReader();
         let reading = true;
-        let partial = '';
 
         while (reading && useStore.getState().generating) {
           const { done, value } = await reader.read();
@@ -110,7 +104,7 @@ const useSubmit = () => {
               }
 
               try {
-                const content =  currentProvider.parseStreamingResponse(curr);
+                const content = currentProvider.parseStreamingResponse(curr);
                 return output + (content || '');
               } catch (err) {
                 return output;
