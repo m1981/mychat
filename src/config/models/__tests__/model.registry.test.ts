@@ -12,7 +12,7 @@ describe('ModelRegistry', () => {
         provider: 'anthropic',
         contextWindow: 200000,
         maxResponseTokens: 8192,
-        defaultResponseTokens: 2024
+        defaultResponseTokens: 1024
       });
     });
 
@@ -26,7 +26,7 @@ describe('ModelRegistry', () => {
   describe('validateResponseTokens', () => {
     it('should return default tokens when no tokens specified', () => {
       const tokens = ModelRegistry.validateResponseTokens('claude-3-5-sonnet-20241022');
-      expect(tokens).toBe(2024);
+      expect(tokens).toBe(1024);
     });
 
     it('should return requested tokens when within limits', () => {
