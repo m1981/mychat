@@ -1,17 +1,19 @@
 import { AIProvider, RequestConfig } from '@type/provider';
 import { MessageInterface, ProviderKey } from '@type/chat';
 import { ProviderRegistry } from '@config/providers/provider.registry';
+import { ModelRegistry } from '@config/models/model.registry';
+import { ProviderModel } from '@config/providers/provider.config';
 
 export const providers: Record<ProviderKey, AIProvider> = {
   openai: {
     id: 'openai',
     name: ProviderRegistry.getProvider('openai').name,
     endpoints: ProviderRegistry.getProvider('openai').endpoints,
-    models: ProviderRegistry.getProvider('openai').models.map(m => m.id),
+    models: ProviderRegistry.getProvider('openai').models.map((m: ProviderModel) => m.id),
     formatRequest: (messages: MessageInterface[], config: RequestConfig) => ({
       messages,
       model: config.model,
-      max_tokens: config.max_tokens,
+      max_tokens: ModelRegistry.getModelCapabilities(config.model).maxResponseTokens,
       temperature: config.temperature,
       presence_penalty: config.presence_penalty,
       top_p: config.top_p,
@@ -28,7 +30,7 @@ export const providers: Record<ProviderKey, AIProvider> = {
     id: 'anthropic',
     name: ProviderRegistry.getProvider('anthropic').name,
     endpoints: ProviderRegistry.getProvider('anthropic').endpoints,
-    models: ProviderRegistry.getProvider('anthropic').models.map(m => m.id),
+    models: ProviderRegistry.getProvider('anthropic').models.map((m: ProviderModel) => m.id),
     formatRequest: (messages: MessageInterface[], config: RequestConfig) => ({
       messages: messages.map(m => ({
         role: m.role === 'assistant' ? 'assistant' : 'user',

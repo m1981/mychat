@@ -5,6 +5,7 @@ import { ChatConfig, ModelConfig, ProviderKey } from '@type/chat';
 import DownChevronArrow from '@icon/DownChevronArrow';
 import { providers } from '@type/providers';
 import { ProviderRegistry } from '@config/providers/provider.registry';
+import { ProviderModel } from '@config/providers/provider.config';
 
 const ConfigMenu = ({
   setIsModalOpen,
@@ -88,7 +89,7 @@ export const ModelSelector = ({
       setModelConfig({
         ...modelConfig,
         model: defaultModel.id,
-        max_tokens: defaultModel.maxTokens,
+        max_tokens: defaultModel.maxCompletionTokens  // Changed from maxTokens
       });
     }
   }, [provider]);
@@ -122,20 +123,20 @@ export const ModelSelector = ({
         } absolute z-10 bg-white rounded-lg shadow-xl...`}
       >
         <ul className='text-sm text-gray-700 dark:text-gray-200 p-0 m-0'>
-          {providerConfig.models.map((model) => (
+          {providerConfig.models.map((m: ProviderModel) => (
             <li
               className='px-4 py-2 hover:bg-gray-700 dark:hover:bg-gray-200 cursor-pointer'
               onClick={() => {
                 setModelConfig({
                   ...modelConfig,
-                  model: model.id,
-                  max_tokens: model.maxTokens,
+                  model: m.id,
+                  max_tokens: m.maxCompletionTokens
                 });
                 setDropDown(false);
               }}
-              key={model.id}
+              key={m.id}
             >
-              {model.id}
+              {m.id}
             </li>
           ))}
         </ul>
@@ -175,13 +176,10 @@ export const MaxTokenSlider = ({
           });
         }}
         min={MIN_TOKENS}
-        max={currentModelConfig?.maxTokens ?? 2048} // Fallback to 2048 if not found
+        max={currentModelConfig?.maxCompletionTokens ?? 2048} // Changed from maxTokens
         step={100}
         className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
       />
-      <div className='min-w-fit text-gray-500 dark:text-gray-300 text-xs mt-2'>
-        {t('token.description')}
-      </div>
     </div>
   );
 };

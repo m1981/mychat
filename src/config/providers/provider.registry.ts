@@ -12,7 +12,8 @@ const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
       {
         id: 'claude-3-5-sonnet-20241022',
         name: 'Claude 3.5 Sonnet',
-        maxTokens: 8192,  // Changed to reflect max output tokens
+        contextWindow: 200000,
+        maxCompletionTokens: 8192,
         cost: {
           input: { price: 0.003, unit: 1000 },
           output: { price: 0.015, unit: 1000 }
@@ -21,7 +22,8 @@ const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
       {
         id: 'claude-3-haiku-20240307',
         name: 'Claude 3 Haiku',
-        maxTokens: 4096,
+        contextWindow: 200000,
+        maxCompletionTokens: 4096,
         cost: {
           input: { price: 0.00025, unit: 1000 },
           output: { price: 0.00125, unit: 1000 }
@@ -38,7 +40,8 @@ const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
       {
         id: 'gpt-4o',
         name: 'GPT-4o',
-        maxTokens: 127000,  // Represents context window for OpenAI
+        contextWindow: 127000,
+        maxCompletionTokens: 16384,
         cost: {
           input: { price: 0.0025, unit: 1000 },
           output: { price: 0.01, unit: 1000 }
@@ -47,7 +50,8 @@ const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
       {
         id: 'gpt-4o-mini',
         name: 'GPT-4o mini',
-        maxTokens: 127000,
+        contextWindow: 127000,
+        maxCompletionTokens: 16384,
         cost: {
           input: { price: 0.00015, unit: 1000 },
           output: { price: 0.0006, unit: 1000 }

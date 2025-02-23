@@ -37,7 +37,7 @@ const enforceTokenLimit = (config: ChatConfig): ChatConfig => {
         ...config.modelConfig,
         max_tokens: Math.min(
           Math.max(1, config.modelConfig.max_tokens || _defaultModelConfig.max_tokens),
-          model.maxTokens
+          model.maxCompletionTokens  // Changed from maxTokens
         ),
       },
     };

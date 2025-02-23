@@ -1,6 +1,7 @@
 // src/utils/messageUtils.ts
 import { MessageInterface, ModelOptions } from '@type/chat';
 import { ModelRegistry } from '@config/models/model.registry';
+import { ProviderRegistry } from '@config/providers/provider.registry';
 
 import { Tiktoken } from '@dqbd/tiktoken/lite';
 const cl100k_base = await import('@dqbd/tiktoken/encoders/cl100k_base.json');
@@ -52,11 +53,15 @@ export const limitMessageTokens = (
   let tokenCount = 0;
 
   const modelCapabilities = ModelRegistry.getModelCapabilities(model);
+  const providerConfig = ProviderRegistry.getProvider(modelCapabilities.provider);
+  const modelConfig = providerConfig.models.find(m => m.id === model);
+
+  if (!modelConfig) {
+    throw new Error(`Model ${model} not found in provider config`);
+  }
+
   const maxInputTokens = Math.min(
-    // For Anthropic, reserve space for max response tokens
-    modelCapabilities.provider === 'anthropic'
-      ? modelCapabilities.contextWindow - modelCapabilities.maxResponseTokens
-      : Math.floor(modelCapabilities.contextWindow * 0.8),
+    modelConfig.contextWindow - modelConfig.maxCompletionTokens,
     limit
   );
 

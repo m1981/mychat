@@ -5,7 +5,8 @@ import { ProviderKey } from '@type/chat';
 export interface ProviderModel {
   id: string;
   name: string;
-  maxTokens: number;
+  contextWindow: number;  // Rename from maxTokens
+  maxCompletionTokens: number;  // Add this field
   cost: {
     input?: { price: number; unit: number };
     output?: { price: number; unit: number };
