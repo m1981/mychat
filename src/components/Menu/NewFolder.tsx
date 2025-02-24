@@ -43,11 +43,18 @@ const NewFolder = () => {
 
   return (
     <a
-      className={`max-md:hidden flex py-3 px-3 items-center gap-3 rounded-md hover:bg-gray-500/10 transition-colors duration-200 text-white text-sm md:mb-2 flex-shrink-0 md:border md:border-white/20 transition-opacity ${
-        generating
-          ? 'cursor-not-allowed opacity-40'
-          : 'cursor-pointer opacity-100'
-      }`}
+  className={`
+    max-md:hidden
+    flex items-center gap-3 
+    py-3 px-3 
+    rounded-md
+    text-sm text-gray-800 dark:text-gray-100
+    md:mb-2 md:border md:border-gray-200 dark:md:border-gray-600
+    hover:bg-gray-500/10
+    transition-all duration-200
+    flex-shrink-0
+    ${generating ? 'cursor-not-allowed opacity-40' : 'cursor-pointer opacity-100'}
+  `}
       onClick={() => {
         if (!generating) addFolder();
       }}
