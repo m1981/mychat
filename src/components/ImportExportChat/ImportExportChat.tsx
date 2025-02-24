@@ -24,7 +24,7 @@ const ImportExportChat = () => {
   return (
     <>
       <a
-        className='flex py-2 px-2 items-center gap-3 rounded-md hover:bg-gray-500/10 transition-colors duration-200 text-white cursor-pointer text-sm'
+        className='flex py-2 px-2 items-center gap-3 rounded-md hover:bg-gray-500/10 transition-colors duration-200 text-gray-800 dark:text-gray-100 cursor-pointer text-sm'
         onClick={() => {
           setIsModalOpen(true);
         }}
@@ -170,26 +170,28 @@ const ImportChat = () => {
   };
   return (
     <>
-      <label className='block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300'>
+      <label className='mb-2 block text-sm font-medium text-gray-900 dark:text-gray-300'>
         {t('import')} (JSON)
       </label>
-      <input
-        className='w-full text-sm file:p-2 text-gray-800 file:text-gray-700 dark:text-gray-300 dark:file:text-gray-200 rounded-md cursor-pointer focus:outline-none bg-gray-50 file:bg-gray-100 dark:bg-gray-800 dark:file:bg-gray-700 file:border-0 border border-gray-300 dark:border-gray-600 placeholder-gray-900 dark:placeholder-gray-300 file:cursor-pointer'
-        type='file'
-        ref={inputRef}
-      />
-      <button
-        className='btn btn-small btn-primary mt-3'
-        onClick={handleFileUpload}
-      >
-        {t('import')}
-      </button>
+      <div className='flex items-center gap-2'>
+        <input
+          className='flex-1 cursor-pointer rounded-md border border-gray-300 bg-gray-50 text-sm text-gray-800 file:cursor-pointer file:border-0 file:bg-gray-100 file:p-2 file:text-gray-700 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:file:bg-gray-700 dark:file:text-gray-200'
+          type='file'
+          ref={inputRef}
+        />
+        <button
+          className='btn btn-primary btn-small'
+          onClick={handleFileUpload}
+        >
+          {t('import')}
+        </button>
+      </div>
       {alert && (
         <div
-          className={`relative py-2 px-3 w-full mt-3 border rounded-md text-gray-600 dark:text-gray-100 text-sm whitespace-pre-wrap ${
+          className={`mt-4 rounded-md p-4 text-sm ${
             alert.success
-              ? 'border-green-500 bg-green-500/10'
-              : 'border-red-500 bg-red-500/10'
+              ? 'bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+              : 'bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-200'
           }`}
         >
           {alert.message}
