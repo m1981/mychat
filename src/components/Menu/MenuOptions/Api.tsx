@@ -11,7 +11,15 @@ const Config = () => {
   return (
     <>
       <a
-        className='flex py-2 px-2 items-center gap-3 rounded-md hover:bg-gray-500/10 transition-colors duration-200 text-white cursor-pointer text-sm'
+        className={`
+          flex items-center gap-3
+          py-2 px-2
+          rounded-md
+          text-gray-800 dark:text-gray-100 text-sm
+          cursor-pointer
+          hover:bg-gray-500/10
+          transition-colors duration-200
+        `}
         id='api-menu'
         onClick={() => setIsModalOpen(true)}
       >
