@@ -59,7 +59,7 @@ const NewFolder = () => {
         if (!generating) addFolder();
       }}
     >
-      <NewFolderIcon />
+      <NewFolderIcon /> New Folder
     </a>
   );
 };

@@ -183,7 +183,7 @@ const ChatHistoryList = () => {
 
   return (
     <div
-      className={`flex-col flex-1 overflow-y-auto hide-scroll-bar border-b border-white/20 ${
+      className={`flex-col flex-1 overflow-y-auto hide-scroll-bar ${
         isHover ? 'bg-gray-800/40' : ''
       }`}
       onDrop={handleDrop}
@@ -197,9 +197,9 @@ const ChatHistoryList = () => {
           <Droppable droppableId="folders">
             {(provided) => (
               <div
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                  className="flex flex-col gap-1"
+                {...provided.droppableProps}
+                ref={provided.innerRef}
+                className="flex flex-col gap-1"
               >
                 {Object.keys(chatFolders).map((folderId, index) => (
                   <ChatFolder

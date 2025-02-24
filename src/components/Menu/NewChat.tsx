@@ -12,11 +12,15 @@ const NewChat = ({ folder }: { folder?: string }) => {
   return (
     <a
       className={`
-        flex flex-1 items-center rounded-md 
-        hover:bg-gray-500/10 transition-all duration-200 
-        text-gray-800 dark:text-gray-100 text-sm flex-shrink-0
-        ${generating ? 'cursor-not-allowed opacity-40' : 'cursor-pointer opacity-100'}
-        ${folder ? 'justify-start' : 'p-2 gap-3 mb-2 border border-gray-200 dark:border-gray-600'}
+        flex items-center rounded-md 
+        transition-colors duration-200 
+        text-sm text-gray-800 dark:text-gray-100
+        ${generating && 'cursor-not-allowed opacity-40'}
+        ${folder 
+          ? 'justify-start' 
+          : 'p-2 gap-3 mb-2 border border-gray-200 dark:border-gray-600'
+        }
+        ${!generating && 'hover:bg-gray-500/10 cursor-pointer'}
       `}
       onClick={() => {
         if (!generating) addChat(folder);
