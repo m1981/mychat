@@ -2,23 +2,25 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
 
-import ChatIcon from '@icon/ChatIcon';
 import CancelIcon from '@icon/CancelIcon';
 import CrossIcon from '@icon/CrossIcon';
 import DeleteIcon from '@icon/DeleteIcon';
 import EditIcon from '@icon/EditIcon';
 import TickIcon from '@icon/TickIcon';
+import DotIcon from '@icon/DotIcon';
 import useStore from '@store/store';
 
 const ChatHistoryClass = {
   normal:
-    'flex py-2 px-2 items-center gap-3 relative rounded-md bg-gray-900 hover:bg-gray-850 break-all hover:pr-4 group transition-opacity',
+    'flex py-2 px-2 items-center gap-3 relative rounded-md bg-gray-900 hover:bg-gray-850 break-all group transition-opacity', // removed hover:pr-4
   active:
     'flex py-2 px-2 items-center gap-3 relative rounded-md break-all pr-14 bg-gray-800 hover:bg-gray-800 group transition-opacity',
   normalGradient:
     'absolute inset-y-0 right-0 w-8 z-10 bg-gradient-to-l from-gray-900 group-hover:from-gray-850',
   activeGradient:
     'absolute inset-y-0 right-0 w-8 z-10 bg-gradient-to-l from-gray-800',
+  // Add new class for the dot
+  dot: 'fixed-right-position text-emerald-500 text-lg leading-none z-20',
 };
 
 const ChatHistory = React.memo(
@@ -114,7 +116,10 @@ const ChatHistory = React.memo(
               ref={inputRef}
             />
           ) : (
-            _title
+            <>
+              <span>{_title}</span>
+              {!active && <span className={ChatHistoryClass.dot}><DotIcon /></span>}
+            </>
           )}
 
           {isEdit || (

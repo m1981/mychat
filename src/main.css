@@ -342,7 +342,14 @@
   background: transparent !important;
 }
 
- Only keep essential dark mode adjustments
+ /*Only keep essential dark mode adjustments*/
 .dark .mermaid-container svg {
   filter: invert(1) hue-rotate(180deg);
+}
+
+.fixed-right-position {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
 }
