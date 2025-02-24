@@ -4,6 +4,17 @@ import useStore from '@store/store';
 import PopupModal from '@components/PopupModal';
 import { providers } from '@type/providers';
 import { ProviderKey } from '@type/chat';
+import AnthropicIcon from '@icon/AnthropicIcon';
+import OpenAIIcon from '@icon/OpenAIIcon';
+
+const formFieldStyles = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500';
+const labelStyles = 'block text-sm font-medium text-gray-900 dark:text-gray-300';
+
+// Add provider icons object
+const providerIcons = {
+  openai: <OpenAIIcon className="w-5 h-5" />,
+  anthropic: <AnthropicIcon className="w-5 h-5" />,
+};
 
 const ApiMenu = ({
   setIsModalOpen
@@ -23,7 +34,6 @@ const ApiMenu = ({
   const [tempEndpoints, setTempEndpoints] = useState<Record<ProviderKey, string>>(apiEndpoints);
 
   const handleSave = () => {
-    // Save API keys and endpoints
     Object.entries(tempApiKeys).forEach(([provider, key]) => {
       setApiKey(provider as ProviderKey, key);
     });
@@ -42,12 +52,12 @@ const ApiMenu = ({
       handleConfirm={handleSave}
     >
       <div className='p-6 border-b border-gray-200 dark:border-gray-600'>
-        {/* API Keys and Endpoints for each provider */}
         {Object.values(providers).map((p) => (
           <div key={p.id} className='mb-6'>
             <div className='mb-4'>
-              <label className='block text-sm font-medium text-gray-900 dark:text-white'>
-                {p.name} API Key
+              <label className={`${labelStyles} flex items-center gap-2`}>
+                {providerIcons[p.id as keyof typeof providerIcons]}
+                <span>{p.name} API Key</span>
               </label>
               <input
                 type='password'
@@ -56,37 +66,14 @@ const ApiMenu = ({
                   ...tempApiKeys,
                   [p.id]: e.target.value
                 })}
-                className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
+                className={formFieldStyles}
               />
-            </div>
-
-            <div className='mb-4'>
-              <label className='block text-sm font-medium text-gray-900 dark:text-white'>
-                {p.name} Endpoint
-              </label>
-              <select
-                value={tempEndpoints[p.id] || p.endpoints[0]}
-                onChange={(e) => setTempEndpoints({
-                  ...tempEndpoints,
-                  [p.id]: e.target.value
-                })}
-                className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
-              >
-                {p.endpoints.map((endpoint) => (
-                  <option key={endpoint} value={endpoint}>
-                    {endpoint}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
         ))}
 
-        {/* Info Messages */}
         <div className='text-sm text-gray-900 dark:text-gray-300 flex flex-col gap-3'>
           <p>{t('securityMessage', { ns: 'api' })}</p>
-          <p>{t('apiEndpoint.description', { ns: 'api' })}</p>
-          <p>{t('apiEndpoint.warn', { ns: 'api' })}</p>
         </div>
       </div>
     </PopupModal>
