@@ -22,10 +22,8 @@ const ClearConversation = () => {
   return (
     <>
       <a
-        className='flex py-2 px-2 items-center gap-3 rounded-md hover:bg-gray-500/10 transition-colors duration-200 text-white cursor-pointer text-sm'
-        onClick={() => {
-          setIsModalOpen(true);
-        }}
+        className='flex items-center gap-3 rounded-md px-2 py-2 text-sm text-gray-800 transition-colors duration-200 hover:bg-gray-500/10 dark:text-gray-100 cursor-pointer'
+        onClick={() => setIsModalOpen(true)}
       >
         <DeleteIcon />
         {t('clearConversation')}
