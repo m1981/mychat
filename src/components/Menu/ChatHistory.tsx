@@ -11,17 +11,19 @@ import DotIcon from '@icon/DotIcon';
 import useStore from '@store/store';
 
 const ChatHistoryClass = {
-  normal:
-    'flex py-2 px-2 items-center gap-3 relative rounded-md bg-gray-900 hover:bg-gray-850 break-all group transition-opacity', // removed hover:pr-4
-  active:
-    'flex py-2 px-2 items-center gap-3 relative rounded-md break-all pr-14 bg-gray-800 hover:bg-gray-800 group transition-opacity',
-  normalGradient:
-    'absolute inset-y-0 right-0 w-8 z-10 bg-gradient-to-l from-gray-900 group-hover:from-gray-850',
-  activeGradient:
-    'absolute inset-y-0 right-0 w-8 z-10 bg-gradient-to-l from-gray-800',
-  // Add new class for the dot
-  dot: 'fixed-right-position text-emerald-500 text-lg leading-none z-20',
+  base: 'flex py-2 px-2 items-center gap-3 relative rounded-md break-all group transition-opacity text-gray-800 dark:text-gray-100',
+  normal: 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850',
+  active: 'pr-14 bg-gray-100 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-800',
+  gradient: {
+    base: 'absolute inset-y-0 right-0 w-8 z-10 bg-gradient-to-l',
+    normal: 'from-gray-50 group-hover:from-gray-100 dark:from-gray-900 dark:group-hover:from-gray-850',
+    active: 'from-gray-100 dark:from-gray-800'
+  },
+  dot: 'fixed-right-position text-emerald-500 text-lg leading-none z-20'
 };
+
+const inputClass = 'focus:outline-blue-600 text-sm border-none bg-transparent p-0 m-0 w-[calc(100%-8px)] text-gray-800 dark:text-gray-100';
+const actionButtonClass = 'p-1 text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100';
 
 const ChatHistory = React.memo(
   ({ title, chatIndex }: { title: string; chatIndex: number }) => {
@@ -90,24 +92,20 @@ const ChatHistory = React.memo(
 
     return (
       <a
-        className={`${
+        className={`${ChatHistoryClass.base} ${
           active ? ChatHistoryClass.active : ChatHistoryClass.normal
-        } ${
-          generating
-            ? 'cursor-not-allowed opacity-40'
-            : 'cursor-pointer opacity-100'
-        }`}
+        } ${generating ? 'cursor-not-allowed opacity-40' : 'cursor-pointer opacity-100'}`}
         onClick={() => {
           if (!generating) setCurrentChatIndex(chatIndex);
         }}
         draggable
         onDragStart={handleDragStart}
       >
-        <div className='flex-1 text-ellipsis max-h-5 overflow-hidden break-all relative'>
+        <div className="flex-1 text-ellipsis max-h-5 overflow-hidden break-all relative">
           {isEdit ? (
             <input
-              type='text'
-              className='focus:outline-blue-600 text-sm border-none bg-transparent p-0 m-0 w-[calc(100%-8px)]'
+              type="text"
+              className={inputClass}
               value={_title}
               onChange={(e) => {
                 _setTitle(e.target.value);
@@ -122,40 +120,31 @@ const ChatHistory = React.memo(
             </>
           )}
 
-          {isEdit || (
+          {!isEdit && (
             <div
-              className={
-                active
-                  ? ChatHistoryClass.activeGradient
-                  : ChatHistoryClass.normalGradient
-              }
+              className={`${ChatHistoryClass.gradient.base} ${
+                active ? ChatHistoryClass.gradient.active : ChatHistoryClass.gradient.normal
+              }`}
             />
           )}
         </div>
         {active && (
-          <div className='absolute flex right-1 z-10 text-gray-300 visible pl-[5px] bg-gray-800'>
+          <div className="absolute flex right-1 z-10 text-gray-600 dark:text-gray-300 visible pl-[5px] bg-gray-100 dark:bg-gray-800">
             {isDelete || isEdit ? (
               <>
-                <button className='p-1 hover:text-white' onClick={handleTick}>
+                <button className={actionButtonClass} onClick={handleTick}>
                   <TickIcon />
                 </button>
-                <button className='p-1 hover:text-white' onClick={handleCross}>
-                  {isDelete && <CancelIcon />}
-                  {isEdit && <CrossIcon />}
+                <button className={actionButtonClass} onClick={handleCross}>
+                  {isDelete ? <CancelIcon /> : <CrossIcon />}
                 </button>
               </>
             ) : (
               <>
-                <button
-                  className='p-1 hover:text-white'
-                  onClick={() => setIsEdit(true)}
-                >
+                <button className={actionButtonClass} onClick={() => setIsEdit(true)}>
                   <EditIcon />
                 </button>
-                <button
-                  className='p-1 hover:text-white'
-                  onClick={() => setIsDelete(true)}
-                >
+                <button className={actionButtonClass} onClick={() => setIsDelete(true)}>
                   <DeleteIcon />
                 </button>
               </>

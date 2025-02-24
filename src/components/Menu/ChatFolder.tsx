@@ -181,8 +181,8 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
             <div
               style={{ background: color || '' }}
               className={`${
-                color ? '' : 'hover:bg-gray-850'
-              } transition-colors flex py-0 pl-2 pr-1 items-center gap-3 relative rounded-md break-all cursor-pointer parent-sibling`}
+                color ? '' : 'hover:bg-gray-500/10'
+              } transition-colors flex py-0 pl-2 pr-1 items-center gap-3 relative rounded-md break-all cursor-pointer parent-sibling text-gray-800 dark:text-gray-100`}
               onClick={toggleExpanded}
               ref={folderRef}
               onMouseEnter={() => {
@@ -250,7 +250,7 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
                       ref={paletteRef}
                     >
                       <button
-                        className='p-1 hover:text-white'
+                        className='p-1 hover:bg-gray-500/10'
                         onClick={() => {
                           setShowPalette((prev) => !prev);
                         }}
@@ -288,7 +288,7 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
                       <EditIcon />
                     </button>
                     <button
-                      className='p-1 hover:text-white md:hidden group-hover/folder:md:inline'
+                      className='p-1 hover:bg-gray-500/10 md:hidden group-hover/folder:md:inline'
                       onClick={() => setIsDelete(true)}
                     >
                       <DeleteIcon />
@@ -304,7 +304,7 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
                 )}
               </div>
             </div>
-            <div className='ml-3 pl-1 border-l-2 border-gray-700 flex flex-col gap-1 parent'>
+            <div className='ml-3 pl-1 border-l-2 border-gray-200 dark:border-gray-600 flex flex-col gap-1 parent'>
               {isExpanded && <NewChat folder={folderId} />}
               {isExpanded &&
                 folderChats.map((chat: ChatHistoryInterface) => (
