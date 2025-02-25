@@ -146,12 +146,12 @@ const ChatContent: React.FC = () => {
               </React.Fragment>
             ))}
 
-            {/* Sticky Message */}
+            {/* Composer Message */}
             <Message
               role={inputRole}
               content=''
               messageIndex={stickyIndex}
-              sticky
+              isComposer
             />
 
             {/* Error Message */}
