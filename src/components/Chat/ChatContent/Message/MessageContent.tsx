@@ -13,7 +13,7 @@ import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import useStore from '@store/store';
 import useSubmit from '@hooks/useSubmit';
-import { ChatInterface } from '@type/chat';
+import { ChatInterface, Role } from '@type/chat';
 
 import PopupModal from '@components/PopupModal';
 import TokenCount from '@components/TokenCount';
@@ -23,10 +23,11 @@ import { MermaidDiagram } from './MermaidComponent';
 import { usePasteHandler } from '@hooks/usePasteHandler';
 import { useFileDropHandler } from '@hooks/useFileDropHandler';
 
-interface MessageContentProps {
+export interface MessageContentProps {
+  role: Role;
   content: string;
   messageIndex: number;
-  isComposer?: boolean;
+  isComposer: boolean;
   isEdit: boolean;
   setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
   isEditing: boolean;
@@ -51,6 +52,7 @@ const p = (props: DetailedHTMLProps<HTMLAttributes<HTMLParagraphElement>, HTMLPa
 };
 
 const MessageContent: React.FC<MessageContentProps> = ({
+  role,
   content,
   messageIndex,
   isComposer = false,
