@@ -37,6 +37,9 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({ error, onClose }) => (
 );
 
 const ChatContent: React.FC = () => {
+  // Add temporary variable to disable NewMessageButton
+  const in_future = true;
+
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const saveRef = useRef<HTMLDivElement | null>(null);
 
@@ -130,7 +133,7 @@ const ChatContent: React.FC = () => {
             <ChatTitle />
 
             {/* New Message Button when no messages */}
-            {!generating && messages?.length === 0 && (
+            {!generating && messages?.length === 0 && !in_future && (
               <NewMessageButton messageIndex={-1} />
             )}
 
@@ -142,7 +145,7 @@ const ChatContent: React.FC = () => {
                   content={message.content}
                   messageIndex={index}
                 />
-                {!generating && <NewMessageButton messageIndex={index} />}
+                {!generating && !in_future && <NewMessageButton messageIndex={index} />}
               </React.Fragment>
             ))}
 
