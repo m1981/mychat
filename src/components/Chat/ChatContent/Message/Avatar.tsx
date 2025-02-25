@@ -8,7 +8,7 @@ import useStore from '@store/store';
 
 const Avatar = React.memo(({ role }: { role: Role }) => {
   return (
-    <div className='w-[30px] flex flex-col relative items-end'>
+    <div className='flex-shrink-0 flex items-start mt-2'> {/* Added mt-2 for top margin */}
       {role === 'user' && <UserAvatar />}
       {role === 'assistant' && <AssistantAvatar />}
       {role === 'system' && <SystemAvatar />}
@@ -19,7 +19,7 @@ const Avatar = React.memo(({ role }: { role: Role }) => {
 const UserAvatar = () => {
   return (
     <div
-      className='relative h-[30px] w-[30px] p-1 rounded-sm text-gray-800 dark:text-gray-100 flex items-center justify-center'
+      className='relative h-[30px] w-[30px] p-1 rounded-full text-gray-800 dark:text-gray-100 flex items-center justify-center'
       style={{ backgroundColor: 'rgb(200, 70, 70)' }}
     >
       <PersonIcon />
@@ -40,7 +40,7 @@ const AssistantAvatar = () => {
 
   return (
     <div
-      className='relative h-[30px] w-[30px] p-1 rounded-sm text-white flex items-center justify-center'
+      className='relative h-[30px] w-[30px] p-1 rounded-full text-white flex items-center justify-center'
       style={{ backgroundColor: 'rgb(16, 163, 127)' }}
     >
       {provider === 'anthropic' ? <AnthropicIcon /> : <OpenAIIcon />}
@@ -51,7 +51,7 @@ const AssistantAvatar = () => {
 const SystemAvatar = () => {
   return (
     <div
-      className='relative h-[30px] w-[30px] p-1 rounded-sm text-white flex items-center justify-center'
+      className='relative h-[30px] w-[30px] p-1 rounded-full text-white flex items-center justify-center'
       style={{ backgroundColor: 'rgb(126, 163, 227)' }}
     >
       <SettingIcon />
