@@ -2,12 +2,14 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Role } from '@type/chat';
 
+interface RoleSelectorProps {
+  role: Role;
+}
+
 const RoleSelector = React.memo(
   ({
     role,
-  }: {
-    role: Role;
-  }) => {
+  }: RoleSelectorProps) => {
     const { t } = useTranslation();
 
     return (

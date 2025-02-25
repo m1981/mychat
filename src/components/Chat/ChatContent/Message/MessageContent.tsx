@@ -13,31 +13,28 @@ import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import useStore from '@store/store';
 import useSubmit from '@hooks/useSubmit';
-import { ChatInterface, Role } from '@type/chat';
+import { ChatInterface } from '@type/chat';
 
 import PopupModal from '@components/PopupModal';
 import TokenCount from '@components/TokenCount';
 import CommandPrompt from './CommandPrompt';
 import CodeBlock from './CodeBlock';
-import MessageActionButtons from './MessageActionButtons';
 import { MermaidDiagram } from './MermaidComponent';
 import { usePasteHandler } from '@hooks/usePasteHandler';
 import { useFileDropHandler } from '@hooks/useFileDropHandler';
 
 interface MessageContentProps {
-  role: Role;
   content: string;
   messageIndex: number;
-  isComposer: boolean;
+  isComposer?: boolean;
   isEdit: boolean;
   setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
   isEditing: boolean;
   setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-interface ContentViewProps extends MessageContentProps {
-  setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
-  setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
+interface ContentViewProps {
+  content: string;
 }
 
 interface EditViewProps {
@@ -54,19 +51,14 @@ const p = (props: DetailedHTMLProps<HTMLAttributes<HTMLParagraphElement>, HTMLPa
 };
 
 const MessageContent: React.FC<MessageContentProps> = ({
-  role,
   content,
   messageIndex,
   isComposer = false,
-  isEdit,  // Remove local state, use props instead
+  isEdit,
   setIsEdit,
   isEditing,
   setIsEditing,
 }) => {
-  // Remove these local states as they're now passed as props
-  // const [isEdit, setIsEdit] = useState<boolean>(sticky);
-  // const [isEditing, setIsEditing] = useState<boolean>(false);
-
   return (
     <div className='relative flex flex-col gap-1 md:gap-3 lg:w-[calc(100%-115px)]'>
       {isEdit ? (
@@ -80,11 +72,7 @@ const MessageContent: React.FC<MessageContentProps> = ({
         />
       ) : (
         <ContentView
-          role={role}
           content={content}
-          messageIndex={messageIndex}
-          setIsEdit={setIsEdit}
-          setIsEditing={setIsEditing}
         />
       )}
     </div>
@@ -92,11 +80,7 @@ const MessageContent: React.FC<MessageContentProps> = ({
 };
 
 const ContentView = React.memo<ContentViewProps>(({
-  role,
-  content,
-  setIsEdit,
-  messageIndex,
-  setIsEditing,
+  content
 }) => {
   return (
     <>
@@ -143,7 +127,6 @@ const EditView: React.FC<EditViewProps> = ({
   const inputRole = useStore((state) => state.inputRole);
   const setChats = useStore((state) => state.setChats);
   const currentChatIndex = useStore((state) => state.currentChatIndex);
-  const generating = useStore((state) => state.generating);
 
   const [_content, _setContent] = useState<string>(content);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
