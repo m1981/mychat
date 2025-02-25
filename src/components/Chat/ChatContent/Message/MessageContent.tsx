@@ -62,7 +62,7 @@ const MessageContent: React.FC<MessageContentProps> = ({
   setIsEditing,
 }) => {
   return (
-    <div className='relative flex flex-col gap-1 md:gap-3 lg:w-[calc(100%-115px)]'>
+    <div className='relative flex flex-col gap-1 md:gap-3 lg:w-[calc(100%)]'>
       {isEdit ? (
         <EditView
           content={content}
