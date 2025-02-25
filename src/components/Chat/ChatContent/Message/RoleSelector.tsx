@@ -5,19 +5,15 @@ import { Role } from '@type/chat';
 const RoleSelector = React.memo(
   ({
     role,
-    messageIndex,
-    isComposer,
   }: {
     role: Role;
-    messageIndex: number;
-    isComposer?: boolean;
   }) => {
     const { t } = useTranslation();
 
     return (
       <div className='prose dark:prose-invert'>
         <span className='text-sm text-gray-700 dark:text-gray-200'>
-          {t(role)}
+          {role === 'user' ? 'You' : t(role)}
         </span>
       </div>
     );
