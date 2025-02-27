@@ -1,6 +1,7 @@
 // api/anthropic.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Anthropic from '@anthropic-ai/sdk';
+import { MessageInterface } from '@type/chat';
 
 export const config = {
   maxDuration: 60,
@@ -32,14 +33,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-    
-    // Additional headers required by Anthropic
     res.setHeader('X-Accel-Buffering', 'no');
     res.setHeader('Transfer-Encoding', 'chunked');
 
     if (chatConfig.stream) {
       // Format messages for Anthropic API
-      const formattedMessages = messages.map(msg => ({
+      const formattedMessages = messages.map((msg: MessageInterface) => ({
         role: msg.role === 'assistant' ? 'assistant' : 'user',
         content: msg.content,
       }));
@@ -52,10 +51,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         stream: true,
       });
 
+      // Ping handling
       let lastPing = Date.now();
       const keepAliveInterval = setInterval(() => {
         if (Date.now() - lastPing >= 5000) {
-          res.write(':keep-alive\n\n');
+          res.write('event: ping\ndata: {}\n\n');
           lastPing = Date.now();
         }
       }, 5000);
@@ -64,39 +64,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         for await (const chunk of stream) {
           lastPing = Date.now();
           
-          // Handle different types of chunks
-          if (chunk.type === 'message_start') {
-            res.write(`data: ${JSON.stringify({
-              type: 'message_start',
-              message: chunk.message,
-            })}\n\n`);
-          } else if (chunk.type === 'content_block_start') {
-            res.write(`data: ${JSON.stringify({
-              type: 'content_block_start',
-              content_block: chunk.content_block,
-            })}\n\n`);
-          } else if (chunk.type === 'content_block_delta') {
-            res.write(`data: ${JSON.stringify({
-              type: 'content_block_delta',
-              delta: chunk.delta,
-            })}\n\n`);
-          } else if (chunk.type === 'content_block_stop') {
-            res.write(`data: ${JSON.stringify({
-              type: 'content_block_stop',
-              content_block: chunk.content_block,
-            })}\n\n`);
+          // Send the event type and data
+          if (chunk.type === 'content_block_delta') {
+            res.write(`event: content_block_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
+          } else if (chunk.type === 'message_start') {
+            res.write(`event: message_start\ndata: ${JSON.stringify(chunk)}\n\n`);
           } else if (chunk.type === 'message_delta') {
-            res.write(`data: ${JSON.stringify({
-              type: 'message_delta',
-              delta: chunk.delta,
-            })}\n\n`);
+            res.write(`event: message_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
           } else if (chunk.type === 'message_stop') {
-            res.write(`data: ${JSON.stringify({
-              type: 'message_stop',
-              message: chunk.message,
-            })}\n\n`);
+            res.write(`event: message_stop\ndata: ${JSON.stringify(chunk)}\n\n`);
+          } else {
+            // Handle any other event types
+            res.write(`event: ${chunk.type}\ndata: ${JSON.stringify(chunk)}\n\n`);
           }
         }
+      } catch (streamError: any) {
+        // Handle stream-specific errors
+        const errorResponse = {
+          type: 'error',
+          error: {
+            type: getErrorType(streamError.status),
+            message: streamError.message || 'Stream error occurred'
+          }
+        };
+        res.write(`event: error\ndata: ${JSON.stringify(errorResponse)}\n\n`);
       } finally {
         clearInterval(keepAliveInterval);
         res.write('data: [DONE]\n\n');
@@ -105,7 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       // Non-streaming response
       const response = await anthropic.messages.create({
-        messages: messages.map(msg => ({
+        messages: messages.map((msg: MessageInterface) => ({
           role: msg.role === 'assistant' ? 'assistant' : 'user',
           content: msg.content,
         })),
@@ -117,16 +108,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(200).json(response);
     }
   } catch (error: any) {
-    console.error('Anthropic API Error:', error);
-    
-    // Enhanced error handling
+    // Handle non-stream errors
     const errorResponse = {
-      error: error.message || 'An error occurred during the API request',
-      status: error.status,
-      type: error.type,
-      details: error.error?.details || undefined,
+      type: 'error',
+      error: {
+        type: getErrorType(error.status),
+        message: error.message || 'An error occurred'
+      }
     };
 
-    res.status(error.status || 500).json(errorResponse);
+    if (chatConfig.stream && !res.headersSent) {
+      res.write(`event: error\ndata: ${JSON.stringify(errorResponse)}\n\n`);
+      res.end();
+    } else {
+      res.status(error.status || 500).json(errorResponse);
+    }
   }
+}
+
+function getErrorType(status: number): string {
+  const errorTypes: Record<number, string> = {
+    400: 'invalid_request_error',
+    401: 'authentication_error',
+    403: 'permission_error',
+    404: 'not_found_error',
+    413: 'request_too_large',
+    429: 'rate_limit_error',
+    500: 'api_error',
+    529: 'overloaded_error'
+  };
+  return errorTypes[status] || 'api_error';
 }

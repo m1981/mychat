@@ -75,7 +75,14 @@ const useSubmit = () => {
         const reader = response.getReader();
         let reading = true;
 
+        const MAX_STREAM_DURATION = 60000; // 60 seconds
+        const streamStart = Date.now();
+
         while (reading && useStore.getState().generating) {
+        if (Date.now() - streamStart > MAX_STREAM_DURATION) {
+          reader.cancel('Stream timeout');
+          break;
+        }
           const { done, value } = await reader.read();
 
           if (done) {

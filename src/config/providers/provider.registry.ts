@@ -6,9 +6,19 @@ const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
   anthropic: {
     id: 'anthropic',
     name: 'Anthropic',
-    defaultModel: 'claude-3-5-sonnet-20241022',
+    defaultModel: 'claude-3-7-sonnet-20250219',
     endpoints: ['/chat/anthropic'],
     models: [
+      {
+        id: 'claude-3-7-sonnet-20250219',
+        name: 'Claude 3.7 Sonnet',
+        contextWindow: 200000,
+        maxCompletionTokens: 20000,
+        cost: {
+          input: { price: 0.003, unit: 1000 },
+          output: { price: 0.015, unit: 1000 }
+        }
+      },
       {
         id: 'claude-3-5-sonnet-20241022',
         name: 'Claude 3.5 Sonnet',
