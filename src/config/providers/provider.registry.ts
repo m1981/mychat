@@ -87,4 +87,28 @@ export class ProviderRegistry {
   static validateModelForProvider(provider: ProviderKey, modelId: string): boolean {
     return this.getProvider(provider).models.some(model => model.id === modelId);
   }
+
+  static getProviderCapabilities(provider: ProviderKey) {
+    const providerConfig = this.getProvider(provider);
+    const defaultModel = providerConfig.models.find(m => m.id === providerConfig.defaultModel);
+    
+    if (provider === 'anthropic') {
+      return {
+        supportsThinking: true,
+        defaultThinkingModel: providerConfig.defaultModel,
+        maxContextWindow: defaultModel?.contextWindow || 200000,
+        defaultModel: providerConfig.defaultModel
+      };
+    }
+    
+    if (provider === 'openai') {
+      return {
+        supportsThinking: false,
+        maxContextWindow: defaultModel?.contextWindow || 127000,
+        defaultModel: providerConfig.defaultModel
+      };
+    }
+
+    throw new Error(`Provider ${provider} not supported`);
+  }
 }

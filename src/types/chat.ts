@@ -9,6 +9,10 @@ export interface ModelConfig {
   presence_penalty: number;
   top_p: number;
   frequency_penalty: number;
+  enableThinking?: boolean;
+  thinkingConfig?: {
+    budget_tokens: number;
+  };
 }
 
 export interface ChatConfig {

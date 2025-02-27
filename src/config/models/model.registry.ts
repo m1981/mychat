@@ -4,12 +4,14 @@ import { ProviderKey } from '@type/chat';
 
 export class ModelRegistry {
   private static modelCapabilities: Map<string, ModelCapabilities> = new Map([
-    ['claude-3-5-sonnet-20241022', {
-      modelId: 'claude-3-5-sonnet-20241022',
+    ['claude-3-7-sonnet-20250219', {
+      modelId: 'claude-3-7-sonnet-20250219',
       provider: 'anthropic',
       contextWindow: 200000,
       maxResponseTokens: 8192,
-      defaultResponseTokens: 1024
+      defaultResponseTokens: 4096,
+      supportsThinking: true,
+      defaultThinkingBudget: 16000
     }],
     ['gpt-4o', {
       modelId: 'gpt-4o',

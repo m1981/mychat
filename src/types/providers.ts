@@ -40,6 +40,10 @@ export const providers: Record<ProviderKey, AIProvider> = {
       max_tokens: config.max_tokens,
       temperature: config.temperature,
       stream: config.stream,
+      thinking: config.enableThinking ? {
+        type: 'enabled',
+        budget_tokens: Math.floor(config.max_tokens * 0.8) // 80% of max_tokens for thinking
+      } : undefined
     }),
     parseResponse: (response) => {
       // Handle non-streaming response

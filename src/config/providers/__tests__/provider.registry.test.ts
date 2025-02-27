@@ -5,20 +5,19 @@ import { ProviderKey } from '@type/chat';
 
 describe('ProviderRegistry', () => {
   describe('getDefaultModelForProvider', () => {
-    it('should return claude-3-5-sonnet-20241022 for anthropic provider', () => {
+    it('should return claude-3-7-sonnet-20250219 for anthropic provider', () => {
       const model = ProviderRegistry.getDefaultModelForProvider('anthropic');
-      expect(model).toBe('claude-3-5-sonnet-20241022');
+      expect(model).toBe('claude-3-7-sonnet-20250219');
     });
 
-    it('should return gpt-4 for openai provider', () => {
+    it('should return gpt-4o for openai provider', () => {
       const model = ProviderRegistry.getDefaultModelForProvider('openai');
       expect(model).toBe('gpt-4o');
     });
 
     it('should throw error for invalid provider', () => {
-      // TypeScript will catch this at compile time, but we test runtime behavior
       expect(() => {
-        ProviderRegistry.getDefaultModelForProvider('invalid-provider' as ProviderKey)
+        ProviderRegistry.getDefaultModelForProvider('invalid-provider' as ProviderKey);
       }).toThrow('Provider invalid-provider not found');
     });
   });
@@ -27,7 +26,7 @@ describe('ProviderRegistry', () => {
     it('should return true for valid anthropic model', () => {
       const isValid = ProviderRegistry.validateModelForProvider(
         'anthropic',
-        'claude-3-5-sonnet-20241022'
+        'claude-3-7-sonnet-20250219'
       );
       expect(isValid).toBe(true);
     });
@@ -38,6 +37,27 @@ describe('ProviderRegistry', () => {
         'gpt-4o'
       );
       expect(isValid).toBe(false);
+    });
+  });
+
+  describe('getProviderCapabilities', () => {
+    it('should return correct capabilities for anthropic provider', () => {
+      const capabilities = ProviderRegistry.getProviderCapabilities('anthropic');
+      expect(capabilities).toEqual({
+        supportsThinking: true,
+        defaultThinkingModel: 'claude-3-7-sonnet-20250219',
+        maxContextWindow: 200000,
+        defaultModel: 'claude-3-7-sonnet-20250219'
+      });
+    });
+
+    it('should return correct capabilities for openai provider', () => {
+      const capabilities = ProviderRegistry.getProviderCapabilities('openai');
+      expect(capabilities).toEqual({
+        supportsThinking: false,
+        maxContextWindow: 127000,
+        defaultModel: 'gpt-4o'
+      });
     });
   });
 });

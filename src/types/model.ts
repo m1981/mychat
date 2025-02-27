@@ -4,4 +4,6 @@ export interface ModelCapabilities {
   contextWindow: number;
   maxResponseTokens: number;
   defaultResponseTokens: number;
+  supportsThinking?: boolean;
+  defaultThinkingBudget?: number;
 }
