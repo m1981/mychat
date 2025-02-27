@@ -64,17 +64,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         for await (const chunk of stream) {
           lastPing = Date.now();
           
-          // Send the event type and data
           if (chunk.type === 'content_block_delta') {
-            res.write(`event: content_block_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
-          } else if (chunk.type === 'message_start') {
-            res.write(`event: message_start\ndata: ${JSON.stringify(chunk)}\n\n`);
-          } else if (chunk.type === 'message_delta') {
-            res.write(`event: message_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
-          } else if (chunk.type === 'message_stop') {
-            res.write(`event: message_stop\ndata: ${JSON.stringify(chunk)}\n\n`);
-          } else {
-            // Handle any other event types
+            const delta = chunk.delta;
+            
+            if (delta.type === 'text_delta') {
+              res.write(`event: content_block_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
+            } else if (delta.type === 'thinking_delta') {
+              res.write(`event: thinking_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
+            } else if (delta.type === 'signature_delta') {
+              res.write(`event: signature_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
+            }
+          } else if (chunk.type === 'message_start' || 
+                     chunk.type === 'message_delta' || 
+                     chunk.type === 'message_stop') {
             res.write(`event: ${chunk.type}\ndata: ${JSON.stringify(chunk)}\n\n`);
           }
         }
