@@ -46,7 +46,7 @@ describe('ProviderRegistry', () => {
       expect(capabilities).toEqual({
         supportsThinking: true,
         defaultThinkingModel: 'claude-3-7-sonnet-20250219',
-        maxContextWindow: 200000,
+        maxContextWindow: 8196,
         defaultModel: 'claude-3-7-sonnet-20250219'
       });
     });

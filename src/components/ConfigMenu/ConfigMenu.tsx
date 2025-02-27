@@ -167,8 +167,9 @@ export const MaxTokenSlider = ({
   const providerConfig = ProviderRegistry.getProvider(provider);
   const currentModelConfig = providerConfig.models.find(m => m.id === modelConfig.model);
 
-  // Add these constants for min tokens
   const MIN_TOKENS = 100;
+  // Ensure max_tokens doesn't exceed model's maxCompletionTokens
+  const maxAllowedTokens = currentModelConfig?.maxCompletionTokens ?? 2048;
 
   return (
     <div>
@@ -179,13 +180,21 @@ export const MaxTokenSlider = ({
         type='range'
         value={modelConfig.max_tokens}
         onChange={(e) => {
+          const newMaxTokens = Number(e.target.value);
           setModelConfig({
             ...modelConfig,
-            max_tokens: Number(e.target.value),
+            max_tokens: newMaxTokens,
+            // Ensure thinking budget doesn't exceed max_tokens
+            thinkingConfig: {
+              budget_tokens: Math.min(
+                modelConfig.thinkingConfig.budget_tokens,
+                newMaxTokens
+              )
+            }
           });
         }}
         min={MIN_TOKENS}
-        max={currentModelConfig?.maxCompletionTokens ?? 2048} // Changed from maxTokens
+        max={maxAllowedTokens}
         step={100}
         className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
       />
@@ -348,8 +357,8 @@ export const ThinkingModeToggle = ({
       enableThinking: enabled,
       thinkingConfig: {
         budget_tokens: enabled 
-          ? (modelConfig.thinkingConfig?.budget_tokens || 1000)
-          : (modelConfig.thinkingConfig?.budget_tokens || 0)
+          ? Math.min(1000, modelConfig.max_tokens)
+          : 0
       }
     });
   };
@@ -358,8 +367,7 @@ export const ThinkingModeToggle = ({
     setModelConfig({
       ...modelConfig,
       thinkingConfig: {
-        ...modelConfig.thinkingConfig,
-        budget_tokens: budget
+        budget_tokens: Math.min(budget, modelConfig.max_tokens)
       }
     });
   };
@@ -388,7 +396,7 @@ export const ThinkingModeToggle = ({
             value={modelConfig.thinkingConfig.budget_tokens}
             onChange={(e) => handleBudgetChange(Number(e.target.value))}
             min={100}
-            max={2000}
+            max={modelConfig.max_tokens} // Cap at max_tokens
             step={100}
             className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
           />

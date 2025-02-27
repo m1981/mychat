@@ -13,7 +13,7 @@ const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
         id: 'claude-3-7-sonnet-20250219',
         name: 'Claude 3.7 Sonnet',
         contextWindow: 200000,
-        maxCompletionTokens: 20000,
+        maxCompletionTokens: 8192,
         cost: {
           input: { price: 0.003, unit: 1000 },
           output: { price: 0.015, unit: 1000 }
@@ -92,11 +92,16 @@ export class ProviderRegistry {
     const providerConfig = this.getProvider(provider);
     const defaultModel = providerConfig.models.find(m => m.id === providerConfig.defaultModel);
     
+    if (!defaultModel) {
+      throw new Error(`Default model not found for provider ${provider}`);
+    }
+
     if (provider === 'anthropic') {
       return {
         supportsThinking: true,
         defaultThinkingModel: providerConfig.defaultModel,
-        maxContextWindow: defaultModel?.contextWindow || 200000,
+        contextWindow: defaultModel.contextWindow,
+        maxCompletionTokens: defaultModel.maxCompletionTokens,
         defaultModel: providerConfig.defaultModel
       };
     }
@@ -104,7 +109,8 @@ export class ProviderRegistry {
     if (provider === 'openai') {
       return {
         supportsThinking: false,
-        maxContextWindow: defaultModel?.contextWindow || 127000,
+        contextWindow: defaultModel.contextWindow,
+        maxCompletionTokens: defaultModel.maxCompletionTokens,
         defaultModel: providerConfig.defaultModel
       };
     }
