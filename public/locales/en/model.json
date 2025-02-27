@@ -25,5 +25,10 @@
   },
   "defaultChatConfig": "Default Chat Config",
   "defaultSystemMessage": "Default System Message",
-  "resetToDefault": "Reset To Default"
+  "resetToDefault": "Reset To Default",
+  "thinking": {
+    "label": "Enable Thinking Mode",
+    "budget": "Thinking Token Budget",
+    "description": "Allows the model to spend tokens on internal reasoning before providing a final response"
+  }
 }

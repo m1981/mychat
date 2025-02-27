@@ -20,6 +20,10 @@ export const _defaultModelConfig: ModelConfig = {
   presence_penalty: 0,
   top_p: 1,
   frequency_penalty: 0,
+  enableThinking: false,  // Default to disabled
+  thinkingConfig: {
+    budget_tokens: 1000,  // Default budget for thinking
+  },
 };
 
 export const DEFAULT_PROVIDER: ProviderKey = 'anthropic';

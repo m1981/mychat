@@ -70,7 +70,7 @@ const isLegacyConfig = (config: any): config is LegacyConfig => {
 
 // Convert legacy config to new format
 const convertLegacyConfig = (oldConfig: LegacyConfig | undefined): ChatConfig => {
-  const config = {
+  const config: ChatConfig = {
     provider: 'openai' as ProviderKey,
     modelConfig: {
       model: oldConfig?.model || _defaultModelConfig.model,
@@ -79,6 +79,11 @@ const convertLegacyConfig = (oldConfig: LegacyConfig | undefined): ChatConfig =>
       presence_penalty: oldConfig?.presence_penalty || _defaultModelConfig.presence_penalty,
       top_p: oldConfig?.top_p || _defaultModelConfig.top_p,
       frequency_penalty: oldConfig?.frequency_penalty || _defaultModelConfig.frequency_penalty,
+      // Add the missing properties
+      enableThinking: _defaultModelConfig.enableThinking,
+      thinkingConfig: {
+        budget_tokens: _defaultModelConfig.thinkingConfig.budget_tokens
+      }
     }
   };
 

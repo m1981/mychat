@@ -146,6 +146,20 @@ const ImportChat = () => {
             presence_penalty: oldConfig?.presence_penalty || _defaultModelConfig.presence_penalty,
             top_p: oldConfig?.top_p || _defaultModelConfig.top_p,
             frequency_penalty: oldConfig?.frequency_penalty || _defaultModelConfig.frequency_penalty,
+            // Add the missing properties
+            enableThinking: _defaultModelConfig.enableThinking,
+            thinkingConfig: {
+              budget_tokens: _defaultModelConfig.thinkingConfig.budget_tokens
+            }
+          }
+        };
+      } else {
+        // Ensure existing configs also have the new properties
+        chat.config.modelConfig = {
+          ...chat.config.modelConfig,
+          enableThinking: chat.config.modelConfig.enableThinking ?? _defaultModelConfig.enableThinking,
+          thinkingConfig: {
+            budget_tokens: chat.config.modelConfig.thinkingConfig?.budget_tokens ?? _defaultModelConfig.thinkingConfig.budget_tokens
           }
         };
       }

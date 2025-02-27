@@ -9,8 +9,9 @@ export interface ModelConfig {
   presence_penalty: number;
   top_p: number;
   frequency_penalty: number;
-  enableThinking?: boolean;
-  thinkingConfig?: {
+  // Added in v1.x.x: Support for thinking mode
+  enableThinking: boolean;
+  thinkingConfig: {
     budget_tokens: number;
   };
 }

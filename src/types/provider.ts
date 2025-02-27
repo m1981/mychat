@@ -1,7 +1,12 @@
 import { MessageInterface, ModelConfig, ProviderKey } from '@type/chat';
 
 export interface RequestConfig extends ModelConfig {
-  stream: boolean;
+  stream?: boolean;
+  // Add any provider-specific handling for thinking mode
+  thinking_mode?: {
+    enabled: boolean;
+    budget_tokens: number;
+  };
 }
 
 export interface AIProvider {

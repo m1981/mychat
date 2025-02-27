@@ -62,6 +62,10 @@ const ConfigMenu = ({
           modelConfig={_modelConfig}
           setModelConfig={_setModelConfig}
         />
+        <ThinkingModeToggle
+          modelConfig={_modelConfig}
+          setModelConfig={_setModelConfig}
+        />
       </div>
     </PopupModal>
   );
@@ -89,7 +93,12 @@ export const ModelSelector = ({
       setModelConfig({
         ...modelConfig,
         model: defaultModel.id,
-        max_tokens: defaultModel.maxCompletionTokens  // Changed from maxTokens
+        max_tokens: defaultModel.maxCompletionTokens,
+        // Ensure thinking mode properties are preserved
+        enableThinking: modelConfig.enableThinking,
+        thinkingConfig: {
+          budget_tokens: modelConfig.thinkingConfig.budget_tokens
+        }
       });
     }
   }, [provider]);
@@ -320,6 +329,74 @@ export const FrequencyPenaltySlider = ({
       <div className='text-xs text-gray-500 dark:text-gray-300 mt-2'>
         {t('frequencyPenalty.description')}
       </div>
+    </div>
+  );
+};
+
+export const ThinkingModeToggle = ({
+  modelConfig,
+  setModelConfig,
+}: {
+  modelConfig: ModelConfig;
+  setModelConfig: (config: ModelConfig) => void;
+}) => {
+  const { t } = useTranslation('model');
+
+  const handleThinkingToggle = (enabled: boolean) => {
+    setModelConfig({
+      ...modelConfig,
+      enableThinking: enabled,
+      thinkingConfig: {
+        budget_tokens: enabled 
+          ? (modelConfig.thinkingConfig?.budget_tokens || 1000)
+          : (modelConfig.thinkingConfig?.budget_tokens || 0)
+      }
+    });
+  };
+
+  const handleBudgetChange = (budget: number) => {
+    setModelConfig({
+      ...modelConfig,
+      thinkingConfig: {
+        ...modelConfig.thinkingConfig,
+        budget_tokens: budget
+      }
+    });
+  };
+
+  return (
+    <div className='mt-5 pt-5 border-t border-gray-500'>
+      <div className='flex items-center justify-between'>
+        <label className='block text-sm font-medium text-gray-900 dark:text-white'>
+          {t('thinking.label')}
+        </label>
+        <input
+          type='checkbox'
+          checked={modelConfig.enableThinking}
+          onChange={(e) => handleThinkingToggle(e.target.checked)}
+          className='toggle toggle-primary'
+        />
+      </div>
+      
+      {modelConfig.enableThinking && (
+        <div className='mt-4'>
+          <label className='block text-sm font-medium text-gray-900 dark:text-white'>
+            {t('thinking.budget')}: {modelConfig.thinkingConfig.budget_tokens}
+          </label>
+          <input
+            type='range'
+            value={modelConfig.thinkingConfig.budget_tokens}
+            onChange={(e) => handleBudgetChange(Number(e.target.value))}
+            min={100}
+            max={2000}
+            step={100}
+            className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
+          />
+          <div className='min-w-fit text-gray-500 dark:text-gray-300 text-xs mt-2'>
+            {t('thinking.description')}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
