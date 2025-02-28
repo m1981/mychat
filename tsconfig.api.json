@@ -3,7 +3,13 @@
   "compilerOptions": {
     "module": "CommonJS",
     "outDir": "dist/api",
-    "noEmit": false
+    "noEmit": false,
+    "baseUrl": ".",
+    "paths": {
+      "@src/*": ["src/*"],
+      "@type/*": ["src/types/*"],
+      "@lib/*": ["src/lib/*"]
+    }
   },
   "include": ["api/**/*"],
   "exclude": ["node_modules"]

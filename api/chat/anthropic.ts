@@ -1,4 +1,4 @@
-// api/anthropic.ts
+import './register';
 import Anthropic, { APIError } from '@anthropic-ai/sdk';
 import type {
   MessageParam,
@@ -6,7 +6,7 @@ import type {
 } from '@anthropic-ai/sdk/resources/messages/messages.js';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-import { MessageFormatter } from '@src/lib/messageFormatter';
+import { MessageFormatter } from '@lib/messageFormatter';
 import { MessageInterface } from '@type/chat';
 import { RequestConfig } from '@type/provider';
 
