@@ -14,7 +14,8 @@ import {
 } from '@components/ConfigMenu/ConfigMenu';
 
 import { ModelOptions, ChatConfig, ModelConfig, ProviderKey } from '@type/chat';
-import { _defaultChatConfig, _defaultModelConfig, _defaultSystemMessage } from '@constants/chat';
+import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
+import { DEFAULT_CHAT_CONFIG, DEFAULT_SYSTEM_MESSAGE } from '@config/chat/ChatConfig';
 
 const ChatConfigMenu = () => {
   const { t } = useTranslation('model');
@@ -56,9 +57,9 @@ const ChatConfigPopup = ({
   };
 
   const handleReset = () => {
-    _setProvider(_defaultChatConfig.provider);
-    _setModelConfig(_defaultModelConfig);
-    _setSystemMessage(_defaultSystemMessage);
+    _setProvider(DEFAULT_CHAT_CONFIG.provider);
+    _setModelConfig(DEFAULT_MODEL_CONFIG);
+    _setSystemMessage(DEFAULT_SYSTEM_MESSAGE);
   };
 
   return (

@@ -1,5 +1,6 @@
 import { StoreSlice } from './store';
 import { ChatInterface, FolderCollection, MessageInterface } from '@type/chat';
+import { DEFAULT_FOLDERS, DEFAULT_CHATS } from '@constants/chat';
 
 export interface ChatSlice {
   messages: MessageInterface[];
@@ -20,10 +21,11 @@ export interface ChatSlice {
 
 export const createChatSlice: StoreSlice<ChatSlice> = (set, get) => ({
   messages: [],
-  currentChatIndex: -1,
+  chats: DEFAULT_CHATS,
+  currentChatIndex: 0,
   generating: false,
   error: '',
-  folders: {},
+  folders: DEFAULT_FOLDERS,
   currentChatTokenCount: 0,
   setMessages: (messages: MessageInterface[]) => {
     set((prev: ChatSlice) => ({

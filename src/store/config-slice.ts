@@ -1,7 +1,8 @@
 import { StoreSlice } from './store';
 import { Theme } from '@type/theme';
 import { ChatConfig, ProviderKey } from '@type/chat';
-import { _defaultModelConfig, _defaultSystemMessage } from '@constants/chat';
+import { DEFAULT_SYSTEM_MESSAGE } from '@config/chat/ChatConfig';
+import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 
 export type LayoutWidth = 'normal' | 'wide';
 
@@ -38,9 +39,9 @@ export const createConfigSlice: StoreSlice<ConfigSlice> = (set) => ({
   layoutWidth: 'normal',
   defaultChatConfig: {
     provider: 'anthropic',
-    modelConfig: _defaultModelConfig,
+    modelConfig: DEFAULT_MODEL_CONFIG,
   },
-  defaultSystemMessage: _defaultSystemMessage,
+  defaultSystemMessage: DEFAULT_SYSTEM_MESSAGE,
   setOpenConfig: (openConfig: boolean) => {
     set((prev: ConfigSlice) => ({
       ...prev,

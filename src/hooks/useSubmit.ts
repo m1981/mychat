@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { ChatInterface, MessageInterface } from '@type/chat';
 import { getChatCompletion, getChatCompletionStream } from '@api/api';
 import { parseEventSource } from '@api/helper';
-import { _defaultModelConfig, DEFAULT_PROVIDER } from '@constants/chat';
+import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
+import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { checkStorageQuota } from '@utils/storage';
 import { providers} from '@type/providers';
 
@@ -29,7 +30,7 @@ const useSubmit = () => {
     return await getChatCompletion(
       providerKey,
       message,
-      currentChat?.config.modelConfig || _defaultModelConfig,
+      currentChat?.config.modelConfig || DEFAULT_MODEL_CONFIG,
       currentApiKey
     );
   };

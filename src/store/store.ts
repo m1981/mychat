@@ -5,7 +5,7 @@ import { InputSlice, createInputSlice } from './input-slice';
 import { AuthSlice, createAuthSlice } from './auth-slice';
 import { ConfigSlice, createConfigSlice } from './config-slice';
 import { PromptSlice, createPromptSlice } from './prompt-slice';
-import { _defaultChatConfig } from '@constants/chat';
+import { DEFAULT_CHAT_CONFIG } from '@constants/chat';
 import { ProviderRegistry } from '@config/providers/provider.registry';
 
 export type StoreState = ChatSlice &
@@ -108,7 +108,7 @@ const useStore = create<StoreState>()(
           return {
             ...persistedState,
             chats,
-            defaultChatConfig: _defaultChatConfig,
+            defaultChatConfig: DEFAULT_CHAT_CONFIG,
           };
         }
         return persistedState;

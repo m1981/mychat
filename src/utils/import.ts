@@ -8,7 +8,8 @@ import {
   Role,
 } from '@type/chat';
 import { roles } from '@type/chat';
-import { _defaultChatConfig, _defaultModelConfig } from '@constants/chat';
+import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
+import { DEFAULT_CHAT_CONFIG } from '@config/chat/ChatConfig';
 import { ExportV1, LegacyExport } from '@type/export';
 import { ProviderRegistry } from '@config/providers/provider.registry';
 import { ProviderKey } from '@type/chat';
@@ -17,16 +18,15 @@ import { ProviderModel } from '@config/providers/provider.config';
 const enforceTokenLimit = (config: ChatConfig): ChatConfig => {
   try {
     const providerConfig = ProviderRegistry.getProvider(config.provider);
-    if (!providerConfig) return _defaultChatConfig; // Fallback to default if provider is invalid
+    if (!providerConfig) return DEFAULT_CHAT_CONFIG;
 
     const model = providerConfig.models.find((m: ProviderModel) => m.id === config.modelConfig.model);
     if (!model) {
-      // If model doesn't exist in provider's config, use default model
       return {
         ...config,
         modelConfig: {
-          ..._defaultModelConfig,
-          model: _defaultModelConfig.model,
+          ...DEFAULT_MODEL_CONFIG,
+          model: DEFAULT_MODEL_CONFIG.model
         },
       };
     }
@@ -36,14 +36,14 @@ const enforceTokenLimit = (config: ChatConfig): ChatConfig => {
       modelConfig: {
         ...config.modelConfig,
         max_tokens: Math.min(
-          Math.max(1, config.modelConfig.max_tokens || _defaultModelConfig.max_tokens),
+          Math.max(1, config.modelConfig.max_tokens || DEFAULT_MODEL_CONFIG.max_tokens),
           model.maxCompletionTokens  // Changed from maxTokens
         ),
       },
     };
   } catch (error) {
     console.warn('Error enforcing token limit:', error);
-    return _defaultChatConfig;
+    return DEFAULT_CHAT_CONFIG;
   }
 };
 
@@ -69,27 +69,23 @@ const isLegacyConfig = (config: any): config is LegacyConfig => {
 };
 
 // Convert legacy config to new format
-const convertLegacyConfig = (oldConfig: LegacyConfig | undefined): ChatConfig => {
-  const config: ChatConfig = {
-    provider: 'openai' as ProviderKey,
-    modelConfig: {
-      model: oldConfig?.model || _defaultModelConfig.model,
-      max_tokens: oldConfig?.max_tokens || _defaultModelConfig.max_tokens,
-      temperature: oldConfig?.temperature || _defaultModelConfig.temperature,
-      presence_penalty: oldConfig?.presence_penalty || _defaultModelConfig.presence_penalty,
-      top_p: oldConfig?.top_p || _defaultModelConfig.top_p,
-      frequency_penalty: oldConfig?.frequency_penalty || _defaultModelConfig.frequency_penalty,
-      // Add the missing properties
-      enableThinking: _defaultModelConfig.enableThinking,
-      thinkingConfig: {
-        budget_tokens: _defaultModelConfig.thinkingConfig.budget_tokens
-      }
+const convertLegacyConfig = (oldConfig: LegacyConfig | undefined): ChatConfig => ({
+  provider: 'openai' as ProviderKey,
+  modelConfig: {
+    ...DEFAULT_MODEL_CONFIG,
+    model: oldConfig?.model || DEFAULT_MODEL_CONFIG.model,
+    max_tokens: oldConfig?.max_tokens || DEFAULT_MODEL_CONFIG.max_tokens,
+    temperature: oldConfig?.temperature || DEFAULT_MODEL_CONFIG.temperature,
+    presence_penalty: oldConfig?.presence_penalty || DEFAULT_MODEL_CONFIG.presence_penalty,
+    top_p: oldConfig?.top_p || DEFAULT_MODEL_CONFIG.top_p,
+    frequency_penalty: oldConfig?.frequency_penalty || DEFAULT_MODEL_CONFIG.frequency_penalty,
+    // New fields from DEFAULT_MODEL_CONFIG will be automatically included
+    enableThinking: DEFAULT_MODEL_CONFIG.enableThinking,
+    thinkingConfig: {
+      budget_tokens: DEFAULT_MODEL_CONFIG.thinkingConfig.budget_tokens
     }
-  };
-
-  // Enforce token limits for converted config
-  return enforceTokenLimit(config);
-};
+  }
+});
 
 export const validateAndFixChats = (chats: any[]): chats is ChatInterface[] => {
   if (!Array.isArray(chats)) return false;
@@ -116,19 +112,19 @@ export const validateAndFixChats = (chats: any[]): chats is ChatInterface[] => {
       // Handle config conversion and validation
       try {
         if (!chat.config) {
-          chat.config = _defaultChatConfig;
+          chat.config = DEFAULT_CHAT_CONFIG;
         } else if (!chat.config.provider || !chat.config.modelConfig) {
           if (isLegacyConfig(chat.config)) {
             chat.config = convertLegacyConfig(chat.config);
           } else {
-            chat.config = _defaultChatConfig;
+            chat.config = DEFAULT_CHAT_CONFIG;
           }
         }
 
         chat.config = enforceTokenLimit(chat.config);
       } catch (error) {
         console.warn('Error processing chat config:', error);
-        chat.config = _defaultChatConfig;
+        chat.config = DEFAULT_CHAT_CONFIG;
       }
     }
 

@@ -34,6 +34,7 @@ export interface ChatInterface {
   config: ChatConfig;
   titleSet: boolean;
   currentChatTokenCount?: number;
+  timestamp?: number;
 }
 
 export interface ChatHistoryInterface {

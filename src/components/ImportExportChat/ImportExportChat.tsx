@@ -15,7 +15,8 @@ import {
 } from '@utils/import';
 import { ChatInterface, FolderCollection } from '@type/chat';
 import { Export, ExportV1 } from '@type/export';
-import { _defaultModelConfig, _defaultChatConfig } from '@constants/chat';
+import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
+import { DEFAULT_CHAT_CONFIG } from '@config/chat/ChatConfig';
 
 const ImportExportChat = () => {
   const { t } = useTranslation();
@@ -140,16 +141,16 @@ const ImportChat = () => {
         chat.config = {
           provider: 'openai',
           modelConfig: {
-            model: oldConfig?.model || _defaultModelConfig.model,
-            max_tokens: oldConfig?.max_tokens || _defaultModelConfig.max_tokens,
-            temperature: oldConfig?.temperature || _defaultModelConfig.temperature,
-            presence_penalty: oldConfig?.presence_penalty || _defaultModelConfig.presence_penalty,
-            top_p: oldConfig?.top_p || _defaultModelConfig.top_p,
-            frequency_penalty: oldConfig?.frequency_penalty || _defaultModelConfig.frequency_penalty,
+            model: oldConfig?.model || DEFAULT_MODEL_CONFIG.model,
+            max_tokens: oldConfig?.max_tokens || DEFAULT_MODEL_CONFIG.max_tokens,
+            temperature: oldConfig?.temperature || DEFAULT_MODEL_CONFIG.temperature,
+            presence_penalty: oldConfig?.presence_penalty || DEFAULT_MODEL_CONFIG.presence_penalty,
+            top_p: oldConfig?.top_p || DEFAULT_MODEL_CONFIG.top_p,
+            frequency_penalty: oldConfig?.frequency_penalty || DEFAULT_MODEL_CONFIG.frequency_penalty,
             // Add the missing properties
-            enableThinking: _defaultModelConfig.enableThinking,
+            enableThinking: DEFAULT_MODEL_CONFIG.enableThinking,
             thinkingConfig: {
-              budget_tokens: _defaultModelConfig.thinkingConfig.budget_tokens
+              budget_tokens: DEFAULT_MODEL_CONFIG.thinkingConfig.budget_tokens
             }
           }
         };
@@ -157,9 +158,9 @@ const ImportChat = () => {
         // Ensure existing configs also have the new properties
         chat.config.modelConfig = {
           ...chat.config.modelConfig,
-          enableThinking: chat.config.modelConfig.enableThinking ?? _defaultModelConfig.enableThinking,
+          enableThinking: chat.config.modelConfig.enableThinking ?? DEFAULT_MODEL_CONFIG.enableThinking,
           thinkingConfig: {
-            budget_tokens: chat.config.modelConfig.thinkingConfig?.budget_tokens ?? _defaultModelConfig.thinkingConfig.budget_tokens
+            budget_tokens: chat.config.modelConfig.thinkingConfig?.budget_tokens ?? DEFAULT_MODEL_CONFIG.thinkingConfig.budget_tokens
           }
         };
       }
