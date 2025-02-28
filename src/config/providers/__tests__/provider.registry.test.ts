@@ -46,7 +46,7 @@ describe('ProviderRegistry', () => {
       expect(capabilities).toEqual({
         supportsThinking: true,
         defaultThinkingModel: 'claude-3-7-sonnet-20250219',
-        maxContextWindow: 8196,
+        maxCompletionTokens: 8192,
         defaultModel: 'claude-3-7-sonnet-20250219'
       });
     });
@@ -55,7 +55,7 @@ describe('ProviderRegistry', () => {
       const capabilities = ProviderRegistry.getProviderCapabilities('openai');
       expect(capabilities).toEqual({
         supportsThinking: false,
-        maxContextWindow: 127000,
+        maxCompletionTokens: 16384,
         defaultModel: 'gpt-4o'
       });
     });

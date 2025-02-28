@@ -44,12 +44,6 @@ const TokenCount = React.memo(() => {
       return totalCost.toPrecision(2);
     }
 
-    // Handle legacy price/unit structure
-    if (modelConfig.cost.price && modelConfig.cost.unit) {
-      const totalCost = (modelConfig.cost.price * (tokenCount / modelConfig.cost.unit)) * 4.4;
-      return totalCost.toPrecision(2);
-    }
-
     return '0.00';
   }, [model, tokenCount, provider]);
 

@@ -1,8 +1,5 @@
 // src/utils/messageUtils.ts
 import { MessageInterface, ModelOptions } from '@type/chat';
-import { ModelRegistry } from '@config/models/model.registry';
-import { ProviderRegistry } from '@config/providers/provider.registry';
-
 import { Tiktoken } from '@dqbd/tiktoken/lite';
 const cl100k_base = await import('@dqbd/tiktoken/encoders/cl100k_base.json');
 
@@ -17,7 +14,6 @@ const encoder = new Tiktoken(
   cl100k_base.pat_str
 );
 
-// https://github.com/dqbd/tiktoken/issues/23#issuecomment-1483317174
 export const getChatGPTEncoding = (
   messages: MessageInterface[],
   model: ModelOptions
@@ -42,37 +38,6 @@ export const getChatGPTEncoding = (
 const countTokens = (messages: MessageInterface[], model: ModelOptions) => {
   if (messages.length === 0) return 0;
   return getChatGPTEncoding(messages, model).length;
-};
-
-export const limitMessageTokens = (
-  messages: MessageInterface[],
-  limit: number,
-  model: ModelOptions
-): MessageInterface[] => {
-  const limitedMessages: MessageInterface[] = [];
-  let tokenCount = 0;
-
-  const modelCapabilities = ModelRegistry.getModelCapabilities(model);
-  const providerConfig = ProviderRegistry.getProvider(modelCapabilities.provider);
-  const modelConfig = providerConfig.models.find(m => m.id === model);
-
-  if (!modelConfig) {
-    throw new Error(`Model ${model} not found in provider config`);
-  }
-
-  const maxInputTokens = Math.min(
-    modelConfig.contextWindow - modelConfig.maxCompletionTokens,
-    limit
-  );
-
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const count = countTokens([messages[i]], model);
-    if (count + tokenCount > maxInputTokens) break;
-    tokenCount += count;
-    limitedMessages.unshift({ ...messages[i] });
-  }
-
-  return limitedMessages;
 };
 
 export default countTokens;

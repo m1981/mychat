@@ -1,9 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
-import { ProviderKey, ChatConfig, ModelConfig, ChatInterface, ModelOptions } from '@type/chat';
+import { ProviderKey, ChatConfig, ModelConfig, ChatInterface } from '@type/chat';
 import useStore from '@store/store';
 
-import { ModelRegistry } from '../config/models/model.registry';
-import { ProviderRegistry } from '../config/providers/provider.registry';
+import { ModelRegistry } from '@config/models/model.registry';
+import { ProviderRegistry } from '@config/providers/provider.registry';
 
 const defaultProvider = ProviderRegistry.getProvider('anthropic');
 const defaultModel = defaultProvider.defaultModel;

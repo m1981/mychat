@@ -10,7 +10,6 @@ describe('ModelRegistry', () => {
       expect(capabilities).toEqual({
         modelId: 'claude-3-7-sonnet-20250219',
         provider: 'anthropic',
-        contextWindow: 200000,
         maxResponseTokens: 8192,
         defaultResponseTokens: 4096,
         supportsThinking: true,

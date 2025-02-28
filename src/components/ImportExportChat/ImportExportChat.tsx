@@ -13,8 +13,8 @@ import {
   validateAndFixChats,
   validateExportV1,
 } from '@utils/import';
-import { ChatInterface, Folder, FolderCollection } from '@type/chat';
-import { Export, ExportBase, ExportV1 } from '@type/export';
+import { ChatInterface, FolderCollection } from '@type/chat';
+import { Export, ExportV1 } from '@type/export';
 import { _defaultModelConfig, _defaultChatConfig } from '@constants/chat';
 
 const ImportExportChat = () => {

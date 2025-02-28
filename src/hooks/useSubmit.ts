@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { ChatInterface, MessageInterface } from '@type/chat';
 import { getChatCompletion, getChatCompletionStream } from '@api/api';
 import { parseEventSource } from '@api/helper';
-import { limitMessageTokens } from '@utils/messageUtils';
 import { _defaultModelConfig, DEFAULT_PROVIDER } from '@constants/chat';
 import { checkStorageQuota } from '@utils/storage';
 import { providers} from '@type/providers';
@@ -57,11 +56,8 @@ const useSubmit = () => {
         return;
       }
 
-      const messages = limitMessageTokens(
-        chats[currentChatIndex].messages,
-        chats[currentChatIndex].config.modelConfig.max_tokens,
-        chats[currentChatIndex].config.modelConfig.model
-      );
+      // Use all messages instead of limiting them
+      const messages = chats[currentChatIndex].messages;
 
       const { modelConfig } = chats[currentChatIndex].config;
       const response = await getChatCompletionStream(
