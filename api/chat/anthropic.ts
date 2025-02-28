@@ -1,8 +1,11 @@
-import '../register';
 import Anthropic, { APIError } from '@anthropic-ai/sdk';
 import type {
   MessageParam,
-  ThinkingConfigParam
+  ThinkingConfigParam,
+  ContentBlockStartEvent,
+  MessageStartEvent,
+  ContentBlockDeltaEvent,
+  RawContentBlockStopEvent,
 } from '@anthropic-ai/sdk/resources/messages/messages.js';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
@@ -10,7 +13,12 @@ import { MessageFormatter } from '@src/lib/messageFormatter';
 import { MessageInterface } from '@type/chat';
 import { RequestConfig } from '@type/provider';
 
-// Extend RequestConfig to include thinking mode
+// Constants
+const KEEP_ALIVE_INTERVAL = 15_000;
+const DEFAULT_MAX_TOKENS = 1024;
+const DEFAULT_TEMPERATURE = 0.7;
+const MAX_TOKENS_LIMIT = 4096;
+
 interface AnthropicRequestConfig extends RequestConfig {
   thinking?: ThinkingConfigParam;
 }
@@ -21,152 +29,200 @@ interface AnthropicErrorResponse {
     type: string;
     message: string;
     status?: number;
+    details?: unknown;
   };
 }
 
+interface RequestBody {
+  messages: MessageInterface[];
+  config: AnthropicRequestConfig;
+  apiKey: string;
+}
+
+interface StreamHandler {
+  handleChunk: (chunk: any) => void;
+  cleanup: () => void;
+}
+
+class AnthropicError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public type: string,
+    public details?: unknown
+  ) {
+    super(message);
+    this.name = 'AnthropicError';
+  }
+}
+
 class AnthropicMessageHandler {
-  private client: Anthropic;
+  private readonly client: Anthropic;
   
   constructor(apiKey: string) {
-    if (!apiKey) throw new Error('Anthropic API key is required');
+    if (!apiKey?.trim()) throw new Error('Anthropic API key is required');
+
     this.client = new Anthropic({ 
       apiKey,
       maxRetries: 3,
     });
   }
 
-  async handleStreamingMessage(messages: MessageInterface[], config: AnthropicRequestConfig) {
-    const maxTokens = config.max_tokens || 1024;
-    if (maxTokens > 4096) throw new Error('Max tokens exceeds limit');
+  private validateConfig(config: AnthropicRequestConfig) {
+    const maxTokens = config.max_tokens || DEFAULT_MAX_TOKENS;
+    if (maxTokens > MAX_TOKENS_LIMIT) {
+      throw new Error(`Max tokens (${maxTokens}) exceeds limit (${MAX_TOKENS_LIMIT})`);
+    }
+  }
 
-    return await this.client.messages.stream({
-      messages: MessageFormatter.formatForAnthropic(messages) as MessageParam[],  // Changed to MessageParam[]
+  private getMessageParams(messages: MessageInterface[], config: AnthropicRequestConfig) {
+    return {
+      messages: MessageFormatter.formatForAnthropic(messages) as MessageParam[],
       model: config.model,
-      max_tokens: maxTokens,
-      temperature: config.temperature || 0.7,
-      ...(config.thinking && {
-        thinking: config.thinking
-      }),
+      max_tokens: config.max_tokens || DEFAULT_MAX_TOKENS,
+      temperature: config.temperature || DEFAULT_TEMPERATURE,
+      ...(config.thinking && { thinking: config.thinking }),
+    };
+  }
+
+  async handleStreamingMessage(messages: MessageInterface[], config: AnthropicRequestConfig) {
+    this.validateConfig(config);
+    return await this.client.messages.stream({
+      ...this.getMessageParams(messages, config),
       stream: true,
     });
   }
 
   async handleNonStreamingMessage(messages: MessageInterface[], config: AnthropicRequestConfig) {
-    return await this.client.messages.create({
-      messages: MessageFormatter.formatForAnthropic(messages) as MessageParam[],  // Changed to MessageParam[]
-      model: config.model,
-      max_tokens: config.max_tokens || 1024,
-      temperature: config.temperature || 0.7,
-      ...(config.thinking && {
-        thinking: config.thinking
-      })
-    });
+    this.validateConfig(config);
+    return await this.client.messages.create(this.getMessageParams(messages, config));
   }
-}
-
-export const config = {
-  maxDuration: 60,
-  api: {
-    responseLimit: false,
-    bodyParser: false,
-    externalResolver: true, // Enable for better error handling
-  },
-};
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Parse the request body manually
-  const chunks = [];
-  for await (const chunk of req) {
-    chunks.push(chunk);
-  }
-  const data = JSON.parse(Buffer.concat(chunks).toString());
-  const { messages, config: chatConfig, apiKey } = data;
-
-  const anthropic = new AnthropicMessageHandler(apiKey);
-
-  try {
-    // Set standard SSE headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-    res.setHeader('Transfer-Encoding', 'chunked');
-
-    if (chatConfig.stream) {
-      const stream = await anthropic.handleStreamingMessage(messages, chatConfig);
-      
-      // Improved keep-alive logic
-      const KEEP_ALIVE_INTERVAL = 15000;
+function createStreamHandler(res: NextApiResponse): StreamHandler {
       let lastPing = Date.now();
       const keepAliveInterval = setInterval(() => {
-        if (Date.now() - lastPing >= KEEP_ALIVE_INTERVAL) {
-          if (!res.writableEnded) {
+    if (Date.now() - lastPing >= KEEP_ALIVE_INTERVAL && !res.writableEnded) {
             res.write('event: ping\ndata: {}\n\n');
             lastPing = Date.now();
           }
-        }
       }, KEEP_ALIVE_INTERVAL);
 
-      req.on('close', () => {
-        clearInterval(keepAliveInterval);
-        stream.controller.abort(); // Abort stream if client disconnects
-      });
+  const writeChunk = (data: any) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
 
-      try {
-        for await (const chunk of stream) {
-          if (res.writableEnded) break;
+  return {
+    handleChunk: (chunk: any) => {
+      if (res.writableEnded) return;
           lastPing = Date.now();
 
-          if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-            res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-          }
-        }
-      } finally {
+      const handlers: Record<string, (chunk: any) => void> = {
+        message_start: (c) => writeChunk({
+                type: 'message_start',
+          message: (c as MessageStartEvent).message,
+        }),
+        content_block_start: (c) => writeChunk({
+                type: 'content_block_start',
+          content_block: (c as ContentBlockStartEvent).content_block,
+        }),
+        content_block_delta: (c) => {
+          if ((c as ContentBlockDeltaEvent).delta.type === 'text_delta') {
+            writeChunk(c);
+              }
+        },
+        content_block_stop: (c) => writeChunk({
+                type: 'content_block_stop',
+          index: (c as RawContentBlockStopEvent).index
+        }),
+        message_delta: (c) => writeChunk({
+                type: 'message_delta',
+          delta: c.delta,
+        }),
+        message_stop: () => writeChunk({
+                type: 'message_stop'
+        }),
+      };
+
+      const handler = handlers[chunk.type];
+      if (handler) handler(chunk);
+    },
+    cleanup: () => {
         clearInterval(keepAliveInterval);
         if (!res.writableEnded) {
           res.write('data: [DONE]\n\n');
           res.end();
         }
       }
-    } else {
-      // Non-streaming response
-      const response = await anthropic.handleNonStreamingMessage(messages, chatConfig);
+  };
+}
 
-      res.status(200).json(response);
+function validateRequest(data: unknown): asserts data is RequestBody {
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid request body');
+  }
+
+  const { messages, config, apiKey } = data as Partial<RequestBody>;
+
+  if (!messages?.length || !Array.isArray(messages)) {
+    throw new Error('Messages must be a non-empty array');
+  }
+
+  if (!config || typeof config !== 'object') {
+    throw new Error('Config must be an object');
     }
-  } catch (error) {
-    handleError(error as APIError, res, chatConfig.stream);
+
+  if (!apiKey?.trim()) {
+    throw new Error('API key is required');
   }
 }
 
-function handleError(error: APIError<any>, res: NextApiResponse, isStream: boolean) {
-  const errorResponse: AnthropicErrorResponse = {
+function createErrorResponse(error: APIError<any>): AnthropicErrorResponse {
+  return {
     type: 'error',
     error: {
       type: getErrorType(error.status),
       message: error.message || 'An unexpected error occurred',
-      status: error.status
+      status: error.status,
+      details: error.error && typeof error.error === 'object' ? 
+        'details' in error.error ? error.error.details : undefined : undefined
     },
   };
+}
 
-  // Handle timeout specifically
-  if (error.name === 'TimeoutError' || error.message?.includes('timeout')) {
-    errorResponse.error.type = 'timeout_error';
-    errorResponse.error.message = 'Request timed out. Please try again with a shorter conversation or reduced max_tokens.';
-    return res.status(504).json(errorResponse);
+function handleTimeoutError(res: NextApiResponse) {
+  const timeoutResponse: AnthropicErrorResponse = {
+    type: 'error',
+    error: {
+      type: 'timeout_error',
+      message: 'Request timed out. Please try again with a shorter conversation or reduced max_tokens.',
+      status: 504,
+    },
+  };
+  return res.status(504).json(timeoutResponse);
   }
 
+function sendErrorResponse(
+  res: NextApiResponse,
+  errorResponse: AnthropicErrorResponse,
+  isStream: boolean
+) {
   if (isStream) {
     res.write(`data: ${JSON.stringify(errorResponse)}\n\n`);
     res.write('data: [DONE]\n\n');
     res.end();
   } else {
-    res.status(error.status || 500).json(errorResponse);
+    res.status(errorResponse.error.status || 500).json(errorResponse);
   }
+  }
+
+function handleError(error: APIError<any>, res: NextApiResponse, isStream: boolean) {
+  if (error.name === 'TimeoutError' || error.message?.includes('timeout')) {
+    return handleTimeoutError(res);
+  }
+
+  const errorResponse = createErrorResponse(error);
+  sendErrorResponse(res, errorResponse, isStream);
 }
 
 function getErrorType(status: number | undefined): string {
@@ -183,4 +239,73 @@ function getErrorType(status: number | undefined): string {
     529: 'overloaded_error'
   };
   return errorTypes[status] || 'api_error';
+}
+
+export const config = {
+  maxDuration: 60,
+  api: {
+    responseLimit: false,
+    bodyParser: false,
+    externalResolver: true,
+  },
+};
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Parse the request body manually
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(chunk);
+  }
+
+  let data: unknown;
+  try {
+    data = JSON.parse(Buffer.concat(chunks).toString());
+    validateRequest(data);
+  } catch (error) {
+    return res.status(400).json({
+      error: 'Invalid request format',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+
+  const { messages, config: chatConfig, apiKey } = data;
+  const anthropic = new AnthropicMessageHandler(apiKey);
+
+  try {
+    // Set standard SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.setHeader('Transfer-Encoding', 'chunked');
+
+    if (chatConfig.stream) {
+      const stream = await anthropic.handleStreamingMessage(messages, chatConfig);
+      const streamHandler = createStreamHandler(res);
+
+      req.on('close', () => {
+        stream.controller.abort(); // Abort stream if client disconnects
+        streamHandler.cleanup();
+      });
+
+      try {
+        for await (const chunk of stream) {
+          if (res.writableEnded) break;
+          streamHandler.handleChunk(chunk);
+        }
+      } finally {
+        streamHandler.cleanup();
+      }
+    } else {
+      // Non-streaming response
+      const response = await anthropic.handleNonStreamingMessage(messages, chatConfig);
+      res.status(200).json(response);
+    }
+  } catch (error) {
+    handleError(error as APIError, res, Boolean(chatConfig.stream));
+  }
 }
