@@ -52,12 +52,6 @@ export default defineConfig({
             'uuid',
             'lz-string',
             'papaparse'
-          ],
-
-          // AI/API related
-          'ai-sdk': [
-            '@anthropic-ai/sdk',
-            'openai'
           ]
         }
       }
