@@ -52,6 +52,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         max_tokens: chatConfig.max_tokens,
         temperature: chatConfig.temperature,
         stream: true,
+        thinking: chatConfig.enableThinking ? {
+          type: 'enabled',
+          budget_tokens: Math.min(
+            chatConfig.thinkingConfig?.budget_tokens || 1000,
+            Math.floor(chatConfig.max_tokens * 0.8) // Ensure budget is less than max_tokens
+          )
+        } : undefined
       });
 
       // Ping handling
@@ -70,15 +77,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           if (chunk.type === 'content_block_delta') {
             const delta = chunk.delta;
             
-            if (delta.type === 'text_delta') {
-              res.write(`event: content_block_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
-            } else if (delta.type === 'thinking_delta') {
-              res.write(`event: thinking_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
-            } else if (delta.type === 'signature_delta') {
-              res.write(`event: signature_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
+            switch (delta.type) {
+              case 'text_delta':
+                res.write(`event: text_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
+                break;
+              case 'thinking_delta':
+                res.write(`event: thinking_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
+                break;
+              case 'signature_delta':
+                res.write(`event: signature_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
+                break;
             }
-          } else if (chunk.type === 'message_start' || 
-                     chunk.type === 'message_delta' || 
+          } else if (chunk.type === 'content_block_start' || 
+                     chunk.type === 'content_block_stop' || 
+                     chunk.type === 'message_start' || 
                      chunk.type === 'message_stop') {
             res.write(`event: ${chunk.type}\ndata: ${JSON.stringify(chunk)}\n\n`);
           }
@@ -99,15 +111,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.end();
       }
     } else {
-      // Non-streaming response
+      // Non-streaming response with thinking enabled
       const response = await anthropic.messages.create({
-        messages: messages.map((msg: MessageInterface) => ({
-          role: msg.role === 'assistant' ? 'assistant' : 'user',
-          content: msg.content,
-        })),
+        messages: formattedMessages,
         model: chatConfig.model,
         max_tokens: chatConfig.max_tokens,
         temperature: chatConfig.temperature,
+        thinking: chatConfig.enableThinking ? {
+          type: 'enabled',
+          budget_tokens: Math.min(
+            chatConfig.thinkingConfig?.budget_tokens || 1000,
+            Math.floor(chatConfig.max_tokens * 0.8)
+          )
+        } : undefined
       });
 
       res.status(200).json(response);
