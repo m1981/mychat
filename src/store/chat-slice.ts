@@ -20,12 +20,12 @@ export interface ChatSlice {
 }
 
 export const createChatSlice: StoreSlice<ChatSlice> = (set, get) => ({
+  folders: {},
   messages: [],
   chats: DEFAULT_CHATS,
   currentChatIndex: 0,
   generating: false,
   error: '',
-  folders: DEFAULT_FOLDERS,
   currentChatTokenCount: 0,
   setMessages: (messages: MessageInterface[]) => {
     set((prev: ChatSlice) => ({

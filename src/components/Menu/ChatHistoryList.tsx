@@ -48,15 +48,18 @@ const ChatHistoryList = () => {
     const chats = useStore.getState().chats;
     const folders = useStore.getState().folders;
 
-    (Object.values(folders) as Folder[])
-      .sort((a, b) => a.order - b.order)
-      .forEach((f) => (_folders[f.id] = []));
+    // Initialize folders only if they exist
+    if (folders) {
+      (Object.values(folders) as Folder[])
+        .sort((a, b) => a.order - b.order)
+        .forEach((f) => (_folders[f.id] = []));
+    }
 
     if (chats) {
       chats.forEach((chat: ChatInterface, index: number) => {
         const _filterLowerCase = filterRef.current.toLowerCase();
         const _chatTitle = chat.title.toLowerCase();
-        const _chatFolderName = chat.folder
+        const _chatFolderName = chat.folder && folders && folders[chat.folder]
           ? folders[chat.folder].name.toLowerCase()
           : '';
 
@@ -67,7 +70,7 @@ const ChatHistoryList = () => {
         )
           return;
 
-        if (!chat.folder) {
+        if (!chat.folder || !folders || !folders[chat.folder]) {
           _noFolders.push({ title: chat.title, index: index, id: chat.id });
         } else {
           if (!_folders[chat.folder]) _folders[chat.folder] = [];
@@ -103,28 +106,33 @@ const ChatHistoryList = () => {
   }, []);
 
   useEffect(() => {
-    if (
-      chatTitles &&
-      currentChatIndex >= 0 &&
-      currentChatIndex < chatTitles.length
-    ) {
-      // set title
-      document.title = chatTitles[currentChatIndex];
+    if (!chatTitles || currentChatIndex < 0 || currentChatIndex >= chatTitles.length) {
+      return;
+    }
 
-      // expand folder of current chat
-      const chats = useStore.getState().chats;
-      if (chats) {
-        const folderId = chats[currentChatIndex].folder;
+    // Always update document title for current chat
+    document.title = chatTitles[currentChatIndex];
 
-        if (folderId) {
-          const updatedFolders: FolderCollection = JSON.parse(
-            JSON.stringify(useStore.getState().folders)
-          );
+    // Handle folder expansion
+    const chats = useStore.getState().chats;
+    const folders = useStore.getState().folders;
+    if (!chats?.[currentChatIndex]) return;
 
-          updatedFolders[folderId].expanded = true;
-          setFolders(updatedFolders);
-        }
+    const folderId = chats[currentChatIndex].folder;
+    if (!folderId || !folders) return;
+
+    // If chat belongs to a folder, ensure it's expanded
+    const updatedFolders: FolderCollection = {
+      ...folders,
+      [folderId]: {
+        ...folders[folderId],
+        expanded: true
       }
+    };
+
+    // Only update if the folder exists and its state actually changed
+    if (folders[folderId] && !folders[folderId].expanded) {
+      setFolders(updatedFolders);
     }
   }, [currentChatIndex, chatTitles]);
 

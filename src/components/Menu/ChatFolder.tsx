@@ -29,9 +29,14 @@ interface ChatFolderProps {
 }
 
 const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
-  const folderName = useStore((state) => state.folders[folderId]?.name);
-  const isExpanded = useStore((state) => state.folders[folderId].expanded);
-  const color = useStore((state) => state.folders[folderId].color);
+  // Add safety to store access
+  const folder = useStore((state) => state.folders?.[folderId]);
+  const expanded = useStore((state) => state.folders?.[folderId]?.expanded ?? true);
+  
+  // If folder doesn't exist in store yet, provide fallback rendering
+  if (!folder) {
+    return null; // or some loading state
+  }
 
   const setChats = useStore((state) => state.setChats);
   const setFolders = useStore((state) => state.setFolders);
@@ -41,7 +46,7 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
   const gradientRef = useRef<HTMLDivElement>(null);
   const paletteRef = useRef<HTMLDivElement>(null);
 
-  const [_folderName, _setFolderName] = useState<string>(folderName);
+  const [_folderName, _setFolderName] = useState<string>(folder.name);
   const [isEdit, setIsEdit] = useState<boolean>(false);
   const [isDelete, setIsDelete] = useState<boolean>(false);
   const [isHover, setIsHover] = useState<boolean>(false);
@@ -169,7 +174,7 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
   }, [paletteRef, showPalette]);
 
   return (
-    <Draggable draggableId={folderId} index={useStore.getState().folders[folderId].order}>
+    <Draggable draggableId={folderId} index={folder.order}>
       {(provided) => (
         <div ref={provided.innerRef} {...provided.draggableProps}>
           <div
@@ -179,20 +184,20 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
             onDragLeave={handleDragLeave}
           >
             <div
-              style={{ background: color || '' }}
+              style={{ background: folder.color || '' }}
               className={`${
-                color ? '' : 'hover:bg-gray-500/10'
+                folder.color ? '' : 'hover:bg-gray-500/10'
               } transition-colors flex py-0 pl-2 pr-1 items-center gap-3 relative rounded-md break-all cursor-pointer parent-sibling text-gray-800 dark:text-gray-100`}
               onClick={toggleExpanded}
               ref={folderRef}
               onMouseEnter={() => {
-                if (color && folderRef.current)
-                  folderRef.current.style.background = `${color}dd`;
+                if (folder.color && folderRef.current)
+                  folderRef.current.style.background = `${folder.color}dd`;
                 if (gradientRef.current) gradientRef.current.style.width = '0px';
               }}
               onMouseLeave={() => {
-                if (color && folderRef.current)
-                  folderRef.current.style.background = color;
+                if (folder.color && folderRef.current)
+                  folderRef.current.style.background = folder.color;
                 if (gradientRef.current) gradientRef.current.style.width = '1rem';
               }}
             >
@@ -221,9 +226,9 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
                     className='absolute inset-y-0 right-0 w-4 z-10 transition-all'
                     style={{
                       background:
-                        color &&
+                        folder.color &&
                         `linear-gradient(to left, ${
-                          color || 'var(--color-900)'
+                          folder.color || 'var(--color-900)'
                         }, rgb(32 33 35 / 0))`,
                     }}
                   />
@@ -296,7 +301,7 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
                     <button className='p-1 hover:text-white' onClick={toggleExpanded}>
                       <DownChevronArrow
                         className={`${
-                          isExpanded ? 'rotate-180' : ''
+                          expanded ? 'rotate-180' : ''
                         } transition-transform`}
                       />
                     </button>
@@ -305,8 +310,8 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
               </div>
             </div>
             <div className='ml-3 pl-1 border-l-2 border-gray-200 dark:border-gray-600 flex flex-col gap-1 parent'>
-              {isExpanded && <NewChat folder={folderId} />}
-              {isExpanded &&
+              {expanded && <NewChat folder={folderId} />}
+              {expanded &&
                 folderChats.map((chat: ChatHistoryInterface) => (
                   <ChatHistory
                     title={chat.title}
