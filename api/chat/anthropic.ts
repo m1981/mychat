@@ -20,6 +20,7 @@ interface AnthropicErrorResponse {
   error: {
     type: string;
     message: string;
+    status?: number;
   };
 }
 
@@ -64,7 +65,7 @@ class AnthropicMessageHandler {
 }
 
 export const config = {
-  maxDuration: 300, // Increase to 5 minutes for longer conversations
+  maxDuration: 60,
   api: {
     responseLimit: false,
     bodyParser: false,
@@ -142,17 +143,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-function handleError(error: APIError, res: NextApiResponse, isStream: boolean) {
+function handleError(error: APIError<any>, res: NextApiResponse, isStream: boolean) {
   const errorResponse: AnthropicErrorResponse = {
     type: 'error',
     error: {
       type: getErrorType(error.status),
-      message: error.message || 'An error occurred'
-    }
+      message: error.message || 'An unexpected error occurred',
+      status: error.status
+    },
   };
 
-  if (isStream && !res.writableEnded) {
-    res.write(`event: error\ndata: ${JSON.stringify(errorResponse)}\n\n`);
+  // Handle timeout specifically
+  if (error.name === 'TimeoutError' || error.message?.includes('timeout')) {
+    errorResponse.error.type = 'timeout_error';
+    errorResponse.error.message = 'Request timed out. Please try again with a shorter conversation or reduced max_tokens.';
+    return res.status(504).json(errorResponse);
+  }
+
+  if (isStream) {
+    res.write(`data: ${JSON.stringify(errorResponse)}\n\n`);
+    res.write('data: [DONE]\n\n');
     res.end();
   } else {
     res.status(error.status || 500).json(errorResponse);
