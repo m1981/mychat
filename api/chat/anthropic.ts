@@ -1,4 +1,4 @@
-import './register';
+import '../register';
 import Anthropic, { APIError } from '@anthropic-ai/sdk';
 import type {
   MessageParam,
