@@ -8,7 +8,8 @@
     "paths": {
       "@src/*": ["src/*"],
       "@type/*": ["src/types/*"],
-      "@lib/*": ["src/lib/*"]
+      "@lib/*": ["src/lib/*"],
+      "@api/*": ["api/*"]
     }
   },
   "include": ["api/**/*"],
