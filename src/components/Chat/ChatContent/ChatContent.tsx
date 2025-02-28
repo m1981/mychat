@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import useStore from '@store/store';
 
-import ScrollToBottomButton from './ScrollToBottomButton';
+import CrossIcon from '@icon/CrossIcon2';
+import useStore from '@store/store';
+import { Role } from '@type/chat';
+
 import ChatTitle from './ChatTitle';
+import CloneChat from './CloneChat';
+import DownloadChat from './DownloadChat';
 import Message from './Message';
 import NewMessageButton from './Message/NewMessageButton';
-import CrossIcon from '@icon/CrossIcon2';
-
-import DownloadChat from './DownloadChat';
-import CloneChat from './CloneChat';
-import { Role } from '@type/chat';
+import ScrollToBottomButton from './ScrollToBottomButton';
 import { SelectionCopyProvider } from './SelectionCopyProvider';
 interface Message {
   role: Role;

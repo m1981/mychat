@@ -1,7 +1,9 @@
+import Papa from 'papaparse';
+
 import { Prompt } from '@type/prompt';
+
 import { getToday } from './date';
 
-import Papa from 'papaparse';
 
 export const importPromptCSV = (csvString: string, header: boolean = true) => {
   const results = Papa.parse(csvString, {

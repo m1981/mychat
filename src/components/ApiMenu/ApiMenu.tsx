@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import useStore from '@store/store';
+
 import PopupModal from '@components/PopupModal';
-import { providers } from '@type/providers';
-import { ProviderKey } from '@type/chat';
 import AnthropicIcon from '@icon/AnthropicIcon';
 import OpenAIIcon from '@icon/OpenAIIcon';
+import useStore from '@store/store';
+import { ProviderKey } from '@type/chat';
+import { providers } from '@type/providers';
 
 const formFieldStyles = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500';
 const labelStyles = 'block text-sm font-medium text-gray-900 dark:text-gray-300';

@@ -1,10 +1,11 @@
 import React from 'react';
-import { Role } from '@type/chat';
-import SettingIcon from '@icon/SettingIcon';
-import PersonIcon from '@icon/PersonIcon';
+
 import AnthropicIcon from '@icon/AnthropicIcon';
 import OpenAIIcon from '@icon/OpenAIIcon';
+import PersonIcon from '@icon/PersonIcon';
+import SettingIcon from '@icon/SettingIcon';
 import useStore from '@store/store';
+import { Role } from '@type/chat';
 
 const Avatar = React.memo(({ role }: { role: Role }) => {
   return (

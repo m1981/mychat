@@ -1,9 +1,11 @@
 import React from 'react';
+
+import StopGeneratingButton from '@components/StopGeneratingButton/StopGeneratingButton';
 import useStore from '@store/store';
 
-import ChatContent from './ChatContent';
 import MobileBar from '../MobileBar';
-import StopGeneratingButton from '@components/StopGeneratingButton/StopGeneratingButton';
+
+import ChatContent from './ChatContent';
 
 const Chat = () => {
   const hideSideMenu = useStore((state) => state.hideSideMenu);

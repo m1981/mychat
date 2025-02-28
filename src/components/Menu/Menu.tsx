@@ -1,15 +1,16 @@
 import React, { useEffect, useRef } from 'react';
 
-import useStore from '@store/store';
-
-import NewChat from './NewChat';
-import NewFolder from './NewFolder';
-import ChatHistoryList from './ChatHistoryList';
-import MenuOptions from './MenuOptions';
-
 import CrossIcon2 from '@icon/CrossIcon2';
 import DownArrow from '@icon/DownArrow';
 import MenuIcon from '@icon/MenuIcon';
+import useStore from '@store/store';
+
+
+import ChatHistoryList from './ChatHistoryList';
+import MenuOptions from './MenuOptions';
+import NewChat from './NewChat';
+import NewFolder from './NewFolder';
+
 
 const Menu = () => {
   const hideSideMenu = useStore((state) => state.hideSideMenu);

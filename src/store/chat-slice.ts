@@ -1,6 +1,7 @@
-import { StoreSlice } from './store';
+import { DEFAULT_CHATS } from '@constants/chat';
 import { ChatInterface, FolderCollection, MessageInterface } from '@type/chat';
-import { DEFAULT_FOLDERS, DEFAULT_CHATS } from '@constants/chat';
+
+import { StoreSlice } from './store';
 
 export interface ChatSlice {
   messages: MessageInterface[];

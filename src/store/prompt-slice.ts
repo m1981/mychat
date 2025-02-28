@@ -1,6 +1,7 @@
-import { StoreSlice } from './store';
-import { Prompt } from '@type/prompt';
 import defaultPrompts from '@constants/prompt';
+import { Prompt } from '@type/prompt';
+
+import { StoreSlice } from './store';
 
 export interface PromptSlice {
   prompts: Prompt[];

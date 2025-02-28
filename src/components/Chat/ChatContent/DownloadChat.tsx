@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import useStore from '@store/store';
+
 import PopupModal from '@components/PopupModal';
+import ImageIcon from '@icon/ImageIcon';
+import JsonIcon from '@icon/JsonIcon';
+import MarkdownIcon from '@icon/MarkdownIcon';
+import useStore from '@store/store';
 import {
   chatToMarkdown,
   downloadImg,
@@ -9,11 +13,6 @@ import {
   // downloadPDF,
   htmlToImg,
 } from '@utils/chat';
-import ImageIcon from '@icon/ImageIcon';
-import PdfIcon from '@icon/PdfIcon';
-import MarkdownIcon from '@icon/MarkdownIcon';
-import JsonIcon from '@icon/JsonIcon';
-
 import downloadFile from '@utils/downloadFile';
 
 const DownloadChat = React.memo(

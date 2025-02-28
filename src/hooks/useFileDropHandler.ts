@@ -1,6 +1,7 @@
 // src/hooks/useFileDropHandler.ts
-import { processContent } from '@utils/contentProcessing';
 import { useCallback } from 'react';
+
+import { processContent } from '@utils/contentProcessing';
 
 interface UseFileDropHandlerProps {
   onContentUpdate: (content: string) => void;

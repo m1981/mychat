@@ -1,4 +1,5 @@
 import React from 'react';
+
 import LogoutIcon from '@icon/LogoutIcon';
 
 const Logout = () => {

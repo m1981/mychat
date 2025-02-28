@@ -2,21 +2,21 @@
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { v4 as uuidv4 } from 'uuid';
-import useStore from '@store/store';
 
-import ExportIcon from '@icon/ExportIcon';
-import downloadFile from '@utils/downloadFile';
-import { getToday } from '@utils/date';
 import PopupModal from '@components/PopupModal';
+import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
+import ExportIcon from '@icon/ExportIcon';
+import useStore from '@store/store';
+import { ChatInterface, FolderCollection } from '@type/chat';
+import { Export, ExportV1 } from '@type/export';
+import { getToday } from '@utils/date';
+import downloadFile from '@utils/downloadFile';
 import {
   isLegacyImport,
   validateAndFixChats,
   validateExportV1,
 } from '@utils/import';
-import { ChatInterface, FolderCollection } from '@type/chat';
-import { Export, ExportV1 } from '@type/export';
-import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
-import { DEFAULT_CHAT_CONFIG } from '@config/chat/ChatConfig';
+
 
 const ImportExportChat = () => {
   const { t } = useTranslation();

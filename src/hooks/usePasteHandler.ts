@@ -1,6 +1,7 @@
 // src/hooks/usePasteHandler.ts
-import { processContent } from '@utils/contentProcessing';
 import { useCallback } from 'react';
+
+import { processContent } from '@utils/contentProcessing';
 
 interface UsePasteHandlerProps {
   onContentUpdate: (content: string) => void;

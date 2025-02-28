@@ -1,5 +1,6 @@
 // src/config/providers/provider.registry.ts
 import { ProviderKey } from '@type/chat';
+
 import { ProviderConfig } from './provider.config';
 
 const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {

@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
 import { debounce } from 'lodash';
-import useStore from '@store/store';
+import React, { useEffect, useRef, useState } from 'react';
 
 import SearchBar from '@components/SearchBar';
+import useStore from '@store/store';
 
 const ChatSearch = ({
   filter,

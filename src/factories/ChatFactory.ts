@@ -1,6 +1,6 @@
+import { DEFAULT_CHAT_CONFIG } from '@config/defaults/ChatDefaults';
 import { ChatInterface } from '@type/chat';
 import { generateUUID } from '@utils/uuid';
-import { DEFAULT_CHAT_CONFIG } from '@config/defaults/ChatDefaults';
 
 export class ChatFactory {
   static createChat(title?: string, folder?: string): ChatInterface {

@@ -1,9 +1,10 @@
 import React from 'react';
 
-import useStore from '@store/store';
-import PlusIcon from '@icon/PlusIcon';
-import MenuIcon from '@icon/MenuIcon';
 import useAddChat from '@hooks/useAddChat';
+import MenuIcon from '@icon/MenuIcon';
+import PlusIcon from '@icon/PlusIcon';
+import useStore from '@store/store';
+
 
 const MobileBar = () => {
   const generating = useStore((state) => state.generating);

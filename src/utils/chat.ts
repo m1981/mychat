@@ -1,7 +1,7 @@
-import html2canvas from 'html2canvas';
 // import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
 import { ChatInterface } from '@type/chat';
-import { Theme } from '@type/theme';
 
 export const htmlToImg = async (html: HTMLDivElement) => {
   const needResize = window.innerWidth >= 1024;

@@ -1,7 +1,10 @@
 // api/anthropic.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
 import Anthropic from '@anthropic-ai/sdk';
+import type { APIError } from '@anthropic-ai/sdk';
+import type { NextApiRequest, NextApiResponse } from 'next';
+
 import { MessageInterface } from '@type/chat';
+
 
 export const config = {
   maxDuration: 60,
@@ -80,13 +83,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             res.write(`event: ${chunk.type}\ndata: ${JSON.stringify(chunk)}\n\n`);
           }
         }
-      } catch (streamError: any) {
+      } catch (streamError: unknown) {
         // Handle stream-specific errors
         const errorResponse = {
           type: 'error',
           error: {
-            type: getErrorType(streamError.status),
-            message: streamError.message || 'Stream error occurred'
+            type: getErrorType((streamError as APIError).status),
+            message: (streamError as APIError).message || 'Stream error occurred'
           }
         };
         res.write(`event: error\ndata: ${JSON.stringify(errorResponse)}\n\n`);
@@ -114,8 +117,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const errorResponse = {
       type: 'error',
       error: {
-        type: getErrorType(error.status),
-        message: error.message || 'An error occurred'
+        type: getErrorType((error as APIError).status),
+        message: (error as APIError).message || 'An error occurred'
       }
     };
 
@@ -123,7 +126,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.write(`event: error\ndata: ${JSON.stringify(errorResponse)}\n\n`);
       res.end();
     } else {
-      res.status(error.status || 500).json(errorResponse);
+      res.status((error as APIError).status || 500).json(errorResponse);
     }
   }
 }

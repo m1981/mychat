@@ -1,9 +1,17 @@
-import { ipcRenderer } from 'electron';
 import React, { useEffect, useRef, useState } from 'react';
-import useStore from '@store/store';
 import { Draggable } from 'react-beautiful-dnd';
+
+import { folderColorOptions } from '@constants/color';
+import CancelIcon from '@icon/CancelIcon';
+import ColorPaletteIcon from '@icon/ColorPaletteIcon';
+import CrossIcon from '@icon/CrossIcon';
+import DeleteIcon from '@icon/DeleteIcon';
 import DownChevronArrow from '@icon/DownChevronArrow';
+import EditIcon from '@icon/EditIcon';
 import FolderIcon from '@icon/FolderIcon';
+import RefreshIcon from '@icon/RefreshIcon';
+import TickIcon from '@icon/TickIcon';
+import useStore from '@store/store';
 import {
   ChatHistoryInterface,
   ChatInterface,
@@ -12,15 +20,7 @@ import {
 
 import ChatHistory from './ChatHistory';
 import NewChat from './NewChat';
-import EditIcon from '@icon/EditIcon';
-import DeleteIcon from '@icon/DeleteIcon';
-import CancelIcon from '@icon/CancelIcon';
-import CrossIcon from '@icon/CrossIcon';
-import TickIcon from '@icon/TickIcon';
-import ColorPaletteIcon from '@icon/ColorPaletteIcon';
-import RefreshIcon from '@icon/RefreshIcon';
 
-import { folderColorOptions } from '@constants/color';
 
 
 interface ChatFolderProps {

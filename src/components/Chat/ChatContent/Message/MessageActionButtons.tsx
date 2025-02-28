@@ -1,11 +1,12 @@
 import React, { useState, MouseEvent, Dispatch, SetStateAction } from 'react';
-import RefreshIcon from '@icon/RefreshIcon';
-import DownChevronArrow from '@icon/DownChevronArrow';
+
 import CancelIcon from '@icon/CancelIcon';
-import TickIcon from '@icon/TickIcon';
 import CopyIcon from '@icon/CopyIcon';
-import EditIcon2 from '@icon/EditIcon2';
 import DeleteIcon from '@icon/DeleteIcon';
+import DownChevronArrow from '@icon/DownChevronArrow';
+import EditIcon2 from '@icon/EditIcon2';
+import RefreshIcon from '@icon/RefreshIcon';
+import TickIcon from '@icon/TickIcon';
 import useStore from '@store/store';
 
 interface MessageButtonProps {

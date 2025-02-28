@@ -1,5 +1,5 @@
 import React from 'react';
-import RefreshIcon from '@icon/RefreshIcon';
+
 import SendIcon from '@icon/SendIcon';
 
 const ChatInput = () => {

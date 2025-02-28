@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
-import useStore from '@store/store';
 import { useTranslation } from 'react-i18next';
-import { providers } from '@type/providers';
 
-import PopupModal from '@components/PopupModal';
 import {
   FrequencyPenaltySlider,
   MaxTokenSlider,
@@ -12,10 +9,12 @@ import {
   TemperatureSlider,
   TopPSlider,
 } from '@components/ConfigMenu/ConfigMenu';
-
-import { ModelOptions, ChatConfig, ModelConfig, ProviderKey } from '@type/chat';
-import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
+import PopupModal from '@components/PopupModal';
 import { DEFAULT_CHAT_CONFIG, DEFAULT_SYSTEM_MESSAGE } from '@config/chat/ChatConfig';
+import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
+import useStore from '@store/store';
+import { ModelConfig, ProviderKey } from '@type/chat';
+
 
 const ChatConfigMenu = () => {
   const { t } = useTranslation('model');

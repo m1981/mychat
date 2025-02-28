@@ -12,7 +12,7 @@ const getStringSizeInBytes = (str: string): number => {
  */
 const getLocalStorageSize = (): number => {
   let size = 0;
-  for (let key in localStorage) {
+  for (const key in localStorage) {
     if (localStorage.hasOwnProperty(key)) {
       const item = localStorage[key];
       size += getStringSizeInBytes(key) + getStringSizeInBytes(item);

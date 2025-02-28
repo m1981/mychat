@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { useTextSelection } from '@hooks/useTextSelection';
 import { toast } from 'react-hot-toast';
+
+import { useTextSelection } from '@hooks/useTextSelection';
 
 interface SelectionCopyProviderProps {
   children: React.ReactNode;

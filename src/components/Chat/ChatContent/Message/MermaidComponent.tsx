@@ -1,7 +1,7 @@
 // MermaidComponents.tsx
-import React, { useRef, useState, useEffect } from 'react';
 import { compressToEncodedURIComponent } from 'lz-string';
 import type { MermaidConfig } from 'mermaid';
+import React, { useRef, useState, useEffect } from 'react';
 interface DangerousHTML {
   __html: string;
 }

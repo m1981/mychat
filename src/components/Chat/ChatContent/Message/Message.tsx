@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import useStore from '@store/store';
+import React, { useState } from 'react';
+
 import useSubmit from '@hooks/useSubmit';
+import useStore from '@store/store';
 import { ChatInterface } from '@type/chat';
-import Avatar from './Avatar';
-import MessageContent from './MessageContent';
 import { Role } from '@type/chat';
-import RoleSelector from './RoleSelector';
+
+import Avatar from './Avatar';
 import MessageActionButtons from './MessageActionButtons';
+import MessageContent from './MessageContent';
+import RoleSelector from './RoleSelector';
 
 const backgroundStyle = ['dark:bg-gray-800', 'bg-gray-50 dark:bg-gray-650'];
 

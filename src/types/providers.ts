@@ -1,8 +1,8 @@
-import { AIProvider, RequestConfig } from '@type/provider';
-import { MessageInterface, ProviderKey } from '@type/chat';
-import { ProviderRegistry } from '@config/providers/provider.registry';
 import { ModelRegistry } from '@config/models/model.registry';
 import { ProviderModel } from '@config/providers/provider.config';
+import { ProviderRegistry } from '@config/providers/provider.registry';
+import { MessageInterface, ProviderKey } from '@type/chat';
+import { AIProvider, RequestConfig } from '@type/provider';
 
 export const providers: Record<ProviderKey, AIProvider> = {
   openai: {

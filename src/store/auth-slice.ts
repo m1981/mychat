@@ -1,8 +1,8 @@
-import { defaultAPIEndpoint } from '@constants/auth';
-import { StoreSlice } from './store';
-import { providers } from '@type/providers';
+
 import { officialAPIEndpoint } from '@constants/auth';
 import { ProviderKey } from '@type/chat';
+
+import { StoreSlice } from './store';
 
 export interface AuthSlice {
   apiKeys: Record<ProviderKey, string>;

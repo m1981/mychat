@@ -1,6 +1,6 @@
-import { ModelConfig } from '@type/chat';
-import { ProviderRegistry } from '@config/providers/provider.registry';
 import { ModelRegistry } from '@config/models/model.registry';
+import { ProviderRegistry } from '@config/providers/provider.registry';
+import { ModelConfig } from '@type/chat';
 
 // Move this from ChatConfig.ts to break circular dependency
 const DEFAULT_PROVIDER = 'anthropic' as const;

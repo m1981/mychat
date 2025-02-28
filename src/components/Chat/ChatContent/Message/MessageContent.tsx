@@ -7,21 +7,23 @@ import React, {
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import { CodeProps } from 'react-markdown/lib/ast-to-react';
-import rehypeKatex from 'rehype-katex';
 import rehypeHighlight from 'rehype-highlight';
-import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import useStore from '@store/store';
-import useSubmit from '@hooks/useSubmit';
-import { ChatInterface, Role } from '@type/chat';
+import remarkMath from 'remark-math';
 
 import PopupModal from '@components/PopupModal';
 import TokenCount from '@components/TokenCount';
-import CommandPrompt from './CommandPrompt';
-import CodeBlock from './CodeBlock';
-import { MermaidDiagram } from './MermaidComponent';
-import { usePasteHandler } from '@hooks/usePasteHandler';
 import { useFileDropHandler } from '@hooks/useFileDropHandler';
+import { usePasteHandler } from '@hooks/usePasteHandler';
+import useSubmit from '@hooks/useSubmit';
+import useStore from '@store/store';
+import { ChatInterface, Role } from '@type/chat';
+
+import CodeBlock from './CodeBlock';
+import CommandPrompt from './CommandPrompt';
+import { MermaidDiagram } from './MermaidComponent';
+
 
 export interface MessageContentProps {
   role: Role;

@@ -1,12 +1,14 @@
 import { StoreApi, create } from 'zustand';
 import { persist, PersistStorage } from 'zustand/middleware';
-import { ChatSlice, createChatSlice } from './chat-slice';
-import { InputSlice, createInputSlice } from './input-slice';
-import { AuthSlice, createAuthSlice } from './auth-slice';
-import { ConfigSlice, createConfigSlice } from './config-slice';
-import { PromptSlice, createPromptSlice } from './prompt-slice';
-import { DEFAULT_CHAT_CONFIG } from '@constants/chat';
+
 import { ProviderRegistry } from '@config/providers/provider.registry';
+import { DEFAULT_CHAT_CONFIG } from '@constants/chat';
+
+import { AuthSlice, createAuthSlice } from './auth-slice';
+import { ChatSlice, createChatSlice } from './chat-slice';
+import { ConfigSlice, createConfigSlice } from './config-slice';
+import { InputSlice, createInputSlice } from './input-slice';
+import { PromptSlice, createPromptSlice } from './prompt-slice';
 
 export type StoreState = ChatSlice &
   InputSlice &

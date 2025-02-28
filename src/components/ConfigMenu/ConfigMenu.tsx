@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
 import PopupModal from '@components/PopupModal';
-import { ChatConfig, ModelConfig, ProviderKey } from '@type/chat';
-import DownChevronArrow from '@icon/DownChevronArrow';
-import { providers } from '@type/providers';
-import { ProviderRegistry } from '@config/providers/provider.registry';
 import { ProviderModel } from '@config/providers/provider.config';
+import { ProviderRegistry } from '@config/providers/provider.registry';
+import DownChevronArrow from '@icon/DownChevronArrow';
+import { ChatConfig, ModelConfig, ProviderKey } from '@type/chat';
+import { providers } from '@type/providers';
 
 const ConfigMenu = ({
   setIsModalOpen,

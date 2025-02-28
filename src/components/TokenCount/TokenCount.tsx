@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import useStore from '@store/store';
 import { shallow } from 'zustand/shallow';
-import countTokens from '@utils/messageUtils';
+
 import { ProviderRegistry } from '@config/providers/provider.registry';
+import useStore from '@store/store';
+import countTokens from '@utils/messageUtils';
 
 const TokenCount = React.memo(() => {
   const [tokenCount, setTokenCount] = useState<number>(0);

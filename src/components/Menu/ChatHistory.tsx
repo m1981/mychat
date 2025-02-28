@@ -1,13 +1,13 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
-
 import CancelIcon from '@icon/CancelIcon';
 import CrossIcon from '@icon/CrossIcon';
 import DeleteIcon from '@icon/DeleteIcon';
+import DotIcon from '@icon/DotIcon';
 import EditIcon from '@icon/EditIcon';
 import TickIcon from '@icon/TickIcon';
-import DotIcon from '@icon/DotIcon';
 import useStore from '@store/store';
 
 const ChatHistoryClass = {

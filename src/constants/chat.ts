@@ -1,6 +1,6 @@
+import { DEFAULT_CHAT_CONFIG } from '@config/chat/ChatConfig';
 import { ChatInterface } from '@type/chat';
 import { generateUUID } from '@utils/uuid';
-import { DEFAULT_CHAT_CONFIG } from '@config/chat/ChatConfig';
 
 // Chat Factory
 export const generateDefaultChat = (title?: string, folder?: string): ChatInterface => ({

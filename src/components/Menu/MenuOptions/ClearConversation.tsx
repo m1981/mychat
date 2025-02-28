@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import useStore from '@store/store';
 
 import PopupModal from '@components/PopupModal';
-import DeleteIcon from '@icon/DeleteIcon';
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
+import DeleteIcon from '@icon/DeleteIcon';
+import useStore from '@store/store';
+
 
 const ClearConversation = () => {
   const { t } = useTranslation();

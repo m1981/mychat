@@ -1,6 +1,7 @@
-import { ModelConfig } from '@type/chat';
-import { ProviderRegistry } from '@config/providers/provider.registry';
 import { ModelRegistry } from '@config/models/model.registry';
+import { ProviderRegistry } from '@config/providers/provider.registry';
+import { ModelConfig } from '@type/chat';
+
 import { DEFAULT_PROVIDER } from './ChatDefaults';
 
 export const createDefaultModelConfig = (): Readonly<ModelConfig> => {

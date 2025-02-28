@@ -1,17 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
-import useStore from '@store/store';
-import { shallow } from 'zustand/shallow';
 import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
+import { shallow } from 'zustand/shallow';
 
-import ChatFolder from './ChatFolder';
-import ChatHistory from './ChatHistory';
-import ChatSearch from './ChatSearch';
-
+import useStore from '@store/store';
 import {
   ChatInterface,
   Folder,
   FolderCollection,
 } from '@type/chat';
+
+import ChatFolder from './ChatFolder';
+import ChatHistory from './ChatHistory';
+import ChatSearch from './ChatSearch';
+
 
 // Define local interfaces that don't conflict with imports
 interface ChatHistoryItem {

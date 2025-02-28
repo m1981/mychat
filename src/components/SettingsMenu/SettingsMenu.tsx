@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ChatConfigMenu from '@components/ChatConfigMenu';
+import LanguageSelector from '@components/LanguageSelector';
+import ThemeSwitcher from '@components/Menu/MenuOptions/ThemeSwitcher';
+import WidthSelector from '@components/Menu/MenuOptions/WidthSelector';
+import PopupModal from '@components/PopupModal';
+import PromptLibraryMenu from '@components/PromptLibraryMenu';
+import SettingIcon from '@icon/SettingIcon';
 import useStore from '@store/store';
 
-import PopupModal from '@components/PopupModal';
-import SettingIcon from '@icon/SettingIcon';
-import ThemeSwitcher from '@components/Menu/MenuOptions/ThemeSwitcher';
-import LanguageSelector from '@components/LanguageSelector';
+
 import AutoTitleToggle from './AutoTitleToggle';
-import PromptLibraryMenu from '@components/PromptLibraryMenu';
-import ChatConfigMenu from '@components/ChatConfigMenu';
 import EnterToSubmitToggle from './EnterToSubmitToggle';
-import WidthSelector from '@components/Menu/MenuOptions/WidthSelector';
+
 
 const SettingsMenu = () => {
   const { t } = useTranslation();

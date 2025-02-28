@@ -1,10 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { v4 as uuidv4 } from 'uuid';
-import useStore from '@store/store';
 
 import NewFolderIcon from '@icon/NewFolderIcon';
+import useStore from '@store/store';
 import { Folder, FolderCollection } from '@type/chat';
+
 
 const NewFolder = () => {
   const { t } = useTranslation();

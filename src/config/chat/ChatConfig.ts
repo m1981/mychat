@@ -1,4 +1,5 @@
 import { ProviderKey, ChatConfig } from '@type/chat';
+
 import { DEFAULT_MODEL_CONFIG } from './ModelConfig';
 
 export const DEFAULT_PROVIDER: ProviderKey = 'anthropic';

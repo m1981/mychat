@@ -23,13 +23,14 @@
       "@hooks/*": ["./src/hooks/*"],
       "@constants/*": ["./src/constants/*"],
       "@config/*": ["src/config/*"],
-      "@api/*": ["./src/api/*"],
+      "@api/*": ["./src/api/*", "./api/*"],
       "@components/*": ["./src/components/*"],
-      "@models/*": [",.src/config/models/*"],
+      "@models/*": ["./src/config/models/*"],
       "@utils/*": ["./src/utils/*"],
       "@src/*": ["./src/*"]
     }
   },
-  "include": ["src", "electron/index.cjs"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": ["src", "api/**/*"],
+  "references": [{ "path": "./tsconfig.node.json" }],
+  "exclude": ["node_modules", "dist", "build"]
 }

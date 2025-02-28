@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import CrossIcon2 from '@icon/CrossIcon2';
 
+
 const PopupModal = ({
   title = 'Information',
   message,
