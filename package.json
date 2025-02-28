@@ -46,7 +46,7 @@
     }
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.1",
+    "@anthropic-ai/sdk": "^0.38.0",
     "@dqbd/tiktoken": "^1.0.2",
     "@types/react-beautiful-dnd": "^13.1.8",
     "depcheck": "^1.4.7",

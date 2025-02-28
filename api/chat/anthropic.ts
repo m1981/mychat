@@ -1,16 +1,74 @@
 // api/anthropic.ts
-import Anthropic from '@anthropic-ai/sdk';
-import type { APIError } from '@anthropic-ai/sdk';
+import Anthropic, { APIError } from '@anthropic-ai/sdk';
+import type {
+  MessageParam,
+  ThinkingConfigParam
+} from '@anthropic-ai/sdk/resources/messages/messages.js';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+import { MessageFormatter } from '@src/lib/messageFormatter';
 import { MessageInterface } from '@type/chat';
+import { RequestConfig } from '@type/provider';
 
+// Extend RequestConfig to include thinking mode
+interface AnthropicRequestConfig extends RequestConfig {
+  thinking?: ThinkingConfigParam;
+}
+
+interface AnthropicErrorResponse {
+  type: string;
+  error: {
+    type: string;
+    message: string;
+  };
+}
+
+class AnthropicMessageHandler {
+  private client: Anthropic;
+  
+  constructor(apiKey: string) {
+    if (!apiKey) throw new Error('Anthropic API key is required');
+    this.client = new Anthropic({ 
+      apiKey,
+      maxRetries: 3,
+    });
+  }
+
+  async handleStreamingMessage(messages: MessageInterface[], config: AnthropicRequestConfig) {
+    const maxTokens = config.max_tokens || 1024;
+    if (maxTokens > 4096) throw new Error('Max tokens exceeds limit');
+
+    return await this.client.messages.stream({
+      messages: MessageFormatter.formatForAnthropic(messages) as MessageParam[],  // Changed to MessageParam[]
+      model: config.model,
+      max_tokens: maxTokens,
+      temperature: config.temperature || 0.7,
+      ...(config.thinking && {
+        thinking: config.thinking
+      }),
+      stream: true,
+    });
+  }
+
+  async handleNonStreamingMessage(messages: MessageInterface[], config: AnthropicRequestConfig) {
+    return await this.client.messages.create({
+      messages: MessageFormatter.formatForAnthropic(messages) as MessageParam[],  // Changed to MessageParam[]
+      model: config.model,
+      max_tokens: config.max_tokens || 1024,
+      temperature: config.temperature || 0.7,
+      ...(config.thinking && {
+        thinking: config.thinking
+      })
+    });
+  }
+}
 
 export const config = {
-  maxDuration: 60,
+  maxDuration: 300, // Increase to 5 minutes for longer conversations
   api: {
     responseLimit: false,
     bodyParser: false,
+    externalResolver: true, // Enable for better error handling
   },
 };
 
@@ -27,9 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const data = JSON.parse(Buffer.concat(chunks).toString());
   const { messages, config: chatConfig, apiKey } = data;
 
-  const anthropic = new Anthropic({
-    apiKey: apiKey,
-  });
+  const anthropic = new AnthropicMessageHandler(apiKey);
 
   try {
     // Set standard SSE headers
@@ -40,114 +96,72 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Transfer-Encoding', 'chunked');
 
     if (chatConfig.stream) {
-      // Format messages for Anthropic API
-      const formattedMessages = messages.map((msg: MessageInterface) => ({
-        role: msg.role === 'assistant' ? 'assistant' : 'user',
-        content: msg.content,
-      }));
-
-      const stream = await anthropic.messages.create({
-        messages: formattedMessages,
-        model: chatConfig.model,
-        max_tokens: chatConfig.max_tokens,
-        temperature: chatConfig.temperature,
-        stream: true,
-        thinking: chatConfig.enableThinking ? {
-          type: 'enabled',
-          budget_tokens: Math.min(
-            chatConfig.thinkingConfig?.budget_tokens || 1000,
-            Math.floor(chatConfig.max_tokens * 0.8) // Ensure budget is less than max_tokens
-          )
-        } : undefined
-      });
-
-      // Ping handling
+      const stream = await anthropic.handleStreamingMessage(messages, chatConfig);
+      
+      // Improved keep-alive logic
+      const KEEP_ALIVE_INTERVAL = 15000;
       let lastPing = Date.now();
       const keepAliveInterval = setInterval(() => {
-        if (Date.now() - lastPing >= 5000) {
-          res.write('event: ping\ndata: {}\n\n');
-          lastPing = Date.now();
+        if (Date.now() - lastPing >= KEEP_ALIVE_INTERVAL) {
+          if (!res.writableEnded) {
+            res.write('event: ping\ndata: {}\n\n');
+            lastPing = Date.now();
+          }
         }
-      }, 5000);
+      }, KEEP_ALIVE_INTERVAL);
+
+      req.on('close', () => {
+        clearInterval(keepAliveInterval);
+        stream.controller.abort(); // Abort stream if client disconnects
+      });
 
       try {
         for await (const chunk of stream) {
+          if (res.writableEnded) break;
           lastPing = Date.now();
-          
-          if (chunk.type === 'content_block_delta') {
-            const delta = chunk.delta;
-            
-            switch (delta.type) {
-              case 'text_delta':
-                res.write(`event: text_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
-                break;
-              case 'thinking_delta':
-                res.write(`event: thinking_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
-                break;
-              case 'signature_delta':
-                res.write(`event: signature_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
-                break;
-            }
-          } else if (chunk.type === 'content_block_start' || 
-                     chunk.type === 'content_block_stop' || 
-                     chunk.type === 'message_start' || 
-                     chunk.type === 'message_stop') {
-            res.write(`event: ${chunk.type}\ndata: ${JSON.stringify(chunk)}\n\n`);
+
+          if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+            res.write(`data: ${JSON.stringify(chunk)}\n\n`);
           }
         }
-      } catch (streamError: unknown) {
-        // Handle stream-specific errors
-        const errorResponse = {
-          type: 'error',
-          error: {
-            type: getErrorType((streamError as APIError).status),
-            message: (streamError as APIError).message || 'Stream error occurred'
-          }
-        };
-        res.write(`event: error\ndata: ${JSON.stringify(errorResponse)}\n\n`);
       } finally {
         clearInterval(keepAliveInterval);
-        res.write('data: [DONE]\n\n');
-        res.end();
+        if (!res.writableEnded) {
+          res.write('data: [DONE]\n\n');
+          res.end();
+        }
       }
     } else {
-      // Non-streaming response with thinking enabled
-      const response = await anthropic.messages.create({
-        messages: formattedMessages,
-        model: chatConfig.model,
-        max_tokens: chatConfig.max_tokens,
-        temperature: chatConfig.temperature,
-        thinking: chatConfig.enableThinking ? {
-          type: 'enabled',
-          budget_tokens: Math.min(
-            chatConfig.thinkingConfig?.budget_tokens || 1000,
-            Math.floor(chatConfig.max_tokens * 0.8)
-          )
-        } : undefined
-      });
+      // Non-streaming response
+      const response = await anthropic.handleNonStreamingMessage(messages, chatConfig);
 
       res.status(200).json(response);
     }
-  } catch (error: any) {
-    // Handle non-stream errors
-    const errorResponse = {
-      type: 'error',
-      error: {
-        type: getErrorType((error as APIError).status),
-        message: (error as APIError).message || 'An error occurred'
-      }
-    };
-
-    if (chatConfig.stream && !res.headersSent) {
-      res.write(`event: error\ndata: ${JSON.stringify(errorResponse)}\n\n`);
-      res.end();
-    } else {
-      res.status((error as APIError).status || 500).json(errorResponse);
-    }
+  } catch (error) {
+    handleError(error as APIError, res, chatConfig.stream);
   }
 }
 
-function getErrorType(status: number): string {
+function handleError(error: APIError, res: NextApiResponse, isStream: boolean) {
+  const errorResponse: AnthropicErrorResponse = {
+    type: 'error',
+    error: {
+      type: getErrorType(error.status),
+      message: error.message || 'An error occurred'
+    }
+  };
+
+  if (isStream && !res.writableEnded) {
+    res.write(`event: error\ndata: ${JSON.stringify(errorResponse)}\n\n`);
+    res.end();
+  } else {
+    res.status(error.status || 500).json(errorResponse);
+  }
+}
+
+function getErrorType(status: number | undefined): string {
+  if (!status) return 'api_error';
+  
   const errorTypes: Record<number, string> = {
     400: 'invalid_request_error',
     401: 'authentication_error',

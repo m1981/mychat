@@ -34,11 +34,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      const stream = await openai.chat.completions.create({
+      const streamResponse = await openai.chat.completions.create({
         ...chatConfig,
         messages,
+        model: chatConfig.model || 'gpt-3.5-turbo',
         stream: true,
-      });
+      } as OpenAI.ChatCompletionCreateParamsStreaming);
 
       let lastPing = Date.now();
       const keepAliveInterval = setInterval(() => {
@@ -49,9 +50,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }, 5000);
 
       try {
-        for await (const chunk of stream) {
+        for await (const part of streamResponse) {
           lastPing = Date.now();
-          res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+          res.write(`data: ${JSON.stringify(part)}\n\n`);
         }
       } finally {
         clearInterval(keepAliveInterval);
@@ -62,7 +63,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const response = await openai.chat.completions.create({
         ...chatConfig,
         messages,
-      });
+        model: chatConfig.model || 'gpt-3.5-turbo',
+        stream: false,
+      } as OpenAI.ChatCompletionCreateParamsNonStreaming);
+      
       res.status(200).json(response);
     }
   } catch (error: any) {
