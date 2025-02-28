@@ -15,13 +15,77 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          mermaid: ['mermaid'],
-          vendor: ['react', 'react-dom'],
+          // Core vendor chunks
+          'core-vendor': ['react', 'react-dom', 'zustand'],
+
+          // Markdown processing
+          'markdown-core': [
+            'react-markdown',
+            'remark-gfm',
+            'remark-math'
+          ],
+          'markdown-plugins': [
+            'rehype-highlight',
+            'rehype-katex'
+          ],
+
+          // Mermaid chunks
+          'mermaid-core': ['mermaid/dist/mermaid-core'],
+          'mermaid-diagrams': [
+            'mermaid/dist/diagrams/flowchart/flowDb',
+            'mermaid/dist/diagrams/sequence/sequenceDb',
+            'mermaid/dist/diagrams/gantt/ganttDb',
+            'mermaid/dist/diagrams/class/classDb'
+          ],
+
+          // UI and functionality
+          'ui-utils': [
+            'react-hot-toast',
+            'html2canvas',
+            'jspdf'
+          ],
+
+          // i18n
+          'i18n': [
+            'i18next',
+            'react-i18next',
+            'i18next-browser-languagedetector',
+            'i18next-http-backend'
+          ],
+
+          // Data handling
+          'data-utils': [
+            'lodash',
+            'uuid',
+            'lz-string',
+            'papaparse'
+          ],
+
+          // AI/API related
+          'ai-sdk': [
+            '@anthropic-ai/sdk',
+            'openai'
+          ]
         }
       }
     },
     chunkSizeWarningLimit: 1600,
+
+    // Additional build optimizations
+    target: 'esnext',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      }
   },
+
+    // Improve build performance
+    reportCompressedSize: false,
+    cssCodeSplit: true
+  },
+
   optimizeDeps: {
     include: ['mermaid'],
     esbuildOptions: {
@@ -52,5 +116,18 @@ export default defineConfig({
       '@config/': new URL('./src/config/', import.meta.url).pathname,
     },
   },
+
+  // Performance optimizations
+  esbuild: {
+    logOverride: { 'this-is-undefined-in-esm': 'silent' }
+  },
+
   base: '/',
+
+  // Add preview configuration for production testing
+  preview: {
+    port: 4173,
+    host: true,
+    strictPort: true,
+  }
 });
