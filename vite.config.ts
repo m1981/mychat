@@ -3,7 +3,6 @@ import { defineConfig } from 'vite';
 import topLevelAwait from 'vite-plugin-top-level-await';
 import wasm from 'vite-plugin-wasm';
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
@@ -29,14 +28,8 @@ export default defineConfig({
             'rehype-katex'
           ],
 
-          // Mermaid chunks
-          'mermaid-core': ['mermaid/dist/mermaid-core'],
-          'mermaid-diagrams': [
-            'mermaid/dist/diagrams/flowchart/flowDb',
-            'mermaid/dist/diagrams/sequence/sequenceDb',
-            'mermaid/dist/diagrams/gantt/ganttDb',
-            'mermaid/dist/diagrams/class/classDb'
-          ],
+          // Mermaid - simplified chunking
+          'mermaid': ['mermaid'],
 
           // UI and functionality
           'ui-utils': [
@@ -70,8 +63,6 @@ export default defineConfig({
       }
     },
     chunkSizeWarningLimit: 1600,
-
-    // Additional build optimizations
     target: 'esnext',
     minify: 'terser',
     terserOptions: {
@@ -115,11 +106,6 @@ export default defineConfig({
       '@src/': new URL('./src/', import.meta.url).pathname,
       '@config/': new URL('./src/config/', import.meta.url).pathname,
     },
-  },
-
-  // Performance optimizations
-  esbuild: {
-    logOverride: { 'this-is-undefined-in-esm': 'silent' }
   },
 
   base: '/',
