@@ -40,6 +40,7 @@ const useSubmit = () => {
     if (generating || !chats) return;
 
     try {
+      console.log('🚀 Starting submission process...');
       await checkStorageQuota();
       if (useStore.getState().error) return;
 
@@ -52,21 +53,38 @@ const useSubmit = () => {
       setChats(updatedChats);
       setGenerating(true);
 
-      if (chats[currentChatIndex].messages.length === 0) {
-        setError('No messages submitted!');
-        return;
-      }
-
       const messages = chats[currentChatIndex].messages;
       const { modelConfig } = chats[currentChatIndex].config;
       
-      const stream = await getChatCompletionStream(
-        providerKey,
-        messages,
-        modelConfig,
-        currentApiKey
-      );
+      console.log('📤 Sending request to backend:', {
+        provider: providerKey,
+        messageCount: messages.length,
+        config: modelConfig
+      });
 
+      const response = await fetch(`/api/chat/${providerKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages,
+          config: { ...modelConfig, stream: true },
+          apiKey: currentApiKey,
+        }),
+      });
+
+      console.log('📥 Received response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const stream = response.body;
       if (!stream) {
         setError('No response stream received');
         return;
@@ -74,55 +92,73 @@ const useSubmit = () => {
 
       const reader = stream.getReader();
       const decoder = new TextDecoder();
-      let accumulatedData = '';
+
+      console.log('📡 Stream connection established');
 
       try {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          
+          if (done) {
+            console.log('�完 Stream complete');
+            break;
+          }
 
-          accumulatedData += decoder.decode(value, { stream: true });
-          const lines = accumulatedData.split('\n');
-          accumulatedData = lines.pop() || ''; // Keep the incomplete line for next iteration
+          const chunk = decoder.decode(value, { stream: true });
+          console.log('📦 Received chunk:', chunk);
 
+          const lines = chunk.split('\n');
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6); // Remove 'data: ' prefix
-              if (data === '[DONE]') break;
+            if (line.trim() === '') continue;
+            if (line.trim() === 'data: [DONE]') {
+              console.log('🏁 Received DONE signal');
+              break;
+            }
 
+            if (line.startsWith('data: ')) {
               try {
-                const parsed = JSON.parse(data);
-                if (parsed.type === 'content_block_delta' && 
-                    parsed.delta?.type === 'text_delta') {
+                const data = JSON.parse(line.slice(6));
+                console.log('🔍 Parsed SSE data:', data);
+
+                if (data.type === 'content_block_delta' && 
+                    data.delta?.type === 'text_delta') {
                   const currentChats = useStore.getState().chats;
                   if (!currentChats) return;
                   
                   const lastMessageIndex = currentChats[currentChatIndex].messages.length - 1;
                   const updatedChats = JSON.parse(JSON.stringify(currentChats));
-                  updatedChats[currentChatIndex].messages[lastMessageIndex].content += parsed.delta.text;
+                  updatedChats[currentChatIndex].messages[lastMessageIndex].content += data.delta.text;
+                  
+                  console.log('💬 Updated message content:', {
+                    deltaText: data.delta.text,
+                    currentContent: updatedChats[currentChatIndex].messages[lastMessageIndex].content
+                  });
+                  
                   setChats(updatedChats);
                 }
               } catch (e) {
-                console.error('Failed to parse chunk:', data);
+                console.error('❌ Failed to parse SSE chunk:', e);
               }
             }
           }
         }
       } catch (error) {
-        console.error('Stream processing error:', error);
+        console.error('❌ Stream processing error:', error);
         setError('Stream processing failed');
       } finally {
+        console.log('🔚 Closing stream reader');
         reader.cancel();
       }
 
-      // Handle title generation after successful response
+      console.log('✨ Starting title generation');
       await handleTitleGeneration();
 
     } catch (error) {
-      console.error('Submit error:', error);
+      console.error('❌ Submit error:', error);
       setError(error instanceof Error ? error.message : 'An unknown error occurred');
     } finally {
       setGenerating(false);
+      console.log('🏷️ Generation complete');
     }
   };
 
