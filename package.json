@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "vite",
     "dev:host": "vite --host 0.0.0.0",
-    "build": "pnpm type-check && NODE_ENV=production pnpm build:vite",
+    "build": "pnpm type-check && NODE_ENV=production TS_NODE_BASEURL=./ pnpm build:vite",
     "build:vite": "NODE_OPTIONS='--max_old_space_size=8192' vite build",
     "build:quick": "vite build --mode development",
     "test": "vitest run",

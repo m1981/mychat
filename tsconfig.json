@@ -27,6 +27,7 @@
       "@components/*": ["./src/components/*"],
       "@models/*": ["./src/config/models/*"],
       "@utils/*": ["./src/utils/*"],
+      "@lib/*": ["./src/lib/*"],
       "@src/*": ["./src/*"]
     }
   },

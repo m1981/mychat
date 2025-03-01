@@ -9,9 +9,9 @@ import type {
 } from '@anthropic-ai/sdk/resources/messages/messages.js';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-import { MessageFormatter } from '@src/lib/messageFormatter';
-import { MessageInterface } from '@type/chat';
-import { RequestConfig } from '@type/provider';
+import { MessageFormatter } from '@lib/messageFormatter';
+import type { MessageInterface } from '@type/chat';
+import type { RequestConfig } from '@type/provider';
 
 // Constants
 const KEEP_ALIVE_INTERVAL = 15_000;
