@@ -1,11 +1,6 @@
 import { register } from 'tsconfig-paths';
 import { getRootPath } from '../../src/lib/paths';
 
-console.log('=== MIDDLEWARE DEBUG ===');
-console.log('Current working directory:', process.cwd());
-console.log('__dirname:', __dirname);
-console.log('Module paths:', module.paths);
-
 const baseUrl = getRootPath();
 
 register({

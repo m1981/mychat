@@ -9,6 +9,12 @@ import type {
 } from '@anthropic-ai/sdk/resources/messages/messages.js';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+
+console.log('=== ANTHROPIC HANDLER DEBUG ===');
+console.log('Current working directory:', process.cwd());
+console.log('__dirname:', __dirname);
+console.log('Module paths:', module.paths);
+
 import { MessageFormatter } from '@lib/messageFormatter';
 import type { MessageInterface } from '@type/chat';
 import type { RequestConfig } from '@type/provider';
