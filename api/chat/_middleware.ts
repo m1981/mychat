@@ -1,15 +1,15 @@
 import { register } from 'tsconfig-paths';
+import { getRootPath } from '../../src/lib/paths';
 
-// Register path aliases
+const baseUrl = getRootPath();
+
 register({
-  baseUrl: process.cwd(),
+  baseUrl,
   paths: {
-    "@src/*": ["src/*"],
-    "@lib/*": ["src/lib/*"],
-    "@type/*": ["src/types/*"],
-    "@constants/*": ["src/constants/*"],
-    "@utils/*": ["src/utils/*"],
-    "@config/*": ["src/config/*"]
+    '@lib/*': [`${baseUrl}/src/lib/*`],
+    '@src/*': [`${baseUrl}/src/*`],
+    '@api/*': [`${baseUrl}/src/api/*`],
+    '@utils/*': [`${baseUrl}/src/utils/*`],
   }
 });
 
