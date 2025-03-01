@@ -23,7 +23,7 @@
       "@hooks/*": ["./src/hooks/*"],
       "@constants/*": ["./src/constants/*"],
       "@config/*": ["src/config/*"],
-      "@api/*": ["./src/api/*", "./api/*"],
+      "@api/*": ["./src/api/*"],
       "@components/*": ["./src/components/*"],
       "@models/*": ["./src/config/models/*"],
       "@utils/*": ["./src/utils/*"],
@@ -31,7 +31,7 @@
       "@src/*": ["./src/*"]
     }
   },
-  "include": ["src", "api/**/*"],
+  "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }],
   "exclude": ["node_modules", "dist", "build"]
 }

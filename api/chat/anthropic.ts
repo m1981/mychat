@@ -24,20 +24,43 @@ interface RequestData {
 
 export const runtime = 'edge';
 
+// Helper function to safely check if an error is an instance of a specific class
+const isErrorInstance = (error: unknown, ErrorClass: any): boolean => {
+  return error instanceof Error &&
+         error.constructor?.name === ErrorClass?.name;
+};
+
+// Helper function to safely create a TextEncoder
+const getTextEncoder = () => {
+  try {
+    return new TextEncoder();
+  } catch (e) {
+    // Fallback for environments where TextEncoder isn't available
+    return {
+      encode: (str: string) => {
+        const arr = new Uint8Array(str.length);
+        for (let i = 0; i < str.length; i++) {
+          arr[i] = str.charCodeAt(i);
+        }
+        return arr;
+      }
+    };
+  }
+};
+
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json() as RequestData;
     const { messages, config: chatConfig, apiKey } = data;
 
     if (!apiKey) {
-      console.error("No API key provided");
       return new Response(
         JSON.stringify({ error: "API key is required" }),
         { status: 401 }
       );
     }
 
-    if (!messages || !Array.isArray(messages)) {
+    if (!messages?.length) {
       return new Response(
         JSON.stringify({ error: "Messages array is required" }),
         { status: 400 }
@@ -51,29 +74,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const anthropic = new Anthropic({
-      apiKey: apiKey,
-    });
-
-    // Format messages for Anthropic API
+    const anthropic = new Anthropic({ apiKey });
     const formattedMessages: MessageParam[] = messages.map((msg: ChatMessage) => ({
       role: msg.role === 'assistant' ? 'assistant' : 'user',
       content: msg.content,
     }));
 
-    console.log("🔍 Initial Request Data:", {
-      hasMessages: !!messages,
-      messageCount: messages?.length,
-      model: chatConfig.model,
-    });
-
     if (chatConfig.stream) {
-      console.log("🚀 Anthropic API Stream Request:", {
-        model: chatConfig.model,
-        messageCount: formattedMessages.length,
-        stream: chatConfig.stream,
-      });
-
       const stream = await anthropic.messages.stream({
         messages: formattedMessages,
         model: chatConfig.model,
@@ -82,19 +89,15 @@ export async function POST(req: NextRequest) {
       });
 
       if (!stream) {
-        console.error("Stream creation failed");
         return new Response(
           JSON.stringify({ error: "Failed to create stream" }),
           { status: 500 }
         );
       }
 
-      const encoder = new TextEncoder();
+      const encoder = getTextEncoder();
       const transformStream = new TransformStream({
         async transform(chunk, controller) {
-          // Add debug logging here
-          console.log('Raw chunk from Anthropic:', chunk);
-          
           if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
             const payload = JSON.stringify({
               type: 'content_block_delta',
@@ -107,32 +110,18 @@ export async function POST(req: NextRequest) {
           } else if (chunk.type === 'message_stop') {
             controller.enqueue(encoder.encode('data: [DONE]\n\n'));
           }
-        },
-        flush(controller) {
-          // Remove this as it sends an extra DONE signal
-          // controller.enqueue(encoder.encode('data: [DONE]\n\n'));
         }
       });
 
-      // Convert MessageStream to ReadableStream before piping
       const readableStream = stream.toReadableStream();
-      const response = new Response(readableStream.pipeThrough(transformStream), {
+      return new Response(readableStream.pipeThrough(transformStream), {
         headers: {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive',
         },
       });
-
-      // Add debug header to track stream initialization
-      response.headers.set('X-Stream-Debug', 'initialized');
-      return response;
     } else {
-      console.log("🚀 Anthropic API Regular Request:", {
-        model: chatConfig.model,
-        messageCount: formattedMessages.length,
-      });
-
       const response = await anthropic.messages.create({
         messages: formattedMessages,
         model: chatConfig.model,
@@ -141,7 +130,10 @@ export async function POST(req: NextRequest) {
       });
 
       return new Response(JSON.stringify(response), {
-        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
     }
   } catch (error) {
@@ -152,18 +144,18 @@ export async function POST(req: NextRequest) {
       stack: error instanceof Error ? error.stack : undefined,
     });
 
-    if (error instanceof Anthropic.APIError) {
+    if (isErrorInstance(error, Anthropic.APIError)) {
       return new Response(
         JSON.stringify({
           error: "API Error",
-          details: error.message,
-          code: error.status,
+          details: (error as Error).message,
+          code: (error as any).status,
         }),
-        { status: error.status }
+        { status: (error as any).status || 500 }
       );
     }
 
-    if (error instanceof Anthropic.AuthenticationError) {
+    if (isErrorInstance(error, Anthropic.AuthenticationError)) {
       return new Response(
         JSON.stringify({
           error: "Authentication Error",

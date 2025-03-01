@@ -2,6 +2,7 @@ import react from '@vitejs/plugin-react-swc';
 import { defineConfig } from 'vite';
 import topLevelAwait from 'vite-plugin-top-level-await';
 import wasm from 'vite-plugin-wasm';
+import path from 'path';
 
 export default defineConfig({
   plugins: [
@@ -88,19 +89,19 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@icon/': new URL('./src/assets/icons/', import.meta.url).pathname,
-      '@type/': new URL('./src/types/', import.meta.url).pathname,
-      '@store/': new URL('./src/store/', import.meta.url).pathname,
-      '@hooks/': new URL('./src/hooks/', import.meta.url).pathname,
-      '@constants/': new URL('./src/constants/', import.meta.url).pathname,
-      '@api/': new URL('./src/api/', import.meta.url).pathname,
-      '@components/': new URL('./src/components/', import.meta.url).pathname,
-      '@models/': new URL('.src/config/models/', import.meta.url).pathname,
-      '@utils/': new URL('./src/utils/', import.meta.url).pathname,
-      '@lib/': new URL('./src/lib/', import.meta.url).pathname,
-      '@src/': new URL('./src/', import.meta.url).pathname,
-      '@config/': new URL('./src/config/', import.meta.url).pathname,
-    },
+      '@icon': path.resolve(__dirname, './src/assets/icons'),
+      '@type': path.resolve(__dirname, './src/types'),
+      '@store': path.resolve(__dirname, './src/store'),
+      '@hooks': path.resolve(__dirname, './src/hooks'),
+      '@constants': path.resolve(__dirname, './src/constants'),
+      '@config': path.resolve(__dirname, './src/config'),
+      '@api': path.resolve(__dirname, './src/api'),
+      '@components': path.resolve(__dirname, './src/components'),
+      '@models': path.resolve(__dirname, './src/config/models'),
+      '@utils': path.resolve(__dirname, './src/utils'),
+      '@lib': path.resolve(__dirname, './src/lib'),
+      '@src': path.resolve(__dirname, './src')
+    }
   },
 
   base: '/',

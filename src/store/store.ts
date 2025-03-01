@@ -22,42 +22,50 @@ export type StoreSlice<T> = (
 ) => T;
 
 // Custom storage with error handling
-const createCustomStorage = (): PersistStorage<Partial<StoreState>> => ({
-  getItem: (name) => {
-    try {
-      const item = localStorage.getItem(name);
-      return item ? JSON.parse(item) : null;
-    } catch (err: unknown) {
-      const error = err as Error;
-      console.warn('Error reading from localStorage:', error);
-      return null;
-    }
-  },
-  setItem: (name, value) => {
-    try {
-      localStorage.setItem(name, JSON.stringify(value));
-    } catch (err: unknown) {
-      const error = err as Error;
-      if (error instanceof Error && error.name === 'QuotaExceededError') {
-        useStore.getState().setError(
-          'Storage limit reached. Please delete some chats to continue saving new messages.'
-        );
-      } else {
-        useStore.getState().setError(
-          'Failed to save to localStorage. ' + error.message
-        );
+const createCustomStorage = (): PersistStorage<Partial<StoreState>> => {
+  let isHandlingError = false;  // Add error handling flag
+  
+  return {
+    getItem: (name) => {
+      try {
+        const item = localStorage.getItem(name);
+        return item ? JSON.parse(item) : null;
+      } catch (err: unknown) {
+        const error = err as Error;
+        console.warn('Error reading from localStorage:', error);
+        return null;
+      }
+    },
+    setItem: (name, value) => {
+      if (isHandlingError) return;  // Prevent recursive error handling
+      
+      try {
+        localStorage.setItem(name, JSON.stringify(value));
+      } catch (err: unknown) {
+        isHandlingError = true;
+        const error = err as Error;
+        if (error instanceof Error && error.name === 'QuotaExceededError') {
+          useStore.getState().setError(
+            'Storage limit reached. Please delete some chats to continue saving new messages.'
+          );
+        } else {
+          useStore.getState().setError(
+            'Failed to save to localStorage. ' + error.message
+          );
+        }
+        isHandlingError = false;
+      }
+    },
+    removeItem: (name) => {
+      try {
+        localStorage.removeItem(name);
+      } catch (err: unknown) {
+        const error = err as Error;
+        console.warn('Error removing from localStorage:', error);
       }
     }
-  },
-  removeItem: (name) => {
-    try {
-      localStorage.removeItem(name);
-    } catch (err: unknown) {
-      const error = err as Error;
-      console.warn('Error removing from localStorage:', error);
-    }
-  },
-});
+  };
+};
 
 const useStore = create<StoreState>()(
   persist(

@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 
-import { getChatCompletion, getChatCompletionStream } from '@api/api';
 import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 import useStore from '@store/store';
@@ -60,6 +59,9 @@ const useSubmit = () => {
       
       console.log('📤 Sending request to:', `/api/chat/${providerKey}`);
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
       const response = await fetch(`/api/chat/${providerKey}`, {
         method: 'POST',
         headers: {
@@ -70,9 +72,12 @@ const useSubmit = () => {
           config: { ...modelConfig, stream: true },
           apiKey: currentApiKey,
         }),
+        signal: controller.signal,
       });
 
-    console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
+      clearTimeout(timeout);
+
+      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Response error:', errorText);
