@@ -14,47 +14,14 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Core vendor chunks
           'core-vendor': ['react', 'react-dom', 'zustand'],
-
-          // Markdown processing
-          'markdown-core': [
-            'react-markdown',
-            'remark-gfm',
-            'remark-math'
-          ],
-          'markdown-plugins': [
-            'rehype-highlight',
-            'rehype-katex'
-          ],
-
-          // Mermaid - simplified chunking
+          'markdown-core': ['react-markdown', 'remark-gfm', 'remark-math'],
+          'markdown-highlight': ['rehype-highlight'],
+          'markdown-katex': ['rehype-katex'],
           'mermaid': ['mermaid'],
-
-          // UI and functionality
-          'ui-utils': [
-            'react-hot-toast',
-            'html2canvas',
-            'jspdf'
-          ],
-
-          // i18n
-          'i18n': [
-            'i18next',
-            'react-i18next',
-            'i18next-browser-languagedetector',
-            'i18next-http-backend'
-          ],
-
-          // Data handling
-          'data-utils': [
-            'lodash',
-            'uuid',
-            'lz-string',
-            'papaparse'
-          ]
+          'utils': ['lz-string']
         }
-      }
+      },
     },
     chunkSizeWarningLimit: 1600,
     target: 'esnext',
@@ -65,6 +32,10 @@ export default defineConfig({
         drop_debugger: true
       }
   },
+
+    commonjsOptions: {
+      include: [/mermaid/],
+    },
 
     // Improve build performance
     reportCompressedSize: false,

@@ -26,6 +26,9 @@ help: ## Display this help
 ##@ Development
 .PHONY: app-up down logs
 
+dev:
+	$(NODE_PACKAGE_MANAGER) dev
+
 app-up: ## Start development environment
 	$(DOCKER_COMPOSE) up --build app
 
@@ -68,8 +71,16 @@ pkg-sync: ## Sync yarn.lock with package.json (fix lock file issues)
 ##@ Building
 .PHONY: build build-quick
 
+clean:
+	rm -rf node_modules
+	rm -rf dist
+	rm pnpm-lock.yaml
+
+inst:
+	$(NODE_PACKAGE_MANAGER) install
+
 build: ## Production build
-	$(DOCKER_COMPOSE) run --rm --build app $(NODE_PACKAGE_MANAGER) build
+	$(NODE_PACKAGE_MANAGER) build
 
 build-quick: ## Development build
 	$(DOCKER_COMPOSE) run --rm --build app $(NODE_PACKAGE_MANAGER) build:quick

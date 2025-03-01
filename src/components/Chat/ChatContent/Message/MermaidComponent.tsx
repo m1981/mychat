@@ -164,7 +164,9 @@ export const MermaidDiagram = ({ content }: { content: string }) => {
           className="mermaid-diagram"
       dangerouslySetInnerHTML={{ __html: svg } as DangerousHTML}
         />
+        <React.Suspense fallback={<div>Loading export options...</div>}>
         <ExportButtons content={content} svg={svg} elementRef={elementRef} />
+        </React.Suspense>
       </div>
 
       <DiagramSource content={content} />
