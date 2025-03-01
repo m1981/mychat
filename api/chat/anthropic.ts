@@ -92,27 +92,41 @@ export async function POST(req: NextRequest) {
       const encoder = new TextEncoder();
       const transformStream = new TransformStream({
         async transform(chunk, controller) {
-          console.log('Received chunk:', chunk);
+          // Add debug logging here
+          console.log('Raw chunk from Anthropic:', chunk);
+          
           if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+            const payload = JSON.stringify({
+              type: 'content_block_delta',
+              delta: {
+                type: 'text_delta',
+                text: chunk.delta.text
+              }
+            });
+            controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
           } else if (chunk.type === 'message_stop') {
             controller.enqueue(encoder.encode('data: [DONE]\n\n'));
           }
         },
-        async flush(controller) {
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        flush(controller) {
+          // Remove this as it sends an extra DONE signal
+          // controller.enqueue(encoder.encode('data: [DONE]\n\n'));
         }
       });
 
       // Convert MessageStream to ReadableStream before piping
       const readableStream = stream.toReadableStream();
-      return new Response(readableStream.pipeThrough(transformStream), {
+      const response = new Response(readableStream.pipeThrough(transformStream), {
         headers: {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive',
         },
       });
+
+      // Add debug header to track stream initialization
+      response.headers.set('X-Stream-Debug', 'initialized');
+      return response;
     } else {
       console.log("🚀 Anthropic API Regular Request:", {
         model: chatConfig.model,
