@@ -97,14 +97,10 @@ export async function POST(req: NextRequest) {
       (async () => {
         try {
           for await (const chunk of stream) {
-            console.log("Received chunk:", chunk); // Add debug logging
+            console.log('Received chunk:', chunk);
             if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-              const event = {
-                type: 'content',
-                content: chunk.delta.text,
-              };
               await writer.write(
-                encoder.encode(`data: ${JSON.stringify(event)}\n\n`)
+                encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`)
               );
             } else if (chunk.type === 'message_stop') {
               await writer.write(encoder.encode('data: [DONE]\n\n'));
@@ -115,7 +111,6 @@ export async function POST(req: NextRequest) {
           const errorEvent = {
             type: 'error',
             error: {
-              type: 'stream_error',
               message: error instanceof Error ? error.message : "Unknown streaming error"
             }
           };

@@ -86,10 +86,13 @@ const useSubmit = () => {
 
           if (value) {
             const decodedValue = new TextDecoder().decode(value);
-            console.log('Received SSE data:', decodedValue);
+            console.log('Raw SSE data:', decodedValue);
 
             const result = parseEventSource(decodedValue);
+            console.log('Parsed SSE data:', result);
+
             const resultString = result.reduce((output: string, curr) => {
+              console.log('Processing chunk:', curr);
               if (curr === '[DONE]') {
                 reading = false;
                 return output;
