@@ -72,8 +72,7 @@ const useSubmit = () => {
         }),
       });
 
-      console.log('📥 Response status:', response.status);
-
+    console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Response error:', errorText);
@@ -89,9 +88,6 @@ const useSubmit = () => {
 
       const reader = stream.getReader();
       const decoder = new TextDecoder();
-      let accumulatedData = '';
-
-      console.log('📡 Stream connection established');
 
       try {
         while (true) {
@@ -102,21 +98,22 @@ const useSubmit = () => {
             break;
           }
 
-          const chunk = decoder.decode(value, { stream: true });
+        const chunk = decoder.decode(value);
           console.log('📦 Raw chunk received:', chunk);
 
-          accumulatedData += chunk;
-          const lines = accumulatedData.split('\n');
-          accumulatedData = lines.pop() || '';
+        // Split chunk into lines and process each line
+        const lines = chunk.split('\n');
 
           for (const line of lines) {
+          if (!line.trim()) continue;
+
             if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              console.log('🔍 Parsed data line:', data);
+            const data = line.slice(6).trim();
+            console.log('🔍 Processing data:', data);
 
               if (data === '[DONE]') {
               console.log('🏁 Received DONE signal');
-              break;
+              continue;
             }
 
               try {
@@ -126,13 +123,15 @@ const useSubmit = () => {
                 if (parsed.type === 'content_block_delta' &&
                     parsed.delta?.type === 'text_delta') {
                   const currentChats = useStore.getState().chats;
-                  if (!currentChats) return;
+                if (!currentChats) continue;
                   
                   const lastMessageIndex = currentChats[currentChatIndex].messages.length - 1;
                   const updatedChats = JSON.parse(JSON.stringify(currentChats));
-                  updatedChats[currentChatIndex].messages[lastMessageIndex].content += parsed.delta.text;
+                const newContent = parsed.delta.text;
                   
-                  console.log('💬 Updated content with:', parsed.delta.text);
+                console.log('💬 Adding new content:', newContent);
+                updatedChats[currentChatIndex].messages[lastMessageIndex].content += newContent;
+
                   setChats(updatedChats);
                 }
               } catch (e) {
