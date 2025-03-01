@@ -9,7 +9,7 @@ export const getChatCompletion = async (
   apiKey?: string,
   customHeaders?: Record<string, string>
 ) => {
-  const provider = providers[providerKey];  // Use providers map instead of ProviderRegistry
+  const provider = providers[providerKey];
   const endpoint = provider.endpoints[0]; // Use first endpoint as default
 
   const response = await fetch(`/api/${endpoint}`, {
@@ -25,7 +25,11 @@ export const getChatCompletion = async (
     }),
   });
 
-  if (!response.ok) throw new Error(await response.text());
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('API Error:', errorText);
+    return Promise.reject(errorText);
+  }
 
   const data = await response.json();
   return data.content;
@@ -37,7 +41,7 @@ export const getChatCompletionStream = async (
   config: ModelConfig,
   apiKey?: string,
   customHeaders?: Record<string, string>
-): Promise<ReadableStream | null> => {
+): Promise<ReadableStream<Uint8Array> | null> => {
   const provider = providers[providerKey];
 
   const response = await fetch(`/api/chat/${provider.id}`, {
@@ -54,15 +58,46 @@ export const getChatCompletionStream = async (
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    console.error('API error:', text);
-    throw new Error(text);
+    const errorText = await response.text();
+    let errorMessage: string;
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorMessage = errorJson.error || errorJson.details || 'Stream request failed';
+    } catch (e) {
+      errorMessage = errorText || 'Stream request failed';
+    }
+    return Promise.reject(errorMessage);
   }
 
   if (!response.body) {
-    console.error('No response body received');
-    throw new Error('No response body received');
+    return Promise.reject('No response body received');
+  }
+
+  // Verify we're getting a stream
+  const contentType = response.headers.get('Content-Type');
+  if (!contentType?.includes('text/event-stream')) {
+    const text = await response.text();
+    console.error('Expected SSE stream but got:', contentType, text);
+    return Promise.reject('Invalid response format');
   }
 
   return response.body;
+};
+
+// Helper function to parse SSE messages
+export const parseSSEResponse = (chunk: string) => {
+  const messages = chunk
+    .split('\n')
+    .filter(line => line.startsWith('data: '))
+    .map(line => line.slice(6));
+
+  return messages.map(msg => {
+    if (msg === '[DONE]') return { done: true };
+    try {
+      return JSON.parse(msg);
+    } catch (e) {
+      console.error('Failed to parse SSE message:', msg);
+      return null;
+    }
+  }).filter(Boolean);
 };

@@ -1,12 +1,11 @@
 import { useTranslation } from 'react-i18next';
 
 import { getChatCompletion, getChatCompletionStream } from '@api/api';
-import { parseEventSource } from '@api/helper';
 import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 import useStore from '@store/store';
 import { ChatInterface, MessageInterface } from '@type/chat';
-import { providers} from '@type/providers';
+import { providers } from '@type/providers';
 import { checkStorageQuota } from '@utils/storage';
 
 const useSubmit = () => {
@@ -15,7 +14,7 @@ const useSubmit = () => {
   const currentChat = chats?.[currentChatIndex];
   
   const providerKey = currentChat?.config.provider || DEFAULT_PROVIDER;
-  const provider = providers[providerKey]; // Use providers map instead of ProviderRegistry
+  const provider = providers[providerKey];
 
   const apiKeys = useStore((state) => state.apiKeys);
   const currentApiKey = apiKeys[providerKey];
@@ -60,68 +59,60 @@ const useSubmit = () => {
 
       const messages = chats[currentChatIndex].messages;
       const { modelConfig } = chats[currentChatIndex].config;
-      const response = await getChatCompletionStream(
+      
+      const stream = await getChatCompletionStream(
         providerKey,
         messages,
         modelConfig,
         currentApiKey
       );
 
-      if (!response) {
-        setError('No response received from API');
+      if (!stream) {
+        setError('No response stream received');
         return;
       }
 
-      if (response instanceof ReadableStream) {
-        const reader = response.getReader();
-        let reading = true;
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedData = '';
 
-        while (reading && useStore.getState().generating) {
+      try {
+        while (true) {
           const { done, value } = await reader.read();
+          if (done) break;
 
-          if (done) {
-            reading = false;
-            break;
-          }
+          accumulatedData += decoder.decode(value, { stream: true });
+          const lines = accumulatedData.split('\n');
+          accumulatedData = lines.pop() || ''; // Keep the incomplete line for next iteration
 
-          if (value) {
-            const decodedValue = new TextDecoder().decode(value);
-            console.log('Raw SSE data:', decodedValue);
-
-            const result = parseEventSource(decodedValue);
-            console.log('Parsed SSE data:', result);
-
-            const resultString = result.reduce((output: string, curr) => {
-              console.log('Processing chunk:', curr);
-              if (curr === '[DONE]') {
-                reading = false;
-                return output;
-              }
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6); // Remove 'data: ' prefix
+              if (data === '[DONE]') break;
 
               try {
-                const content = provider.parseStreamingResponse(curr);
-                return output + (content || '');
-              } catch (err) {
-                console.error('Error parsing stream response:', err);
-                return output;
+                const parsed = JSON.parse(data);
+                if (parsed.type === 'content_block_delta' && 
+                    parsed.delta?.type === 'text_delta') {
+                  const currentChats = useStore.getState().chats;
+                  if (!currentChats) return;
+                  
+                  const lastMessageIndex = currentChats[currentChatIndex].messages.length - 1;
+                  const updatedChats = JSON.parse(JSON.stringify(currentChats));
+                  updatedChats[currentChatIndex].messages[lastMessageIndex].content += parsed.delta.text;
+                  setChats(updatedChats);
+                }
+              } catch (e) {
+                console.error('Failed to parse chunk:', data);
               }
-            }, '');
-
-            if (resultString) {
-              const updatedChats: ChatInterface[] = JSON.parse(
-                JSON.stringify(useStore.getState().chats)
-              );
-              const updatedMessages = updatedChats[currentChatIndex].messages;
-              updatedMessages[updatedMessages.length - 1].content += resultString;
-              setChats(updatedChats);
             }
           }
         }
-
-        // Clean up stream resources
-        if (!reading) {
-          reader.cancel();
-        }
+      } catch (error) {
+        console.error('Stream processing error:', error);
+        setError('Stream processing failed');
+      } finally {
+        reader.cancel();
       }
 
       // Handle title generation after successful response
@@ -135,7 +126,6 @@ const useSubmit = () => {
     }
   };
 
-  // Extracted title generation logic to separate function
   const handleTitleGeneration = async () => {
     const currChats = useStore.getState().chats;
     if (

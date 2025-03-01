@@ -81,7 +81,6 @@ export async function POST(req: NextRequest) {
         temperature: chatConfig.temperature,
       });
 
-      // Add error handling for stream
       if (!stream) {
         console.error("Stream creation failed");
         return new Response(
@@ -90,39 +89,24 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const { readable, writable } = new TransformStream();
-      const writer = writable.getWriter();
       const encoder = new TextEncoder();
-
-      (async () => {
-        try {
-          for await (const chunk of stream) {
-            console.log('Received chunk:', chunk);
-            if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-              await writer.write(
-                encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`)
-              );
-            } else if (chunk.type === 'message_stop') {
-              await writer.write(encoder.encode('data: [DONE]\n\n'));
-            }
+      const transformStream = new TransformStream({
+        async transform(chunk, controller) {
+          console.log('Received chunk:', chunk);
+          if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+          } else if (chunk.type === 'message_stop') {
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
           }
-        } catch (error) {
-          console.error("Stream processing error:", error);
-          const errorEvent = {
-            type: 'error',
-            error: {
-              message: error instanceof Error ? error.message : "Unknown streaming error"
-            }
-          };
-          await writer.write(
-            encoder.encode(`data: ${JSON.stringify(errorEvent)}\n\n`)
-          );
-        } finally {
-          await writer.close();
+        },
+        async flush(controller) {
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
         }
-      })();
+      });
 
-      return new Response(readable, {
+      // Convert MessageStream to ReadableStream before piping
+      const readableStream = stream.toReadableStream();
+      return new Response(readableStream.pipeThrough(transformStream), {
         headers: {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
