@@ -36,6 +36,8 @@ const useSubmit = () => {
   };
 
   const handleSubmit = async () => {
+    console.log('🚀 Starting submission...'); // Initial log
+
     const chats = useStore.getState().chats;
     if (generating || !chats) return;
 
@@ -56,11 +58,7 @@ const useSubmit = () => {
       const messages = chats[currentChatIndex].messages;
       const { modelConfig } = chats[currentChatIndex].config;
       
-      console.log('📤 Sending request to backend:', {
-        provider: providerKey,
-        messageCount: messages.length,
-        config: modelConfig
-      });
+      console.log('📤 Sending request to:', `/api/chat/${providerKey}`);
 
       const response = await fetch(`/api/chat/${providerKey}`, {
         method: 'POST',
@@ -74,24 +72,24 @@ const useSubmit = () => {
         }),
       });
 
-      console.log('📥 Received response:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
+      console.log('📥 Response status:', response.status);
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const stream = response.body;
       if (!stream) {
+        console.error('No stream received');
         setError('No response stream received');
         return;
       }
 
       const reader = stream.getReader();
       const decoder = new TextDecoder();
+      let accumulatedData = '';
 
       console.log('📡 Stream connection established');
 
@@ -105,35 +103,36 @@ const useSubmit = () => {
           }
 
           const chunk = decoder.decode(value, { stream: true });
-          console.log('📦 Received chunk:', chunk);
+          console.log('📦 Raw chunk received:', chunk);
 
-          const lines = chunk.split('\n');
+          accumulatedData += chunk;
+          const lines = accumulatedData.split('\n');
+          accumulatedData = lines.pop() || '';
+
           for (const line of lines) {
-            if (line.trim() === '') continue;
-            if (line.trim() === 'data: [DONE]') {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              console.log('🔍 Parsed data line:', data);
+
+              if (data === '[DONE]') {
               console.log('🏁 Received DONE signal');
               break;
             }
 
-            if (line.startsWith('data: ')) {
               try {
-                const data = JSON.parse(line.slice(6));
-                console.log('🔍 Parsed SSE data:', data);
+                const parsed = JSON.parse(data);
+                console.log('💫 Parsed JSON:', parsed);
 
-                if (data.type === 'content_block_delta' && 
-                    data.delta?.type === 'text_delta') {
+                if (parsed.type === 'content_block_delta' &&
+                    parsed.delta?.type === 'text_delta') {
                   const currentChats = useStore.getState().chats;
                   if (!currentChats) return;
                   
                   const lastMessageIndex = currentChats[currentChatIndex].messages.length - 1;
                   const updatedChats = JSON.parse(JSON.stringify(currentChats));
-                  updatedChats[currentChatIndex].messages[lastMessageIndex].content += data.delta.text;
+                  updatedChats[currentChatIndex].messages[lastMessageIndex].content += parsed.delta.text;
                   
-                  console.log('💬 Updated message content:', {
-                    deltaText: data.delta.text,
-                    currentContent: updatedChats[currentChatIndex].messages[lastMessageIndex].content
-                  });
-                  
+                  console.log('💬 Updated content with:', parsed.delta.text);
                   setChats(updatedChats);
                 }
               } catch (e) {
