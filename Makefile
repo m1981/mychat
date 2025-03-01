@@ -72,6 +72,7 @@ pkg-sync: ## Sync yarn.lock with package.json (fix lock file issues)
 .PHONY: build build-quick
 
 clean:
+	pnpm store prune
 	rm -rf node_modules
 	rm -rf dist
 	rm pnpm-lock.yaml

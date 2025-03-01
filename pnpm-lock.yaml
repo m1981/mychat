@@ -57,7 +57,7 @@ importers:
         specifier: ^5.4.1
         version: 5.5.2
       react:
-        specifier: ^18.3.1
+        specifier: ^18.2.0
         version: 18.3.1
       react-beautiful-dnd:
         specifier: ^13.1.1
