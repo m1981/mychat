@@ -58,5 +58,9 @@ export const getChatCompletionStream = async (
     throw new Error(text);
   }
 
-  return response.body;  // Return the ReadableStream
+  if (!response.body) {
+    throw new Error('No response body received');
+}
+
+  return response.body;
 }
