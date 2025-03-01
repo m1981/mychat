@@ -32,13 +32,13 @@ export const getChatCompletion = async (
 };
 
 export const getChatCompletionStream = async (
-  providerKey: ProviderKey,  // Change from AIProvider to ProviderKey
+  providerKey: ProviderKey,
   messages: MessageInterface[],
   config: ModelConfig,
   apiKey?: string,
   customHeaders?: Record<string, string>
-): Promise<ReadableStream | null> => {  // Add the => here
-  const provider = providers[providerKey];  // Use providers map instead of ProviderRegistry
+): Promise<ReadableStream | null> => {
+  const provider = providers[providerKey];
 
   const response = await fetch(`/api/chat/${provider.id}`, {
     method: 'POST',
@@ -55,12 +55,14 @@ export const getChatCompletionStream = async (
 
   if (!response.ok) {
     const text = await response.text();
+    console.error('API error:', text);
     throw new Error(text);
   }
 
   if (!response.body) {
+    console.error('No response body received');
     throw new Error('No response body received');
-}
+  }
 
   return response.body;
-}
+};

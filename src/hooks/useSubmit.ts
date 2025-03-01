@@ -58,9 +58,7 @@ const useSubmit = () => {
         return;
       }
 
-      // Use all messages instead of limiting them
       const messages = chats[currentChatIndex].messages;
-
       const { modelConfig } = chats[currentChatIndex].config;
       const response = await getChatCompletionStream(
         providerKey,
@@ -69,18 +67,16 @@ const useSubmit = () => {
         currentApiKey
       );
 
-      if (response instanceof ReadableStream) {  // Type check for stream
+      if (!response) {
+        setError('No response received from API');
+        return;
+      }
+
+      if (response instanceof ReadableStream) {
         const reader = response.getReader();
         let reading = true;
 
-        const MAX_STREAM_DURATION = 60000; // 60 seconds
-        const streamStart = Date.now();
-
         while (reading && useStore.getState().generating) {
-        if (Date.now() - streamStart > MAX_STREAM_DURATION) {
-          reader.cancel('Stream timeout');
-          break;
-        }
           const { done, value } = await reader.read();
 
           if (done) {
@@ -90,6 +86,8 @@ const useSubmit = () => {
 
           if (value) {
             const decodedValue = new TextDecoder().decode(value);
+            console.log('Received SSE data:', decodedValue);
+
             const result = parseEventSource(decodedValue);
             const resultString = result.reduce((output: string, curr) => {
               if (curr === '[DONE]') {
@@ -117,50 +115,53 @@ const useSubmit = () => {
           }
         }
 
-        if (useStore.getState().generating) {
-          reader.cancel('Cancelled by user');
-        } else {
-          reader.cancel('Generation completed');
+        // Clean up stream resources
+        if (!reading) {
+          reader.cancel();
         }
-        reader.releaseLock();
-        response.cancel();  // Change 'stream' to 'response'
       }
 
-      // generate title for new chats
-      const currChats = useStore.getState().chats;
-      if (
-        useStore.getState().autoTitle &&
-        currChats &&
-        !currChats[currentChatIndex]?.titleSet
-      ) {
-        const messages_length = currChats[currentChatIndex].messages.length;
-        const assistant_message =
-          currChats[currentChatIndex].messages[messages_length - 1].content;
-        const user_message =
-          currChats[currentChatIndex].messages[messages_length - 2].content;
+      // Handle title generation after successful response
+      await handleTitleGeneration();
 
-        const message: MessageInterface = {
-          role: 'user',
-          content: `Generate a title in less than 6 words for the following message (language: ${i18n.language}):\n"""\nUser: ${user_message}\nAssistant: ${assistant_message}\n"""`,
-        };
-
-        let title = (await generateTitle([message])).trim();
-        if (title.startsWith('"') && title.endsWith('"')) {
-          title = title.slice(1, -1);
-        }
-        const updatedChats: ChatInterface[] = JSON.parse(
-          JSON.stringify(useStore.getState().chats)
-        );
-        updatedChats[currentChatIndex].title = title;
-        updatedChats[currentChatIndex].titleSet = true;
-        setChats(updatedChats);
-      }
-    } catch (e: unknown) {
-      const err = (e as Error).message;
-      console.log(err);
-      setError(err);
+    } catch (error) {
+      console.error('Submit error:', error);
+      setError(error instanceof Error ? error.message : 'An unknown error occurred');
+    } finally {
+      setGenerating(false);
     }
-    setGenerating(false);
+  };
+
+  // Extracted title generation logic to separate function
+  const handleTitleGeneration = async () => {
+    const currChats = useStore.getState().chats;
+    if (
+      useStore.getState().autoTitle &&
+      currChats &&
+      !currChats[currentChatIndex]?.titleSet
+    ) {
+      const messages_length = currChats[currentChatIndex].messages.length;
+      const assistant_message =
+        currChats[currentChatIndex].messages[messages_length - 1].content;
+      const user_message =
+        currChats[currentChatIndex].messages[messages_length - 2].content;
+
+      const message: MessageInterface = {
+        role: 'user',
+        content: `Generate a title in less than 6 words for the following message (language: ${i18n.language}):\n"""\nUser: ${user_message}\nAssistant: ${assistant_message}\n"""`,
+      };
+
+      let title = (await generateTitle([message])).trim();
+      if (title.startsWith('"') && title.endsWith('"')) {
+        title = title.slice(1, -1);
+      }
+      const updatedChats: ChatInterface[] = JSON.parse(
+        JSON.stringify(useStore.getState().chats)
+      );
+      updatedChats[currentChatIndex].title = title;
+      updatedChats[currentChatIndex].titleSet = true;
+      setChats(updatedChats);
+    }
   };
 
   return { handleSubmit, error };

@@ -29,6 +29,14 @@ export async function POST(req: NextRequest) {
     const data = await req.json() as RequestData;
     const { messages, config: chatConfig, apiKey } = data;
 
+    if (!apiKey) {
+      console.error("No API key provided");
+      return new Response(
+        JSON.stringify({ error: "API key is required" }),
+        { status: 401 }
+      );
+    }
+
     if (!messages || !Array.isArray(messages)) {
       return new Response(
         JSON.stringify({ error: "Messages array is required" }),
@@ -73,29 +81,31 @@ export async function POST(req: NextRequest) {
         temperature: chatConfig.temperature,
       });
 
-      // Create a TransformStream to handle the streaming response
+      // Add error handling for stream
+      if (!stream) {
+        console.error("Stream creation failed");
+        return new Response(
+          JSON.stringify({ error: "Failed to create stream" }),
+          { status: 500 }
+        );
+      }
+
       const { readable, writable } = new TransformStream();
       const writer = writable.getWriter();
       const encoder = new TextEncoder();
 
-      // Process the stream
       (async () => {
         try {
           for await (const chunk of stream) {
-            if (chunk.type === 'content_block_start') {
-              // Handle content block start if needed
-            } else if (chunk.type === 'content_block_delta') {
-              if (chunk.delta?.type === 'text_delta') {
-                const event = {
-                  type: 'content',
-                  content: chunk.delta.text,
-                };
-                await writer.write(
-                  encoder.encode(`event: content\ndata: ${JSON.stringify(event)}\n\n`)
-                );
-              }
-            } else if (chunk.type === 'content_block_stop') {
-              // Handle content block stop if needed
+            console.log("Received chunk:", chunk); // Add debug logging
+            if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
+              const event = {
+                type: 'content',
+                content: chunk.delta.text,
+              };
+              await writer.write(
+                encoder.encode(`data: ${JSON.stringify(event)}\n\n`)
+              );
             } else if (chunk.type === 'message_stop') {
               await writer.write(encoder.encode('data: [DONE]\n\n'));
             }
@@ -110,7 +120,7 @@ export async function POST(req: NextRequest) {
             }
           };
           await writer.write(
-            encoder.encode(`event: error\ndata: ${JSON.stringify(errorEvent)}\n\n`)
+            encoder.encode(`data: ${JSON.stringify(errorEvent)}\n\n`)
           );
         } finally {
           await writer.close();
