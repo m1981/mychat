@@ -88,39 +88,51 @@ export async function POST(req: NextRequest) {
         temperature: chatConfig.temperature,
       });
 
-      if (!stream) {
-        return new Response(
-          JSON.stringify({ error: "Failed to create stream" }),
-          { status: 500 }
-        );
-      }
-
-      const encoder = getTextEncoder();
-      const transformStream = new TransformStream({
-        async transform(chunk, controller) {
-          if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-            const payload = JSON.stringify({
-              type: 'content_block_delta',
-              delta: {
-                type: 'text_delta',
-                text: chunk.delta.text
-              }
-            });
-            controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
-          } else if (chunk.type === 'message_stop') {
-            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-          }
-        }
-      });
-
       const readableStream = stream.toReadableStream();
-      return new Response(readableStream.pipeThrough(transformStream), {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
+      
+      return new Response(
+        new ReadableStream({
+          async start(controller) {
+            let lastPing = Date.now();
+            const keepAliveInterval = setInterval(() => {
+              if (Date.now() - lastPing >= 5000) {
+                controller.enqueue(new Uint8Array(Buffer.from(':keep-alive\n\n')));
+                lastPing = Date.now();
+              }
+            }, 5000);
+
+            try {
+              for await (const chunk of readableStream) {
+                lastPing = Date.now();
+                if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
+                  const payload = JSON.stringify({
+                    type: 'content_block_delta',
+                    delta: {
+                      type: 'text_delta',
+                      text: chunk.delta.text
+                    }
+                  });
+                  controller.enqueue(new Uint8Array(Buffer.from(`data: ${payload}\n\n`)));
+                } else if (chunk.type === 'message_stop') {
+                  controller.enqueue(new Uint8Array(Buffer.from('data: [DONE]\n\n')));
+                }
+              }
+              controller.close();
+            } catch (error) {
+              controller.error(error);
+            } finally {
+              clearInterval(keepAliveInterval);
+            }
+          }
+        }),
+        {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+          },
+        }
+      );
     } else {
       const response = await anthropic.messages.create({
         messages: formattedMessages,

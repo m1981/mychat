@@ -34,6 +34,18 @@ const useSubmit = () => {
     );
   };
 
+  const maxRetries = 3;
+  let retryCount = 0;
+
+  const handleStreamError = async () => {
+    if (retryCount < maxRetries) {
+      retryCount++;
+      await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+      return handleSubmit(); // Retry the submission
+    }
+    throw new Error('Max retries exceeded');
+  };
+
   const handleSubmit = async () => {
     console.log('🚀 Starting submission...'); // Initial log
 
@@ -146,8 +158,7 @@ const useSubmit = () => {
           }
         }
       } catch (error) {
-        console.error('❌ Stream processing error:', error);
-        setError('Stream processing failed');
+        await handleStreamError();
       } finally {
         console.log('🔚 Closing stream reader');
         reader.cancel();
