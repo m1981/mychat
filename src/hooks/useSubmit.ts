@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { StoreState } from '@store/store';
 
 import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
@@ -64,62 +65,64 @@ const useSubmit = () => {
 
       const messages = chats[currentChatIndex].messages;
       const { modelConfig } = chats[currentChatIndex].config;
-      const response = await getChatCompletionStream(
+      const { url, options } = await getChatCompletionStream(
         providerKey,
         messages,
         modelConfig,
         currentApiKey
       );
 
-      if (response instanceof ReadableStream) {  // Type check for stream
-        const reader = response.getReader();
-        let reading = true;
+      const eventSource = new EventSource(url, {
+        withCredentials: true,
+      });
 
-        while (reading && useStore.getState().generating) {
-          const { done, value } = await reader.read();
-
-          if (done) {
-            console.log('�完 Stream complete');
-            break;
+      eventSource.addEventListener('message', (event) => {
+        const result = parseEventSource(event.data);
+        const resultString = result.reduce((output: string, curr) => {
+          if (curr === '[DONE]') {
+            eventSource.close();
+            return output;
           }
 
-          if (value) {
-            const decodedValue = new TextDecoder().decode(value);
-            const result = parseEventSource(decodedValue);
-            const resultString = result.reduce((output: string, curr) => {
-              if (curr === '[DONE]') {
-                reading = false;
-                return output;
-              }
-
-              try {
-                const content = provider.parseStreamingResponse(curr);
-                return output + (content || '');
-              } catch (err) {
-                console.error('Error parsing stream response:', err);
-                return output;
-              }
-            }, '');
-
-            if (resultString) {
-              const updatedChats: ChatInterface[] = JSON.parse(
-                JSON.stringify(useStore.getState().chats)
-              );
-              const updatedMessages = updatedChats[currentChatIndex].messages;
-              updatedMessages[updatedMessages.length - 1].content += resultString;
-              setChats(updatedChats);
-            }
+          try {
+            const content = provider.parseStreamingResponse(curr);
+            return output + (content || '');
+          } catch (err) {
+            console.error('Error parsing stream response:', err);
+            return output;
           }
-        }
+        }, '');
 
-        if (useStore.getState().generating) {
-          reader.cancel('Cancelled by user');
-        } else {
-          reader.cancel('Generation completed');
+        if (resultString) {
+          const updatedChats: ChatInterface[] = JSON.parse(
+            JSON.stringify(useStore.getState().chats)
+          );
+          const updatedMessages = updatedChats[currentChatIndex].messages;
+          updatedMessages[updatedMessages.length - 1].content += resultString;
+          setChats(updatedChats);
         }
-        reader.releaseLock();
-        response.cancel();  // Change 'stream' to 'response'
-      }
+      });
+
+      eventSource.addEventListener('error', (error) => {
+        console.error('SSE Error:', error);
+        eventSource.close();
+        setError('Stream connection error');
+        setGenerating(false);
+      });
+
+      // Cleanup when generating is set to false
+      const cleanup = () => {
+        if (eventSource.readyState !== EventSource.CLOSED) {
+          eventSource.close();
+        }
+      };
+
+      // Add cleanup to store state changes - fixed subscription
+      const unsubscribe = useStore.subscribe((state: StoreState) => {
+        if (!state.generating) {
+          cleanup();
+        }
+      });
 
       // generate title for new chats
       const currChats = useStore.getState().chats;
