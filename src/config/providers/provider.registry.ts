@@ -43,7 +43,7 @@ const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
     id: 'openai',
     name: 'OpenAI',
     defaultModel: 'gpt-4o',
-    endpoints: ['api/openai'],
+    endpoints: ['chat/openai'],
     models: [
       {
         id: 'gpt-4o',
