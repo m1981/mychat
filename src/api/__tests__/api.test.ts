@@ -87,34 +87,28 @@ describe('getChatCompletionStream', () => {
 
     const apiKey = 'test-anthropic-key';
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ content: 'response' })
+    // Now getChatCompletionStream returns configuration object instead of making fetch call
+    const result = await getChatCompletionStream('anthropic', messages, config, apiKey);
+
+    // Verify the returned configuration
+    expect(result).toEqual({
+      url: '/api/chat/anthropic',
+      options: {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-7-sonnet-20250219',
+          max_tokens: 4096,
+          temperature: 0,
+          top_p: 1,
+          stream: true,
+          messages: [{ role: 'user', content: 'Hello' }],
+          apiKey: 'test-anthropic-key'
+        })
+      }
     });
-
-    await getChatCompletionStream('anthropic', messages, config, apiKey);
-
-    const expectedBody = {
-      model: 'claude-3-7-sonnet-20250219',
-      max_tokens: 4096,
-      temperature: 0,
-      top_p: 1,
-      stream: true,
-      messages: [{ role: 'user', content: 'Hello' }],
-      apiKey: 'test-anthropic-key'
-    };
-
-    expect(mockFetch).toHaveBeenCalledWith('/api/chat/anthropic', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: expect.any(String)
-    });
-
-    // Parse the actual body and compare objects
-    const actualBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(actualBody).toEqual(expectedBody);
   });
 
   it('should handle API errors correctly', async () => {

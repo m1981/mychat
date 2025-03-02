@@ -40,21 +40,18 @@ export const getChatCompletionStream = async (
   const provider = providers[providerKey];
   const formattedRequest = provider.formatRequest(messages, { ...config, stream: true });
 
-  const response = await fetch(`/api/chat/${provider.id}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      ...formattedRequest,  // Spread the formatted request at the top level
-      apiKey,
-    }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text);
-  }
-
-  return response;
+  // Return the URL and headers separately to work with our SSE hook
+  return {
+    url: `/api/chat/${provider.id}`,
+    options: {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...formattedRequest,
+        apiKey,
+      }),
+    }
+  };
 };
