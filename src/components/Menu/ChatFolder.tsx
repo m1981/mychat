@@ -93,6 +93,9 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       editTitle();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCross();
     }
   };
 

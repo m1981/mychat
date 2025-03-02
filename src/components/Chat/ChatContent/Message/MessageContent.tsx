@@ -166,6 +166,12 @@ const EditView: React.FC<EditViewProps> = ({
         navigator.userAgent
       );
 
+    if (e.key === 'Escape' && !isComposer) {
+      e.preventDefault();
+      setIsEdit(false);
+      return;
+    }
+
     if (e.key === 'Enter' && !isMobile && !e.nativeEvent.isComposing) {
       const enterToSubmit = useStore.getState().enterToSubmit;
       if (isComposer) {

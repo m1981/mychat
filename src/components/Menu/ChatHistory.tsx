@@ -65,6 +65,9 @@ const ChatHistory = React.memo(
       if (e.key === 'Enter') {
         e.preventDefault();
         editTitle();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        handleCross();
       }
     };
 
