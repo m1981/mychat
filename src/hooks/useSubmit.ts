@@ -39,7 +39,7 @@ const useSubmit = () => {
 
 
   const handleSubmit = async () => {
-    console.log('🚀 Starting submission...'); // Initial log
+    console.log('🚀 Starting submission...');
 
     const chats = useStore.getState().chats;
     if (generating || !chats) return;
@@ -65,14 +65,33 @@ const useSubmit = () => {
 
       const messages = chats[currentChatIndex].messages;
       const { modelConfig } = chats[currentChatIndex].config;
-      const { url, options } = await getChatCompletionStream(
-        providerKey,
-        messages,
-        modelConfig,
-        currentApiKey
-      );
+      
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-      const eventSource = new EventSource(url, {
+      // Make the actual fetch request
+      const response = await fetch(`/api/chat/${providerKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages,
+          config: { ...modelConfig, stream: true },
+          apiKey: currentApiKey,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      // Create EventSource from response URL
+      const eventSource = new EventSource(response.url, {
         withCredentials: true,
       });
 
