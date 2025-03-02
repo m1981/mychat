@@ -9,6 +9,7 @@ import Avatar from './Avatar';
 import MessageActionButtons from './MessageActionButtons';
 import MessageContent from './MessageContent';
 import RoleSelector from './RoleSelector';
+import { SelectionCopyProvider } from '../SelectionCopyProvider';
 
 const backgroundStyle = ['dark:bg-gray-800', 'bg-gray-50 dark:bg-gray-650'];
 
@@ -115,16 +116,18 @@ const Message = React.memo(
                 />
               )}
             </div>
-            <MessageContent
-              role={role}
-              content={content}
-              messageIndex={messageIndex}
-              isComposer={isComposer}
-              isEdit={isEdit}
-              setIsEdit={setIsEdit}
-              isEditing={isEditing}
-              setIsEditing={setIsEditing}
-            />
+            <SelectionCopyProvider>
+              <MessageContent
+                role={role}
+                content={content}
+                messageIndex={messageIndex}
+                isComposer={isComposer}
+                isEdit={isEdit}
+                setIsEdit={setIsEdit}
+                isEditing={isEditing}
+                setIsEditing={setIsEditing}
+              />
+            </SelectionCopyProvider>
           </div>
         </div>
       </div>

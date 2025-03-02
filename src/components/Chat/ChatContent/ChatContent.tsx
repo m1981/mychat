@@ -10,7 +10,6 @@ import DownloadChat from './DownloadChat';
 import Message from './Message';
 import NewMessageButton from './Message/NewMessageButton';
 import ScrollToBottomButton from './ScrollToBottomButton';
-import { SelectionCopyProvider } from './SelectionCopyProvider';
 interface Message {
   role: Role;
   content: string;
@@ -124,7 +123,6 @@ const ChatContent: React.FC = () => {
         ref={chatContainerRef}
         className="h-full overflow-y-auto dark:bg-gray-800 scroll-smooth"
       >
-        <SelectionCopyProvider>
         <div className='flex flex-col items-center text-sm dark:bg-gray-800'>
           <div
             className='flex flex-col items-center text-sm dark:bg-gray-800 w-full'
@@ -179,7 +177,6 @@ const ChatContent: React.FC = () => {
             <div className='w-full h-36' />
           </div>
         </div>
-        </SelectionCopyProvider>
       </div>
 
       <ScrollToBottomButton
