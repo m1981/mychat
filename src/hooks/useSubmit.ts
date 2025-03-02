@@ -1,13 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { StoreState } from '@store/store';
-
 import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 import useStore from '@store/store';
-import { parseEventSource } from '@src/api/helper';
 import { ChatInterface, MessageInterface } from '@type/chat';
 import { providers } from '@type/providers';
-import { getChatCompletion, getChatCompletionStream } from '@src/api/api';
+import { getChatCompletion } from '@src/api/api';
 import { checkStorageQuota } from '@utils/storage';
 
 const useSubmit = () => {
@@ -37,6 +34,36 @@ const useSubmit = () => {
     );
   };
 
+  const handleTitleGeneration = async () => {
+    const currChats = useStore.getState().chats;
+    if (
+      useStore.getState().autoTitle &&
+      currChats &&
+      !currChats[currentChatIndex]?.titleSet
+    ) {
+      const messages_length = currChats[currentChatIndex].messages.length;
+      const assistant_message =
+        currChats[currentChatIndex].messages[messages_length - 1].content;
+      const user_message =
+        currChats[currentChatIndex].messages[messages_length - 2].content;
+
+      const message: MessageInterface = {
+        role: 'user',
+        content: `Generate a title in less than 6 words for the following message (language: ${i18n.language}):\n"""\nUser: ${user_message}\nAssistant: ${assistant_message}\n"""`,
+      };
+
+      let title = (await generateTitle([message])).trim();
+      if (title.startsWith('"') && title.endsWith('"')) {
+        title = title.slice(1, -1);
+      }
+      const updatedChats: ChatInterface[] = JSON.parse(
+        JSON.stringify(useStore.getState().chats)
+      );
+      updatedChats[currentChatIndex].title = title;
+      updatedChats[currentChatIndex].titleSet = true;
+      setChats(updatedChats);
+    }
+  };
 
   const handleSubmit = async () => {
     console.log('🚀 Starting submission...');
@@ -75,6 +102,7 @@ const useSubmit = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
         },
         body: JSON.stringify({
           messages,
@@ -90,94 +118,63 @@ const useSubmit = () => {
         throw new Error(await response.text());
       }
 
-      // Create EventSource from response URL
-      const eventSource = new EventSource(response.url, {
-        withCredentials: true,
-      });
+      // Use response.body instead of EventSource
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
 
-      eventSource.addEventListener('message', (event) => {
-        const result = parseEventSource(event.data);
-        const resultString = result.reduce((output: string, curr) => {
-          if (curr === '[DONE]') {
-            eventSource.close();
-            return output;
-          }
-
-          try {
-            const content = provider.parseStreamingResponse(curr);
-            return output + (content || '');
-          } catch (err) {
-            console.error('Error parsing stream response:', err);
-            return output;
-          }
-        }, '');
-
-        if (resultString) {
-          const updatedChats: ChatInterface[] = JSON.parse(
-            JSON.stringify(useStore.getState().chats)
-          );
-          const updatedMessages = updatedChats[currentChatIndex].messages;
-          updatedMessages[updatedMessages.length - 1].content += resultString;
-          setChats(updatedChats);
-        }
-      });
-
-      eventSource.addEventListener('error', (error) => {
-        console.error('SSE Error:', error);
-        eventSource.close();
-        setError('Stream connection error');
-        setGenerating(false);
-      });
-
-      // Cleanup when generating is set to false
-      const cleanup = () => {
-        if (eventSource.readyState !== EventSource.CLOSED) {
-          eventSource.close();
-        }
-      };
-
-      // Add cleanup to store state changes - fixed subscription
-      const unsubscribe = useStore.subscribe((state: StoreState) => {
-        if (!state.generating) {
-          cleanup();
-        }
-      });
-
-      // generate title for new chats
-      const currChats = useStore.getState().chats;
-      if (
-        useStore.getState().autoTitle &&
-        currChats &&
-        !currChats[currentChatIndex]?.titleSet
-      ) {
-        const messages_length = currChats[currentChatIndex].messages.length;
-        const assistant_message =
-          currChats[currentChatIndex].messages[messages_length - 1].content;
-        const user_message =
-          currChats[currentChatIndex].messages[messages_length - 2].content;
-
-        const message: MessageInterface = {
-          role: 'user',
-          content: `Generate a title in less than 6 words for the following message (language: ${i18n.language}):\n"""\nUser: ${user_message}\nAssistant: ${assistant_message}\n"""`,
-        };
-
-        let title = (await generateTitle([message])).trim();
-        if (title.startsWith('"') && title.endsWith('"')) {
-          title = title.slice(1, -1);
-        }
-        const updatedChats: ChatInterface[] = JSON.parse(
-          JSON.stringify(useStore.getState().chats)
-        );
-        updatedChats[currentChatIndex].title = title;
-        updatedChats[currentChatIndex].titleSet = true;
-        setChats(updatedChats);
+      if (!reader) {
+        throw new Error('Response body is null');
       }
-    } catch (e: unknown) {
-      const err = (e as Error).message;
-      console.log(err);
-      setError(err);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log('Stream complete');
+          break;
+        }
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n').filter(line => line.trim() !== '');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6); // Remove 'data: ' prefix
+            
+            if (data === '[DONE]') {
+              continue; // Skip [DONE] messages
+            }
+
+            try {
+              const result = JSON.parse(data);
+              const content = provider.parseStreamingResponse(result);
+              
+              if (content) {
+                const updatedChats: ChatInterface[] = JSON.parse(
+                  JSON.stringify(useStore.getState().chats)
+                );
+                const updatedMessages = updatedChats[currentChatIndex].messages;
+                updatedMessages[updatedMessages.length - 1].content += content;
+                setChats(updatedChats);
+              }
+            } catch (e) {
+              console.error('Failed to parse chunk:', e);
+            }
+          }
+        }
+      }
+
+      // Generate title after stream is complete
+      console.log('✨ Starting title generation');
+      await handleTitleGeneration();
+      console.log('🏷️ Title generation complete');
+
+    } catch (error) {
+      console.error('❌ Submit error:', error);
+      setError(error instanceof Error ? error.message : 'An unknown error occurred');
+    } finally {
+      setGenerating(false);
     }
-    setGenerating(false);
   };
 
   return { handleSubmit, error };

@@ -21,9 +21,13 @@ export const providers: Record<ProviderKey, AIProvider> = {
       stream: config.stream,
     }),
     parseResponse: (response) => response.choices[0].message.content,
-        parseStreamingResponse: (chunk) => {
-      if (!chunk?.choices?.[0]?.delta?.content) return '';
-      return chunk.choices[0].delta.content;
+    parseStreamingResponse: (response: any) => {
+      try {
+        return response.choices?.[0]?.delta?.content || '';
+      } catch (e) {
+        console.error('Error parsing OpenAI response:', e);
+        return '';
+      }
     },
   },
   anthropic: {
@@ -53,16 +57,16 @@ export const providers: Record<ProviderKey, AIProvider> = {
       }
       return '';
     },
-
-parseStreamingResponse: (chunk) => {
-    // Handle content block delta events
-    if (chunk.type === 'content_block_delta' &&
-        chunk.delta?.type === 'text_delta' &&
-        typeof chunk.delta.text === 'string') {
-      return chunk.delta.text;
-    }
-
-  return '';
- },
+    parseStreamingResponse: (response: any) => {
+      try {
+        if (response.type === 'content_block_delta') {
+          return response.delta?.text || '';
+        }
+        return '';
+      } catch (e) {
+        console.error('Error parsing Anthropic response:', e);
+        return '';
+      }
+    },
   },
 };

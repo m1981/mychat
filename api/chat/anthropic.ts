@@ -71,14 +71,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               message: chunk.message,
             })}\n\n`);
           } else if (chunk.type === 'content_block_start') {
-            res.write(`data: ${JSON.stringify({
-              type: 'content_block_start',
-              content_block: chunk.content_block,
-            })}\n\n`);
+            // Add handling for thinking blocks
+            if (chunk.content_block.type === 'thinking' || chunk.content_block.type === 'redacted_thinking') {
+              res.write(`data: ${JSON.stringify({
+                type: 'content_block_start',
+                content_block: chunk.content_block,
+              })}\n\n`);
+            }
           } else if (chunk.type === 'content_block_delta') {
             res.write(`data: ${JSON.stringify({
               type: 'content_block_delta',
               delta: chunk.delta,
+            })}\n\n`);
+          } else if (chunk.type === 'signature_delta') {
+            // Add handling for thinking block signatures
+            res.write(`data: ${JSON.stringify({
+              type: 'signature_delta',
+              signature: chunk.signature,
             })}\n\n`);
           } else if (chunk.type === 'content_block_stop') {
             res.write(`data: ${JSON.stringify({
