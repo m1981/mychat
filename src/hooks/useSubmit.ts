@@ -79,7 +79,7 @@ const useSubmit = () => {
           const { done, value } = await reader.read();
 
           if (done) {
-            console.log('�完 Stream complete');
+            reading = false;
             break;
           }
 

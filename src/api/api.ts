@@ -32,23 +32,22 @@ export const getChatCompletion = async (
 };
 
 export const getChatCompletionStream = async (
-  providerKey: ProviderKey,  // Change from AIProvider to ProviderKey
+  providerKey: ProviderKey,
   messages: MessageInterface[],
   config: ModelConfig,
   apiKey?: string,
-  customHeaders?: Record<string, string>
-): Promise<ReadableStream | null> => {  // Add the => here
-  const provider = providers[providerKey];  // Use providers map instead of ProviderRegistry
+) => {
+  const provider = providers[providerKey];
+  const formattedRequest = provider.formatRequest(messages, { ...config, stream: true });
 
   const response = await fetch(`/api/chat/${provider.id}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...customHeaders,
     },
     body: JSON.stringify({
-      messages: provider.formatRequest(messages, { ...config, stream: true }).messages,
-      config: { ...config, stream: true },
+      messages: formattedRequest.messages,
+      config: formattedRequest,  // Use the formatted config instead of raw config
       apiKey,
     }),
   });
@@ -58,5 +57,5 @@ export const getChatCompletionStream = async (
     throw new Error(text);
   }
 
-  return response.body;  // Return the ReadableStream
-}
+  return response;
+};
