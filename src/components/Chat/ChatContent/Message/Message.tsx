@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 import useSubmit from '@hooks/useSubmit';
 import useStore from '@store/store';
@@ -33,6 +33,8 @@ const Message = React.memo(
     const layoutWidth = useStore((state) => state.layoutWidth);
     const currentChatIndex = useStore((state) => state.currentChatIndex);
     const setChats = useStore((state) => state.setChats);
+    const messageRef = useRef<HTMLDivElement>(null);
+    const [showBottomActions, setShowBottomActions] = useState(false);
 
     const handleDelete = () => {
       const updatedChats: ChatInterface[] = JSON.parse(
@@ -84,8 +86,27 @@ const Message = React.memo(
       return hideSideMenu ? 'w-[55%]' : 'w-[55%]';
     };
 
+    useEffect(() => {
+      const checkHeight = () => {
+        if (messageRef.current) {
+          const height = messageRef.current.offsetHeight;
+          setShowBottomActions(height > 600);
+        }
+      };
+
+      checkHeight();
+      // Add resize observer to handle dynamic content changes
+      const resizeObserver = new ResizeObserver(checkHeight);
+      if (messageRef.current) {
+        resizeObserver.observe(messageRef.current);
+      }
+
+      return () => resizeObserver.disconnect();
+    }, [content]); // Re-run when content changes
+
     return (
       <div
+        ref={messageRef}
         className={`w-full border-b border-black/10 dark:border-gray-900/50 text-gray-800 dark:text-gray-100 group ${
           backgroundStyle[messageIndex % 2]
         }`}
@@ -128,6 +149,22 @@ const Message = React.memo(
                 setIsEditing={setIsEditing}
               />
             </SelectionCopyProvider>
+            {!isEdit && !isComposer && showBottomActions && (
+              <div className="mt-4 flex justify-end">
+                <MessageActionButtons
+                  isDelete={isDelete}
+                  role={role}
+                  messageIndex={messageIndex}
+                  setIsEdit={handleEdit}
+                  setIsDelete={setIsDelete}
+                  handleRefresh={handleRefresh}
+                  handleMoveUp={() => handleMove('up')}
+                  handleMoveDown={() => handleMove('down')}
+                  handleDelete={handleDelete}
+                  handleCopy={handleCopy}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
