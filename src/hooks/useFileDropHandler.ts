@@ -1,7 +1,6 @@
 // src/hooks/useFileDropHandler.ts
 import { useCallback } from 'react';
-
-import { processContent } from '@utils/contentProcessing';
+import { formatDroppedContent } from '@utils/contentProcessing';
 
 interface UseFileDropHandlerProps {
   onContentUpdate: (content: string) => void;
@@ -18,44 +17,53 @@ export const useFileDropHandler = ({ onContentUpdate, currentContent }: UseFileD
     e.preventDefault();
     e.stopPropagation();
 
+    const textarea = e.currentTarget;
     const files = Array.from(e.dataTransfer.files);
-    let cursorPosition = e.currentTarget.selectionStart;
-    let accumulatedContent = currentContent;
-
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    
     try {
-    for (const file of files) {
-      if (file.type.startsWith('text/') ||
-        file.name.match(/\.(txt|md|js|ts|jsx|tsx|json|css|html|svg)$/)) {
+      let processedContent = '';
+      
+      for (const file of files) {
+        if (file.type.startsWith('text/') ||
+          file.name.match(/\.(txt|md|js|ts|jsx|tsx|json|css|html|svg)$/)) {
           const fileContent = await file.text();
-
-          // Get the file path or name
-          // Note: For security reasons, browsers only provide the file name,
-          // not the full path
           const filePath = file.webkitRelativePath || file.name;
 
-          // Process this file's content
-          accumulatedContent = processContent(
-            fileContent,
-            cursorPosition,
-            accumulatedContent,
-            filePath
-          );
-
-          // Add a newline between files
+          // Only format the content, don't join with existing content
+          const formattedContent = formatDroppedContent(fileContent, filePath);
+          processedContent += formattedContent;
+          
           if (files.indexOf(file) < files.length - 1) {
-            accumulatedContent += '\n\n';
+            processedContent += '\n\n';
           }
-
-          // Update cursor position for next file
-          cursorPosition = accumulatedContent.length;
+        }
       }
-    }
 
-      // Update content only once after processing all files
-      onContentUpdate(accumulatedContent);
+      if (processedContent) {
+        // Let execCommand handle the content joining
+        textarea.focus();
+        textarea.setSelectionRange(start, end);
+        
+        if (document.execCommand('insertText', false, processedContent)) {
+          onContentUpdate(textarea.value);
+        } else {
+          // Fallback if execCommand fails
+          const beforeContent = textarea.value.substring(0, start);
+          const afterContent = textarea.value.substring(end);
+          const newContent = beforeContent + processedContent + afterContent;
+          
+          textarea.value = newContent;
+          textarea.setSelectionRange(start + processedContent.length, start + processedContent.length);
+          
+          onContentUpdate(newContent);
+        }
+        
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     } catch (error) {
       console.error('Error processing dropped files:', error);
-      // Optionally show user-friendly error message
     }
   }, [currentContent, onContentUpdate]);
 
