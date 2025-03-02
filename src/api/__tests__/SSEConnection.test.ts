@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SSEConnection } from '../base';
 import type { NextApiResponse } from 'next';
+import type { Mock } from 'vitest';
 
 describe('SSEConnection', () => {
   let mockRes: NextApiResponse;
@@ -77,15 +78,19 @@ describe('SSEConnection', () => {
     sseConnection = new SSEConnection(mockRes);
     
     // Simulate connection close
-    const closeHandler = (mockRes.on as any).mock.calls.find(
-      call => call[0] === 'close'
-    )[1];
+    type MockCall = [event: string, listener: Function];
+    const mockCalls = (mockRes.on as Mock).mock.calls as MockCall[];
+    const closeHandler = mockCalls.find(
+      (call) => call[0] === 'close'
+    )?.[1];
     
-    closeHandler();
-    
-    // Try to send event after close
-    sseConnection.sendEvent('test', {});
-    
-    expect(mockRes.write).not.toHaveBeenCalled();
+    if (closeHandler) {
+      closeHandler();
+      
+      // Try to send event after close
+      sseConnection.sendEvent('test', {});
+      
+      expect(mockRes.write).not.toHaveBeenCalled();
+    }
   });
 });

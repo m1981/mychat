@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react-hooks';
 import { useSSE } from '../useSSE';
+import type { Mock } from 'vitest';
 
 // Mock EventSource
 const mockEventSource = {
@@ -62,7 +63,7 @@ describe('useSSE Hook', () => {
   it('should handle multiple messages', () => {
     console.log('🔍 Multiple messages test started');
     
-    const messages = [];
+    const messages: string[] = [];
     const onMessage = vi.fn((event) => {
       messages.push(event.data);
     });
@@ -75,9 +76,15 @@ describe('useSSE Hook', () => {
     const messageEvent2 = new MessageEvent('message', { data: 'Second message' });
     
     // Get the message handler from the mock calls
-    const messageHandler = mockEventSource.addEventListener.mock.calls.find(
-      call => call[0] === 'message'
-    )[1];
+    type MockCall = [event: string, listener: Function];
+    const mockCalls = (mockEventSource.addEventListener as Mock).mock.calls as MockCall[];
+    const messageHandler = mockCalls.find(
+      (call) => call[0] === 'message'
+    )?.[1];
+    
+    if (!messageHandler) {
+      throw new Error('Message handler not found in mock calls');
+    }
     
     // Simulate receiving messages
     messageHandler(messageEvent1);
@@ -130,9 +137,16 @@ describe('useSSE Hook', () => {
     
     // Simulate an error event
     const errorEvent = new Event('error');
-    const errorHandler = mockEventSource.addEventListener.mock.calls.find(
-      call => call[0] === 'error'
-    )[1];
+    
+    type MockCall = [event: string, listener: Function];
+    const mockCalls = (mockEventSource.addEventListener as Mock).mock.calls as MockCall[];
+    const errorHandler = mockCalls.find(
+      (call) => call[0] === 'error'
+    )?.[1];
+    
+    if (!errorHandler) {
+      throw new Error('Error handler not found in mock calls');
+    }
     
     console.log('🔍 Simulating error event');
     errorHandler(errorEvent);
@@ -141,7 +155,7 @@ describe('useSSE Hook', () => {
     expect(onError).toHaveBeenCalledWith(errorEvent);
     console.log('🔍 Error handler called');
   });
-
+ 
   it('should close connection when close() is called', () => {
     console.log('🔍 Close test started');
     

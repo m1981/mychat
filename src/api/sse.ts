@@ -1,7 +1,9 @@
+import type { NextApiResponse } from 'next';
+
 export class SSEConnection {
   private lastEventId: number = 0;
   private closed: boolean = false;
-  private heartbeatInterval: NodeJS.Timeout;
+  private heartbeatInterval!: NodeJS.Timeout;
 
   constructor(
     private res: NextApiResponse,

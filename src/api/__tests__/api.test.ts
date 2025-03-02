@@ -1,48 +1,56 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { getChatCompletionStream } from '../api';
 import { MessageInterface, ModelConfig } from '@type/chat';
 
 describe('getChatCompletionStream', () => {
-  const mockFetch = vi.fn();
-  const originalFetch = global.fetch;
+  const baseMessages: MessageInterface[] = [
+    { role: 'user', content: 'Hello' }
+  ];
 
-  beforeEach(() => {
-    global.fetch = mockFetch;
-  });
+  const baseOpenAIConfig: ModelConfig = {
+    model: 'gpt-4o',
+    max_tokens: 4096,
+    temperature: 0.7,
+    presence_penalty: 0,
+    frequency_penalty: 0,
+    top_p: 1,
+    enableThinking: false,
+    thinkingConfig: {
+      budget_tokens: 1000
+    }
+  };
 
-  afterEach(() => {
-    global.fetch = originalFetch;
-    vi.clearAllMocks();
-  });
+  const baseAnthropicConfig: ModelConfig = {
+    model: 'claude-3-7-sonnet-20250219',
+    max_tokens: 4096,
+    temperature: 0,
+    presence_penalty: 0,
+    frequency_penalty: 0,
+    top_p: 1,
+    enableThinking: false,
+    thinkingConfig: {
+      budget_tokens: 1000
+    }
+  };
 
   it('should format request correctly for OpenAI provider', async () => {
-    const messages: MessageInterface[] = [
-      { role: 'user', content: 'Hello' }
-    ];
+    const result = await getChatCompletionStream(
+      'openai',
+      baseMessages,
+      baseOpenAIConfig,
+      'test-key'
+    );
 
-    const config: ModelConfig = {
-      model: 'gpt-4o',
-      max_tokens: 4096,
-      temperature: 0.7,
-      presence_penalty: 0,
-      frequency_penalty: 0,
-      top_p: 1,
-      enableThinking: false,
-      thinkingConfig: {
-        budget_tokens: 1000
-      }
-    };
-
-    const apiKey = 'test-key';
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ content: 'response' })
+    // Compare URL and headers directly
+    expect(result.url).toBe('/api/chat/openai');
+    expect(result.options.method).toBe('POST');
+    expect(result.options.headers).toEqual({
+      'Content-Type': 'application/json'
     });
 
-    await getChatCompletionStream('openai', messages, config, apiKey);
-
-    const expectedBody = {
+    // Parse and compare body as object
+    const bodyObject = JSON.parse(result.options.body);
+    expect(bodyObject).toEqual({
       messages: [{ role: 'user', content: 'Hello' }],
       model: 'gpt-4o',
       max_tokens: 4096,
@@ -52,115 +60,69 @@ describe('getChatCompletionStream', () => {
       top_p: 1,
       stream: true,
       apiKey: 'test-key'
-    };
-
-    expect(mockFetch).toHaveBeenCalledWith('/api/chat/openai', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: expect.any(String)
     });
-
-    // Parse the actual body and compare objects
-    const actualBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(actualBody).toEqual(expectedBody);
   });
 
   it('should format request correctly for Anthropic provider', async () => {
-    const messages: MessageInterface[] = [
-      { role: 'user', content: 'Hello' }
-    ];
+    const result = await getChatCompletionStream(
+      'anthropic',
+      baseMessages,
+      baseAnthropicConfig,
+      'test-anthropic-key'
+    );
 
-    const config: ModelConfig = {
+    // Compare URL and headers directly
+    expect(result.url).toBe('/api/chat/anthropic');
+    expect(result.options.method).toBe('POST');
+    expect(result.options.headers).toEqual({
+      'Content-Type': 'application/json'
+    });
+
+    // Parse and compare body as object
+    const bodyObject = JSON.parse(result.options.body);
+    expect(bodyObject).toEqual({
       model: 'claude-3-7-sonnet-20250219',
       max_tokens: 4096,
       temperature: 0,
-      presence_penalty: 0,
-      frequency_penalty: 0,
       top_p: 1,
-      enableThinking: false,
-      thinkingConfig: {
-        budget_tokens: 1000
-      }
-    };
-
-    const apiKey = 'test-anthropic-key';
-
-    // Now getChatCompletionStream returns configuration object instead of making fetch call
-    const result = await getChatCompletionStream('anthropic', messages, config, apiKey);
-
-    // Verify the returned configuration
-    expect(result).toEqual({
-      url: '/api/chat/anthropic',
-      options: {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'claude-3-7-sonnet-20250219',
-          max_tokens: 4096,
-          temperature: 0,
-          top_p: 1,
-          stream: true,
-          messages: [{ role: 'user', content: 'Hello' }],
-          apiKey: 'test-anthropic-key'
-        })
-      }
+      stream: true,
+      messages: [{ role: 'user', content: 'Hello' }],
+      apiKey: 'test-anthropic-key'
     });
   });
 
-  it('should handle API errors correctly', async () => {
-    const messages: MessageInterface[] = [
-      { role: 'user', content: 'Hello' }
-    ];
-
-    const config: ModelConfig = {
-      model: 'gpt-4o',
-      max_tokens: 4096,
-      temperature: 0.7,
-      presence_penalty: 0,
-      frequency_penalty: 0,
-      top_p: 1,
-      enableThinking: false,
-      thinkingConfig: {
-        budget_tokens: 1000
-      }
-    };
-
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      text: () => Promise.resolve('API Error')
-    });
-
-    await expect(getChatCompletionStream('openai', messages, config, 'test-key'))
-      .rejects
-      .toThrow('API Error');
+  it('should throw error for invalid provider', async () => {
+    await expect(
+      getChatCompletionStream(
+        'invalid-provider' as any,
+        baseMessages,
+        baseOpenAIConfig,
+        'test-key'
+      )
+    ).rejects.toThrow("Cannot read properties of undefined (reading 'formatRequest')");
   });
 
-  it('should handle network errors correctly', async () => {
-    const messages: MessageInterface[] = [
-      { role: 'user', content: 'Hello' }
-    ];
+  it('should handle missing API key', async () => {
+    const result = await getChatCompletionStream(
+      'openai',
+      baseMessages,
+      baseOpenAIConfig
+    );
 
-    const config: ModelConfig = {
-      model: 'gpt-4o',
-      max_tokens: 4096,
-      temperature: 0.7,
-      presence_penalty: 0,
-      frequency_penalty: 0,
-      top_p: 1,
-      enableThinking: false,
-      thinkingConfig: {
-        budget_tokens: 1000
-      }
-    };
+    const bodyObject = JSON.parse(result.options.body);
+    expect(bodyObject).not.toHaveProperty('apiKey');
+  });
 
-    mockFetch.mockRejectedValueOnce(new Error('Network Error'));
+  it('should always set stream to true in request', async () => {
+    const configWithoutStream = { ...baseOpenAIConfig, stream: false };
+    const result = await getChatCompletionStream(
+      'openai',
+      baseMessages,
+      configWithoutStream,
+      'test-key'
+    );
 
-    await expect(getChatCompletionStream('openai', messages, config, 'test-key'))
-      .rejects
-      .toThrow('Network Error');
+    const bodyObject = JSON.parse(result.options.body);
+    expect(bodyObject.stream).toBe(true);
   });
 });
