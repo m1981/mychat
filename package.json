@@ -20,7 +20,8 @@
     "type-watch": "tsc --noEmit --watch",
     "deps:check": "depcheck",
     "lint": "eslint . --ext .ts,.tsx --fix",
-    "lint:check": "eslint . --ext .ts,.tsx"
+    "lint:check": "eslint . --ext .ts,.tsx",
+    "vercel-build": "pnpm test && pnpm build"
   },
   "build": {
     "appId": "better-chatgpt",
