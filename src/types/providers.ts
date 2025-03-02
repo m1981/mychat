@@ -36,14 +36,19 @@ export const providers: Record<ProviderKey, AIProvider> = {
         role: m.role === 'assistant' ? 'assistant' : 'user',
         content: m.content,
       })),
-      model: config.model,
-      max_tokens: config.max_tokens,
-      temperature: config.temperature,
-      stream: config.stream,
-      thinking: config.enableThinking ? {
-        type: 'enabled',
-        budget_tokens: Math.floor(config.max_tokens * 0.8) // 80% of max_tokens for thinking
-      } : undefined
+      config: {
+        model: config.model,
+        max_tokens: config.max_tokens,
+        temperature: config.temperature,
+        presence_penalty: config.presence_penalty,
+        top_p: config.top_p,
+        frequency_penalty: config.frequency_penalty,
+        stream: config.stream,
+        thinking: config.enableThinking ? {
+          type: 'enabled',
+          budget_tokens: Math.floor(config.max_tokens * 0.8)
+        } : undefined
+      }
     }),
     parseResponse: (response) => {
       // Handle non-streaming response
