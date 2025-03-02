@@ -1,38 +1,18 @@
 import React from 'react';
-
-import { generateDefaultChat } from '@constants/chat';
 import PlusIcon from '@icon/PlusIcon';
 import useStore from '@store/store';
 import { ChatInterface } from '@type/chat';
-
+import useAddChat from '@hooks/useAddChat';
 
 const NewMessageButton = React.memo(
   ({ messageIndex }: { messageIndex: number }) => {
     const setChats = useStore((state) => state.setChats);
     const currentChatIndex = useStore((state) => state.currentChatIndex);
-    const setCurrentChatIndex = useStore((state) => state.setCurrentChatIndex);
-
-    const addChat = () => {
-      const chats = useStore.getState().chats;
-      if (chats) {
-        const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(chats));
-        let titleIndex = 1;
-        let title = `New Chat ${titleIndex}`;
-
-        while (chats.some((chat: ChatInterface) => chat.title === title)) {
-          titleIndex += 1;
-          title = `New Chat ${titleIndex}`;
-        }
-
-        updatedChats.unshift(generateDefaultChat(title));
-        setChats(updatedChats);
-        setCurrentChatIndex(0);
-      }
-    };
+    const createNewChat = useAddChat();  // renamed to avoid confusion
 
     const addMessage = () => {
       if (currentChatIndex === -1) {
-        addChat();
+        createNewChat();
       } else {
         const updatedChats: ChatInterface[] = JSON.parse(
           JSON.stringify(useStore.getState().chats)

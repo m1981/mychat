@@ -6,8 +6,10 @@ const useAddChat = () => {
   const setChats = useStore((state) => state.setChats);
   const setCurrentChatIndex = useStore((state) => state.setCurrentChatIndex);
 
-  const addChat = (folder?:string) => {
+  const addChat = (folder?: string) => {
     const chats = useStore.getState().chats;
+    const defaultSystemMessage = useStore.getState().defaultSystemMessage;
+    
     if (chats) {
       const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(chats));
       let titleIndex = 1;
@@ -18,7 +20,7 @@ const useAddChat = () => {
         title = `New Chat ${titleIndex}`;
       }
 
-      updatedChats.unshift(generateDefaultChat(title, folder));
+      updatedChats.unshift(generateDefaultChat(title, folder, defaultSystemMessage));
       setChats(updatedChats);
       setCurrentChatIndex(0);
     }
