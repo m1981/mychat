@@ -93,11 +93,15 @@ const useSubmit = () => {
       const messages = chats[currentChatIndex].messages;
       const { modelConfig } = chats[currentChatIndex].config;
       
+      const formattedConfig = provider.formatRequest(messages, {
+        ...modelConfig,
+        stream: true
+      });
+
       // Create AbortController for timeout
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-      // Make the actual fetch request
       const response = await fetch(`/api/chat/${providerKey}`, {
         method: 'POST',
         headers: {
@@ -105,8 +109,8 @@ const useSubmit = () => {
           'Accept': 'text/event-stream',
         },
         body: JSON.stringify({
-          messages,
-          config: { ...modelConfig, stream: true },
+          messages: formattedConfig.messages,
+          config: formattedConfig,
           apiKey: currentApiKey,
         }),
         signal: controller.signal,
@@ -115,16 +119,18 @@ const useSubmit = () => {
       clearTimeout(timeout);
 
       if (!response.ok) {
-        throw new Error(await response.text());
+        const errorText = await response.text();
+        setError(errorText || `HTTP error! status: ${response.status}`);
+        return;
       }
 
-      // Use response.body instead of EventSource
       const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
       if (!reader) {
-        throw new Error('Response body is null');
+        setError('Response body is null');
+        return;
       }
+
+      const decoder = new TextDecoder();
 
       while (true) {
         const { done, value } = await reader.read();
@@ -142,7 +148,7 @@ const useSubmit = () => {
             const data = line.slice(6); // Remove 'data: ' prefix
             
             if (data === '[DONE]') {
-              continue; // Skip [DONE] messages
+              continue;
             }
 
             try {
@@ -159,6 +165,7 @@ const useSubmit = () => {
               }
             } catch (e) {
               console.error('Failed to parse chunk:', e);
+              // Continue processing other chunks even if one fails
             }
           }
         }
