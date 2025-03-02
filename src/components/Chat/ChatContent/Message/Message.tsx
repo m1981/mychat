@@ -78,9 +78,9 @@ const Message = React.memo(
 
     const getWidthClass = () => {
       if (layoutWidth === 'wide') {
-        return hideSideMenu ? 'w-[85%]' : 'w-[85%]';
+        return hideSideMenu ? 'w-[55%]' : 'w-[65%]';
       }
-      return hideSideMenu ? 'w-[75%]' : 'w-[75%]';
+      return hideSideMenu ? 'w-[55%]' : 'w-[55%]';
     };
 
     return (
