@@ -1,11 +1,6 @@
-
-type SSEResult = {
-  event: string;
-  data: any;
-} | '[DONE]';
-
-export const parseEventSource = (raw: string): SSEResult[] => {
-  const result: SSEResult[] = [];
+// src/api/helper.ts
+export const parseEventSource = (raw: string): any[] => {
+  const result: any[] = [];
   const events = raw.split('\n\n').filter(Boolean);
 
   for (const event of events) {
@@ -15,19 +10,14 @@ export const parseEventSource = (raw: string): SSEResult[] => {
     }
 
     const lines = event.split('\n');
-    let eventType = '';
     let data = '';
 
     for (const line of lines) {
-      if (line.startsWith('event: ')) {
-        eventType = line.slice(7).trim();
-      } else if (line.startsWith('data: ')) {
+      if (line.startsWith('data: ')) {
         data = line.slice(6).trim();
         try {
-          result.push({
-            data: JSON.parse(data),
-            event: eventType
-          });
+          const jsonData = JSON.parse(data);
+          result.push(jsonData);
         } catch (e) {
           console.warn('Failed to parse SSE data:', data);
         }
