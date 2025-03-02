@@ -24,6 +24,26 @@ module.exports = {
       typography: {
         DEFAULT: {
           css: {
+            // Smaller, more reasonable heading sizes
+            h1: {
+              fontSize: '1.5rem',    // 24px
+              fontWeight: '600',
+              marginTop: '1.2rem',
+              marginBottom: '0.8rem'
+            },
+            h2: {
+              fontSize: '1.25rem',   // 20px
+              fontWeight: '600',
+              marginTop: '1rem',
+              marginBottom: '0.6rem'
+            },
+            h3: {
+              fontSize: '1.1rem',    // 17.6px
+              fontWeight: '600',
+              marginTop: '0.8rem',
+              marginBottom: '0.4rem'
+            },
+            // You can also customize h4, h5, h6 if needed
             pre: { padding: 0, margin: 0 },
             ul: {
               'list-style-type': 'none',
