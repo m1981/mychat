@@ -6,7 +6,7 @@ const useAddChat = () => {
   const setChats = useStore((state) => state.setChats);
   const setCurrentChatIndex = useStore((state) => state.setCurrentChatIndex);
 
-  const addChat = (folder?: string) => {
+  return (folder?: string) => {
     const chats = useStore.getState().chats;
     const defaultSystemMessage = useStore.getState().defaultSystemMessage;
     
@@ -25,8 +25,6 @@ const useAddChat = () => {
       setCurrentChatIndex(0);
     }
   };
-
-  return addChat;
 };
 
 export default useAddChat;
