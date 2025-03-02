@@ -46,8 +46,7 @@ export const getChatCompletionStream = async (
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      messages: formattedRequest.messages,
-      config: formattedRequest,  // Use the formatted config instead of raw config
+      ...formattedRequest,  // Spread the formatted request at the top level
       apiKey,
     }),
   });
