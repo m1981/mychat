@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 
 import { useTextSelection } from '@hooks/useTextSelection';
@@ -8,12 +8,18 @@ interface SelectionCopyProviderProps {
 }
 
 export const SelectionCopyProvider: React.FC<SelectionCopyProviderProps> = ({
-                                                                              children
-                                                                            }) => {
+  children
+}) => {
   const [copiedText, setCopiedText] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleCopy = useCallback(async (text: string) => {
     try {
+      const selection = window.getSelection();
+      const isWithinContainer = selection && containerRef.current?.contains(selection.anchorNode);
+      
+      if (!isWithinContainer) return;
+
       await navigator.clipboard.writeText(text);
       setCopiedText(text);
       toast.success('Text copied to clipboard!', {
@@ -31,7 +37,7 @@ export const SelectionCopyProvider: React.FC<SelectionCopyProviderProps> = ({
   useTextSelection(handleCopy);
 
   return (
-    <div className="selection-copy-container">
+    <div ref={containerRef} className="selection-copy-container">
       {children}
     </div>
   );
