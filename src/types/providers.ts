@@ -32,23 +32,19 @@ export const providers: Record<ProviderKey, AIProvider> = {
     endpoints: ProviderRegistry.getProvider('anthropic').endpoints,
     models: ProviderRegistry.getProvider('anthropic').models.map((m: ProviderModel) => m.id),
     formatRequest: (messages: MessageInterface[], config: RequestConfig) => ({
+     model: config.model,
+      max_tokens: config.max_tokens,
+      temperature: config.temperature,
+      top_p: config.top_p,
+      stream: config.stream,
+      thinking: config.enableThinking ? {
+        type: 'enabled',
+        budget_tokens: config.thinkingConfig.budget_tokens
+      } : undefined,
       messages: messages.map(m => ({
         role: m.role === 'assistant' ? 'assistant' : 'user',
         content: m.content,
-      })),
-      config: {
-        model: config.model,
-        max_tokens: config.max_tokens,
-        temperature: config.temperature,
-        presence_penalty: config.presence_penalty,
-        top_p: config.top_p,
-        frequency_penalty: config.frequency_penalty,
-        stream: config.stream,
-        thinking: config.enableThinking ? {
-          type: 'enabled',
-          budget_tokens: Math.floor(config.max_tokens * 0.8)
-        } : undefined
-      }
+      }))
     }),
     parseResponse: (response) => {
       // Handle non-streaming response
