@@ -66,8 +66,30 @@ const MessageContent: React.FC<MessageContentProps> = ({
   isEditing,
   setIsEditing,
 }) => {
+  // Add keyboard event handler at component level
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isEdit && !isComposer) {
+        e.preventDefault();
+        setIsEdit(false);
+      }
+    };
+
+    // Add the event listener
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isEdit, isComposer, setIsEdit]);
+
   return (
-    <div className='relative flex flex-col gap-1 md:gap-3 lg:w-[calc(100%)]'>
+    <div 
+      className='relative flex flex-col gap-1 md:gap-3 lg:w-[calc(100%)]'
+      // Optional: Add tabIndex to make the div focusable
+      tabIndex={isEdit ? 0 : -1}
+    >
       {isEdit ? (
         <EditView
           content={content}
