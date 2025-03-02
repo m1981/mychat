@@ -5,12 +5,6 @@ interface UsePasteHandlerProps {
   onContentUpdate: (content: string) => void;
 }
 
-interface UndoStackEntry {
-  value: string;
-  selectionStart: number;
-  selectionEnd: number;
-}
-
 export const usePasteHandler = ({ onContentUpdate }: UsePasteHandlerProps) => {
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     e.preventDefault();

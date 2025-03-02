@@ -3,9 +3,7 @@ import React, { useState, MouseEvent, Dispatch, SetStateAction } from 'react';
 import CancelIcon from '@icon/CancelIcon';
 import CopyIcon from '@icon/CopyIcon';
 import DeleteIcon from '@icon/DeleteIcon';
-import DownChevronArrow from '@icon/DownChevronArrow';
 import EditIcon2 from '@icon/EditIcon2';
-import RefreshIcon from '@icon/RefreshIcon';
 import TickIcon from '@icon/TickIcon';
 import useStore from '@store/store';
 
@@ -28,15 +26,14 @@ interface ActionButtonProps {
 }
 
 const RefreshButton: React.FC<ActionButtonProps> = ({ onClick }) => (
-  <MessageButton icon={<RefreshIcon />} onClick={onClick} />
-);
-
-const UpButton: React.FC<ActionButtonProps> = ({ onClick }) => (
-  <MessageButton icon={<DownChevronArrow className="rotate-180" />} onClick={onClick} />
-);
-
-const DownButton: React.FC<ActionButtonProps> = ({ onClick }) => (
-  <MessageButton icon={<DownChevronArrow />} onClick={onClick} />
+  <button
+    className="invisible group-hover:visible px-3 py-1 text-sm 
+    bg-gray-700 hover:bg-gray-800 text-gray-200 hover:text-white 
+    rounded-md transition-colors duration-200"
+    onClick={onClick}
+  >
+    Try again
+  </button>
 );
 
 interface ToggleButtonProps {
@@ -57,7 +54,9 @@ interface CopyButtonProps {
 
 const CopyButton: React.FC<CopyButtonProps> = ({ handleCopy }) => {
   const [isCopied, setIsCopied] = useState(false);
-  const onClick = (event: MouseEvent<HTMLButtonElement>) => {
+  
+  // Remove unused event parameter
+  const onClick = () => {
     handleCopy();
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 3000);
@@ -86,15 +85,14 @@ const MessageActionButtons: React.FC<MessageActionButtonsProps> = ({
   setIsEdit,
   setIsDelete,
   handleRefresh,
-  handleMoveUp,
-  handleMoveDown,
   handleDelete,
   handleCopy
 }) => {
   const lastMessageIndex = useStore(state => {
     const chats = state.chats;
     const currentChatIndex = state.currentChatIndex;
-    if (chats && typeof currentChatIndex === 'number' && chats[currentChatIndex]) {
+    // Remove redundant typeof check since currentChatIndex is already typed as number
+    if (chats && chats[currentChatIndex]) {
       return chats[currentChatIndex].messages.length - 1;
     }
     return 0;
@@ -103,25 +101,24 @@ const MessageActionButtons: React.FC<MessageActionButtonsProps> = ({
   const isGenerating = useStore(state => state.generating);
 
   return (
-    <div className="flex justify-end  w-full mt-2 group">
-        {isDelete ? (
-          <>
-            <MessageButton icon={<CancelIcon />} onClick={() => setIsDelete(false)} />
-            <MessageButton icon={<TickIcon />} onClick={handleDelete} />
-          </>
-        ) : (
-          <>
-            {!isGenerating && role === 'assistant' && messageIndex === lastMessageIndex &&
-              <RefreshButton onClick={handleRefresh} />}
-            {messageIndex > 0 && <UpButton onClick={handleMoveUp} />}
-            {messageIndex < lastMessageIndex && <DownButton onClick={handleMoveDown} />}
-            <CopyButton handleCopy={handleCopy} />
-            <EditButton setIsActive={setIsEdit} />
-            <DeleteButton setIsActive={setIsDelete} />
-          </>
-        )}
-      </div>
-      );
-      };
+    <div className="flex justify-end w-full mt-2 group">
+      {isDelete ? (
+        <>
+          <MessageButton icon={<CancelIcon />} onClick={() => setIsDelete(false)} />
+          <MessageButton icon={<TickIcon />} onClick={handleDelete} />
+        </>
+      ) : (
+        <>
+          {!isGenerating && role === 'assistant' && messageIndex === lastMessageIndex && (
+            <RefreshButton onClick={handleRefresh} />
+          )}
+          <CopyButton handleCopy={handleCopy} />
+          <EditButton setIsActive={setIsEdit} />
+          <DeleteButton setIsActive={setIsDelete} />
+        </>
+      )}
+    </div>
+  );
+};
 
-      export default MessageActionButtons;
+export default MessageActionButtons;

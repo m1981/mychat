@@ -57,7 +57,6 @@ const p = (props: DetailedHTMLProps<HTMLAttributes<HTMLParagraphElement>, HTMLPa
 };
 
 const MessageContent: React.FC<MessageContentProps> = ({
-  role,
   content,
   messageIndex,
   isComposer = false,
@@ -169,8 +168,7 @@ const EditView: React.FC<EditViewProps> = ({
   const { handleSubmit } = useSubmit();
 
   const { handlePaste } = usePasteHandler({
-    onContentUpdate: _setContent,
-    currentContent: _content
+    onContentUpdate: _setContent
   });
 
   const { handleDragOver, handleDrop } = useFileDropHandler({
