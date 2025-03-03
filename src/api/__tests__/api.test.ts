@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { getChatCompletionStream } from '../api';
+import { describe, it, expect, vi } from 'vitest';
+import { getChatCompletionStream, getChatCompletion } from '../api';
 import { MessageInterface, ModelConfig } from '@type/chat';
 
 describe('getChatCompletionStream', () => {
@@ -124,5 +124,65 @@ describe('getChatCompletionStream', () => {
 
     const bodyObject = JSON.parse(result.options.body);
     expect(bodyObject.stream).toBe(true);
+  });
+});
+
+describe('getChatCompletion', () => {
+  const baseMessages: MessageInterface[] = [
+    { role: 'user', content: 'Hello' }
+  ];
+
+  const baseConfig: ModelConfig = {
+    model: 'gpt-4o',
+    max_tokens: 4096,
+    temperature: 0.7,
+    presence_penalty: 0,
+    frequency_penalty: 0,
+    top_p: 1,
+    enableThinking: false,
+    thinkingConfig: {
+      budget_tokens: 1000
+    }
+  };
+
+  it('should format request correctly for OpenAI provider', async () => {
+    global.fetch = vi.fn().mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ content: 'Test response' })
+      })
+    );
+
+    await getChatCompletion(
+      'openai',
+      baseMessages,
+      baseConfig,
+      'test-key',
+      { 'Custom-Header': 'test' }
+    );
+
+    const expectedBody = JSON.stringify({
+      messages: baseMessages,
+      model: 'gpt-4o',
+      max_tokens: 4096,
+      temperature: 0.7,
+      presence_penalty: 0,
+      top_p: 1,
+      frequency_penalty: 0,
+      stream: false,
+      apiKey: 'test-key'
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/chat/openai',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Custom-Header': 'test'
+        },
+        body: expectedBody
+      }
+    );
   });
 });

@@ -9,8 +9,9 @@ export const getChatCompletion = async (
   apiKey?: string,
   customHeaders?: Record<string, string>
 ) => {
-  const provider = providers[providerKey];  // Use providers map instead of ProviderRegistry
-  const endpoint = provider.endpoints[0]; // Use first endpoint as default
+  const provider = providers[providerKey];
+  const endpoint = provider.endpoints[0];
+  const formattedRequest = provider.formatRequest(messages, { ...config, stream: false });
 
   const response = await fetch(`/api/${endpoint}`, {
     method: 'POST',
@@ -19,8 +20,7 @@ export const getChatCompletion = async (
       ...customHeaders,
     },
     body: JSON.stringify({
-      messages,
-      config,
+      ...formattedRequest,
       apiKey,
     }),
   });
