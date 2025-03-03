@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 import useStore from '@store/store';
-import { ChatInterface, MessageInterface } from '@type/chat';
+import { ChatInterface, MessageInterface, ModelConfig } from '@type/chat';
 import { providers } from '@type/providers';
 import { getChatCompletion } from '@src/api/api';
 import { checkStorageQuota } from '@utils/storage';
@@ -54,8 +54,9 @@ export class ChatStreamHandler {
 // Extracted for testing
 export class TitleGenerator {
   constructor(
-    private readonly generateTitle: (messages: MessageInterface[]) => Promise<string>,
-    private readonly language: string
+    private readonly generateTitle: (messages: MessageInterface[], config: ModelConfig) => Promise<string>,
+    private readonly language: string,
+    private readonly defaultConfig: ModelConfig
   ) {}
 
   async generateChatTitle(
@@ -67,7 +68,7 @@ export class TitleGenerator {
       content: `Generate a title in less than 6 words for the following message (language: ${this.language}):\n"""\nUser: ${userMessage}\nAssistant: ${assistantMessage}\n"""`,
     };
 
-    let title = (await this.generateTitle([message])).trim();
+    let title = (await this.generateTitle([message], this.defaultConfig)).trim();
     if (title.startsWith('"') && title.endsWith('"')) {
       title = title.slice(1, -1);
     }
@@ -98,13 +99,14 @@ const useSubmit = () => {
   // Extracted for testing
   const streamHandler = new ChatStreamHandler(new TextDecoder(), provider);
   const titleGenerator = new TitleGenerator(
-    async (messages) => getChatCompletion(
+    async (messages, config) => getChatCompletion(
       providerKey,
       messages,
-      currentChat?.config.modelConfig || DEFAULT_MODEL_CONFIG,
+      config,
       currentApiKey
     ),
-    i18n.language
+    i18n.language,
+    currentChat?.config.modelConfig || DEFAULT_MODEL_CONFIG
   );
 
   const handleTitleGeneration = async () => {
