@@ -10,10 +10,9 @@ export const getChatCompletion = async (
   customHeaders?: Record<string, string>
 ) => {
   const provider = providers[providerKey];
-  const endpoint = provider.endpoints[0];
   const formattedRequest = provider.formatRequest(messages, { ...config, stream: false });
 
-  const response = await fetch(`/api/${endpoint}`, {
+  const response = await fetch(`/api/chat/${provider.id}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -21,7 +20,7 @@ export const getChatCompletion = async (
     },
     body: JSON.stringify({
       ...formattedRequest,
-      apiKey,
+      apiKey
     }),
   });
 
@@ -40,7 +39,6 @@ export const getChatCompletionStream = async (
   const provider = providers[providerKey];
   const formattedRequest = provider.formatRequest(messages, { ...config, stream: true });
 
-  // Return the URL and headers separately to work with our SSE hook
   return {
     url: `/api/chat/${provider.id}`,
     options: {
