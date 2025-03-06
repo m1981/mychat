@@ -1,16 +1,18 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: development
+    build: .
     container_name: ${CONTAINER_NAME:-mychat-app}
     ports:
       - "5173:5173"
     volumes:
-      - .:/home/appuser/app
-      - /home/appuser/app/node_modules # This excludes node_modules from host mounting
+      - .:/app
+      - pnpm-store:/root/.local/share/pnpm/store
+      - pnpm-cache:/root/.cache/pnpm
     environment:
       - NODE_ENV=development
-    working_dir: /home/appuser/app
-    command: pnpm dev:host
+    working_dir: /app
+    command: sh -c "pnpm install && pnpm dev:host"
+
+volumes:
+  pnpm-store:
+  pnpm-cache:

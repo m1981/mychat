@@ -24,13 +24,17 @@ help: ## Display this help
 
 
 ##@ Development
-.PHONY: app-up down logs
+.PHONY: dev dev-fast clean
 
-dev:
-	$(NODE_PACKAGE_MANAGER) dev
+dev: ## Start development environment (clean start)
+	docker compose up --build
 
-app-up: ## Start development environment
-	$(DOCKER_COMPOSE) up --build app
+dev-fast: ## Start development environment (reuse cache)
+	docker compose up
+
+clean: ## Clean development environment
+	docker compose down
+	docker volume rm pnpm-store pnpm-cache
 
 app-down: ## Stop development environment
 	$(DOCKER_COMPOSE) down
