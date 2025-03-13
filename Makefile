@@ -35,6 +35,10 @@ dev-fast: ## Start development environment (reuse cache)
 clean: ## Clean development environment
 	docker compose down
 	docker volume rm pnpm-store pnpm-cache
+	$(NODE_PACKAGE_MANAGER) store prune
+	rm -rf node_modules
+	rm -rf dist
+	rm -f pnpm-lock.yaml
 
 app-down: ## Stop development environment
 	$(DOCKER_COMPOSE) down
@@ -75,12 +79,6 @@ pkg-sync: ## Sync yarn.lock with package.json (fix lock file issues)
 ##@ Building
 .PHONY: build build-quick
 
-clean:
-	pnpm store prune
-	rm -rf node_modules
-	rm -rf dist
-	rm pnpm-lock.yaml
-
 inst:
 	$(NODE_PACKAGE_MANAGER) install
 
@@ -103,6 +101,15 @@ test-watch: ## Run tests in watch mode
 test-coverage: ## Run tests with coverage
 	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) test:coverage
 
+
+##@ Building
+.PHONY: lint type-check
+
+lint: ## Run linter and fix issues
+	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) lint
+
+type: ## Run types check
+	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) type-check
 
 ##@ Colima Management
 .PHONY: colima-start colima-stop colima-status colima-list colima-delete
