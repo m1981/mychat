@@ -129,7 +129,7 @@ const useSubmit = () => {
   };
 
   const handleSubmit = async () => {
-    console.log('🚀 Starting submission...');
+    const currentState = useStore.getState();
 
     if (generating || !chats) return;
 
@@ -137,8 +137,10 @@ const useSubmit = () => {
       await checkStorageQuota();
       if (useStore.getState().error) return;
 
-      const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(chats));
-      updatedChats[currentChatIndex].messages.push({
+      const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(currentState.chats));
+      const currentMessages = updatedChats[currentState.currentChatIndex].messages;
+
+      currentMessages.push({
         role: 'assistant',
         content: '',
       });
@@ -146,18 +148,15 @@ const useSubmit = () => {
       setChats(updatedChats);
       setGenerating(true);
 
-      if (chats[currentChatIndex].messages.length === 0) {
-        setError('No messages submitted!');
-        return;
-      }
-
-      const messages = chats[currentChatIndex].messages;
-      const { modelConfig } = chats[currentChatIndex].config;
+      const { modelConfig } = updatedChats[currentChatIndex].config;
       
-      const formattedConfig = provider.formatRequest(messages, {
+      const formattedRequest = provider.formatRequest(currentMessages, {
         ...modelConfig,
         stream: true
       });
+
+      // Separate messages from config
+      const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30000);
@@ -169,8 +168,8 @@ const useSubmit = () => {
           'Accept': 'text/event-stream',
         },
         body: JSON.stringify({
-          messages: formattedConfig.messages,
-          config: formattedConfig,
+          messages: formattedMessages,
+          config: configWithoutMessages,
           apiKey: currentApiKey,
         }),
         signal: controller.signal,

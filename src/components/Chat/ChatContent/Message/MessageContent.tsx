@@ -231,16 +231,32 @@ const EditView: React.FC<EditViewProps> = ({
     setIsEditing(false);
   };
 
-  const handleSaveAndSubmit = () => {
+  const handleSaveAndSubmit = async () => {
     if (useStore.getState().generating) return;
+
+    // Get current state
+    const currentState = useStore.getState();
+
+    if (!_content.trim()) return;
+
     const updatedChats: ChatInterface[] = JSON.parse(
-      JSON.stringify(useStore.getState().chats)
+      JSON.stringify(currentState.chats)
     );
+
     const updatedMessages = updatedChats[currentChatIndex].messages;
     if (isComposer) {
       if (_content !== '') {
-        updatedMessages.push({ role: inputRole, content: _content });
+        updatedMessages.push({ role: inputRole, content: _content.trim() });
       }
+
+    // Update state and wait for it to complete
+    await new Promise<void>(resolve => {
+      setChats(updatedChats);
+      // Use a small timeout to ensure state is updated
+      setTimeout(resolve, 0);
+    });
+
+    // Clear content
       _setContent('');
       resetTextAreaHeight();
     } else {
@@ -251,6 +267,11 @@ const EditView: React.FC<EditViewProps> = ({
     }
     setChats(updatedChats);
     setIsEditing(false);
+
+    // Small delay to ensure state is updated
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // Now submit with updated state
     handleSubmit();
   };
 

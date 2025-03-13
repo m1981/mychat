@@ -1,12 +1,26 @@
 import { MessageInterface, ModelConfig, ProviderKey } from '@type/chat';
 
 export interface RequestConfig extends ModelConfig {
-  stream?: boolean;
-  // Add any provider-specific handling for thinking mode
+  stream?: boolean;  // Optional in incoming config
   thinking_mode?: {
     enabled: boolean;
     budget_tokens: number;
   };
+}
+
+export interface FormattedRequest {
+  messages: MessageInterface[];
+  model: string;
+  max_tokens: number;
+  temperature: number;
+  top_p: number;
+  stream: boolean;
+  thinking?: {
+    type: 'enabled';
+    budget_tokens: number;
+  };
+  presence_penalty?: number;
+  frequency_penalty?: number;
 }
 
 export interface AIProvider {
@@ -14,7 +28,7 @@ export interface AIProvider {
   name: string;
   endpoints: string[];
   models: string[];
-  formatRequest: (messages: MessageInterface[], config: RequestConfig) => any;
+  formatRequest: (messages: MessageInterface[], config: RequestConfig) => FormattedRequest;
   parseResponse: (response: any) => string;
   parseStreamingResponse: (chunk: any) => string;
 }
