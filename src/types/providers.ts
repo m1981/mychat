@@ -18,10 +18,17 @@ export const providers: Record<ProviderKey, AIProvider> = {
       presence_penalty: config.presence_penalty,
       top_p: config.top_p,
       frequency_penalty: config.frequency_penalty,
-      stream: config.stream ?? false  // Provide default value
+      stream: config.stream ?? false
     }),
     parseResponse: (response) => response.choices[0].message.content,
-    parseStreamingResponse: (chunk) => chunk.choices?.[0]?.delta?.content || '',
+    parseStreamingResponse: (response: any) => {
+      try {
+        return response.choices?.[0]?.delta?.content || '';
+      } catch (e) {
+        console.error('Error parsing OpenAI response:', e);
+        return '';
+      }
+    },
   },
   anthropic: {
     id: 'anthropic',
@@ -29,21 +36,37 @@ export const providers: Record<ProviderKey, AIProvider> = {
     endpoints: ProviderRegistry.getProvider('anthropic').endpoints,
     models: ProviderRegistry.getProvider('anthropic').models.map((m: ProviderModel) => m.id),
     formatRequest: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => ({
-      model: config.model,
+     model: config.model,
       max_tokens: config.max_tokens,
       temperature: config.temperature,
       top_p: config.top_p,
-      stream: config.stream ?? false,  // Provide default value
+      stream: config.stream ?? false,
       thinking: config.enableThinking ? {
         type: 'enabled',
         budget_tokens: config.thinkingConfig.budget_tokens
       } : undefined,
       messages: messages.map(m => ({
         role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content
+        content: m.content,
       }))
     }),
-    parseResponse: (response) => response.content,
-    parseStreamingResponse: (chunk) => chunk.content || '',
-  }
+    parseResponse: (response) => {
+      // Handle non-streaming response
+      if (response.content && Array.isArray(response.content)) {
+        return response.content[0].text;
+      }
+      return '';
+    },
+    parseStreamingResponse: (response: any) => {
+      try {
+        if (response.type === 'content_block_delta') {
+          return response.delta?.text || '';
+        }
+        return '';
+      } catch (e) {
+        console.error('Error parsing Anthropic response:', e);
+        return '';
+      }
+    },
+  },
 };
