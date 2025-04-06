@@ -10,6 +10,13 @@ export const getChatCompletion = async (
   customHeaders?: Record<string, string>
 ) => {
   const provider = providers[providerKey];
+  if (!provider) {
+    throw new Error(`Invalid provider: ${providerKey}`);
+  }
+  if (!provider.formatRequest) {
+    throw new Error(`Provider ${providerKey} missing formatRequest implementation`);
+  }
+  
   const formattedRequest = provider.formatRequest(messages, { ...config, stream: false });
 
   const response = await fetch(`/api/chat/${provider.id}`, {

@@ -99,33 +99,64 @@ const useSubmit = () => {
   // Extracted for testing
   const streamHandler = new ChatStreamHandler(new TextDecoder(), provider);
   const titleGenerator = new TitleGenerator(
-    async (messages, config) => getChatCompletion(
-      providerKey,
-      messages,
-      config,
-      currentApiKey
-    ),
+    async (messages, config) => {
+      if (!config || !config.model) {
+        throw new Error('Invalid model configuration');
+      }
+      return getChatCompletion(
+        providerKey,
+        messages,
+        config,
+        currentApiKey
+      );
+    },
     i18n.language,
     currentChat?.config.modelConfig || DEFAULT_MODEL_CONFIG
   );
 
   const handleTitleGeneration = async () => {
-    const currChats = useStore.getState().chats;
-    if (!useStore.getState().autoTitle || !currChats || currChats[currentChatIndex]?.titleSet) {
-      return;
-    }
-
-    const messages = currChats[currentChatIndex].messages;
-    const messages_length = messages.length;
-    const assistant_message = messages[messages_length - 1].content;
-    const user_message = messages[messages_length - 2].content;
-
-    const title = await titleGenerator.generateChatTitle(user_message, assistant_message);
+    console.log('Title generation config:', {
+      providerKey,
+      provider: providers[providerKey],
+      modelConfig: currentChat?.config.modelConfig,
+      defaultConfig: DEFAULT_MODEL_CONFIG
+    });
     
-    const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(currChats));
-    updatedChats[currentChatIndex].title = title;
-    updatedChats[currentChatIndex].titleSet = true;
-    setChats(updatedChats);
+    try {
+      const currentState = useStore.getState();
+      if (!currentState.chats || currentState.currentChatIndex < 0) {
+        throw new Error('No active chat found');
+      }
+
+      const currentMessages = currentState.chats[currentState.currentChatIndex].messages;
+      
+      // Get the last user and assistant messages
+      const lastUserMessage = currentMessages
+        .slice()
+        .reverse()
+        .find(msg => msg.role === 'user')?.content || '';
+      
+      const lastAssistantMessage = currentMessages
+        .slice()
+        .reverse()
+        .find(msg => msg.role === 'assistant')?.content || '';
+
+      const title = await titleGenerator.generateChatTitle(lastUserMessage, lastAssistantMessage);
+      console.log('Title generated:', title);
+
+      // Update the chat title
+      if (currentState.chats) {
+        const updatedChats = [...currentState.chats];
+        updatedChats[currentState.currentChatIndex].title = title;
+        setChats(updatedChats);
+      }
+    } catch (error) {
+      console.error('Title generation failed:', {
+        error,
+        state: useStore.getState()
+      });
+      throw error;
+    }
   };
 
   const handleSubmit = async () => {
