@@ -1,6 +1,19 @@
+import { vi } from 'vitest';
 import '@testing-library/jest-dom';
+
+declare global {
+  interface Window {
+    scrollTo: typeof vi.fn;
+    localStorage: {
+      getItem: typeof vi.fn;
+      setItem: typeof vi.fn;
+      removeItem: typeof vi.fn;
+      clear: typeof vi.fn;
+    };
+  }
+}
+
 import { cleanup } from '@testing-library/react';
-import { afterEach, beforeAll, expect, vi } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import i18n from './src/utils/i18n-test-config';
 
@@ -10,24 +23,6 @@ expect.extend(matchers);
 // Initialize i18n for tests
 beforeAll(() => {
   i18n.init();
-});
-
-// Mock window properties commonly used in React apps
-beforeAll(() => {
-  Object.defineProperty(window, 'scrollTo', {
-    value: vi.fn(),
-    writable: true
-  });
-  
-  Object.defineProperty(window, 'localStorage', {
-    value: {
-      getItem: vi.fn(),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
-      clear: vi.fn()
-    },
-    writable: true
-  });
 });
 
 // Add error boundary testing support

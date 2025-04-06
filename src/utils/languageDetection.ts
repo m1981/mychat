@@ -6,9 +6,12 @@ export interface CodeDetectionResult {
   language: string;
   relevance: number;
 }
+
+// Fix: Make type more specific and properly extend CodeDetectionResult
 interface ExtendedCodeDetectionResult extends CodeDetectionResult {
+  isCode: true; // Narrow the type
   type: 'code' | 'patch' | 'mermaid' | 'makefile' | 'mixed';
-  subLanguages?: string[];
+  subLanguages: string[] | undefined; // Allow undefined
 }
 
 const SPECIAL_PATTERNS = {
@@ -24,7 +27,7 @@ export const detectCodeContent = (content: string): ExtendedCodeDetectionResult 
     if (pattern.test(content)) {
       return {
         isCode: true,
-        type: type as any,
+        type: type as 'code' | 'patch' | 'mermaid' | 'makefile' | 'mixed',
         language: type,
         relevance: 10,
         subLanguages: type === 'mixed' ? detectSubLanguages(content) : undefined
@@ -70,3 +73,29 @@ const detectSubLanguages = (content: string): string[] => {
 
   return languages;
 };
+
+// Add null checks for language detection
+export function detectLanguage(text: string): ExtendedCodeDetectionResult | null {
+  try {
+    const result = hljs.highlightAuto(text);
+    if (!result.language) {
+      return null;
+    }
+    
+    return {
+      isCode: true,
+      type: 'code',
+      language: result.language,
+      relevance: result.relevance,
+      subLanguages: result.secondBest?.language ? [result.secondBest.language] : []
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+// Add null checks for language operations
+export function processLanguage(lang: string | undefined): string {
+  if (!lang) return 'text';  // Default fallback
+  return lang.toLowerCase();
+}

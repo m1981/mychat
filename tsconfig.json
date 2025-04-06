@@ -20,51 +20,32 @@
       "@testing-library/jest-dom"
     ],
     "target": "ESNext",
-    "useDefineForClassFields": true,
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "allowJs": false,
-    "skipLibCheck": true,
-    "esModuleInterop": false,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
     "baseUrl": ".",
     "paths": {
-      "@icon/*": ["./src/assets/icons/*"],
+      "@/*": ["./src/*"],
+      "@components/*": ["./src/components/*"],
       "@type/*": ["./src/types/*"],
       "@store/*": ["./src/store/*"],
       "@hooks/*": ["./src/hooks/*"],
       "@constants/*": ["./src/constants/*"],
       "@config/*": ["src/config/*"],
-      "@components/*": ["./src/components/*"],
       "@models/*": ["./src/config/models/*"],
       "@utils/*": ["./src/utils/*"],
       "@lib/*": ["./src/lib/*"],
-      "@src/*": ["./src/*"]
-    },
-    // Add these recommended flags
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "verbatimModuleSyntax": true,
-    // Stricter type checking
-    "exactOptionalPropertyTypes": true,
-    // Performance improvements
-    "incremental": true,
-    "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo"
+      "@icon/*": ["./src/assets/icons/*"]
+    }
   },
   "include": ["src"],
-  "exclude": [
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/__tests__/**",
-    "**/node_modules/**"
-  ],
-  "references": [{ "path": "./tsconfig.node.json" }],
-  "exclude": ["node_modules", "dist", "build"]
+  "exclude": ["node_modules", "dist"]
 }

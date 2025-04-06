@@ -25,7 +25,8 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     typecheck: {
       enabled: true,
-      tsconfig: './tsconfig.test.json'
+      tsconfig: './tsconfig.test.json',
+      include: ['src/**/*.{test,spec}.{ts,tsx}']
     },
     coverage: {
       provider: 'v8',

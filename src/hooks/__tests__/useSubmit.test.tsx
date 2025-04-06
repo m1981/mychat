@@ -6,11 +6,11 @@ import type { ModelConfig } from '@type/chat';
 import useStore from '@store/store';
 import { createWrapper } from '@utils/test-utils';
 
-type MockStore = typeof useStore & {
-  getState: vi.Mock;
-  setState: vi.Mock;
-  subscribe: vi.Mock;
-  destroy: vi.Mock;
+type MockStore = {
+  getState: () => ReturnType<typeof useStore.getState>;
+  setState: typeof useStore.setState;
+  subscribe: typeof useStore.subscribe;
+  destroy: () => void;
 };
 
 const mockSetChats = vi.fn();
