@@ -103,10 +103,15 @@ const useSubmit = () => {
       if (!config || !config.model) {
         throw new Error('Invalid model configuration');
       }
+      // Ensure stream is explicitly set to false for title generation
+      const titleConfig = {
+        ...config,
+        stream: false
+      };
       return getChatCompletion(
         providerKey,
         messages,
-        config,
+        titleConfig,
         currentApiKey
       );
     },

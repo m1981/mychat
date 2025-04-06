@@ -37,7 +37,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('X-Accel-Buffering', 'no');
     res.setHeader('Transfer-Encoding', 'chunked');
 
-    if (chatConfig.stream) {
+    const streamMode = chatConfig?.stream ?? false;
+    if (streamMode) {
       // Format messages for Anthropic API
       const formattedMessages = messages.map(msg => ({
         role: msg.role === 'assistant' ? 'assistant' : 'user',
@@ -127,15 +128,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } catch (error: any) {
     console.error('Anthropic API Error:', error);
-    
-    // Enhanced error handling
-    const errorResponse = {
+    res.status(500).json({
       error: error.message || 'An error occurred during the API request',
       status: error.status,
       type: error.type,
       details: error.error?.details || undefined,
-    };
-
-    res.status(error.status || 500).json(errorResponse);
+    });
   }
 }
