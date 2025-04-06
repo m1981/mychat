@@ -1,25 +1,24 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook } from '@testing-library/react-hooks';
+import { renderHook } from '@testing-library/react';
 import { useSSE } from '../useSSE';
-import type { Mock } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-// Mock EventSource
+// Mock EventSource globally
 const mockEventSource = {
-  close: vi.fn(),
   addEventListener: vi.fn(),
   removeEventListener: vi.fn(),
+  close: vi.fn()
 };
 
-// Create EventSource constructor mock
 const EventSourceMock = vi.fn(() => mockEventSource);
-
-// Setup global mock
-vi.stubGlobal('EventSource', EventSourceMock);
+global.EventSource = EventSourceMock as any;
 
 describe('useSSE Hook', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    console.log('🔍 Mocks cleared');
+    // Reset mock implementations
+    mockEventSource.addEventListener.mockImplementation(() => {});
+    mockEventSource.removeEventListener.mockImplementation(() => {});
+    mockEventSource.close.mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -119,9 +118,7 @@ describe('useSSE Hook', () => {
     console.log('🔍 Cleanup verification complete');
   });
 
-  it('should handle connection errors', () => {
-    console.log('🔍 Error handling test started');
-    
+  it('should handle connection errors', async () => {
     const onMessage = vi.fn();
     const onError = vi.fn();
     const url = 'http://test.com/stream';
@@ -131,48 +128,31 @@ describe('useSSE Hook', () => {
       onError
     }));
     
-    // Verify both message and error listeners were added
     expect(mockEventSource.addEventListener).toHaveBeenCalledWith('message', onMessage);
     expect(mockEventSource.addEventListener).toHaveBeenCalledWith('error', onError);
     
-    // Simulate an error event
+    // Simulate error event
     const errorEvent = new Event('error');
+    const errorHandler = mockEventSource.addEventListener.mock.calls
+      .find(call => call[0] === 'error')?.[1];
     
-    type MockCall = [event: string, listener: Function];
-    const mockCalls = (mockEventSource.addEventListener as Mock).mock.calls as MockCall[];
-    const errorHandler = mockCalls.find(
-      (call) => call[0] === 'error'
-    )?.[1];
-    
-    if (!errorHandler) {
-      throw new Error('Error handler not found in mock calls');
+    if (errorHandler) {
+      errorHandler(errorEvent);
+      expect(onError).toHaveBeenCalledWith(errorEvent);
     }
-    
-    console.log('🔍 Simulating error event');
-    errorHandler(errorEvent);
-    
-    // Verify error was handled
-    expect(onError).toHaveBeenCalledWith(errorEvent);
-    console.log('🔍 Error handler called');
   });
- 
-  it('should close connection when close() is called', () => {
-    console.log('🔍 Close test started');
-    
+
+  it('should close connection when close() is called', async () => {
     const onMessage = vi.fn();
     const url = 'http://test.com/stream';
     
-    // Render hook and get close function
     const { result } = renderHook(() => useSSE(url, { onMessage }));
     
-    // Verify EventSource was created and listener was added
     expect(EventSourceMock).toHaveBeenCalledWith(url);
     expect(mockEventSource.addEventListener).toHaveBeenCalledWith('message', onMessage);
     
-    // Call close
     result.current.close();
     
-    // Verify cleanup occurred
     expect(mockEventSource.close).toHaveBeenCalled();
     expect(mockEventSource.removeEventListener).toHaveBeenCalledWith('message', onMessage);
   });

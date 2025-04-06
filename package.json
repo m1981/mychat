@@ -13,15 +13,15 @@
     "build": "pnpm type-check && NODE_ENV=production TS_NODE_BASEURL=./ pnpm build:vite",
     "build:vite": "NODE_OPTIONS='--max_old_space_size=8192' vite build",
     "build:quick": "vite build --mode development",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test": "vitest run --no-threads",
+    "test:watch": "vitest --no-threads",
+    "test:coverage": "vitest run --coverage --no-threads",
     "type-check": "tsc --noEmit",
     "type-watch": "tsc --noEmit --watch",
     "deps:check": "depcheck",
     "lint": "eslint . --ext .ts,.tsx --fix",
     "lint:check": "eslint . --ext .ts,.tsx",
-    "vercel-build": "pnpm test && pnpm build"
+    "vercel-build": "NODE_ENV=test pnpm test && pnpm build"
   },
   "build": {
     "appId": "better-chatgpt",

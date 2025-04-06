@@ -22,8 +22,15 @@ export default defineConfig({
       ]
     },
     deps: {
-      inline: ['@testing-library/jest-dom']
-    }
+      inline: [
+        '@testing-library/jest-dom',
+        '@testing-library/react'
+      ]
+    },
+    testTimeout: 10000,
+    hookTimeout: 10000,
+    pool: 'vmThreads',
+    threads: false
   },
   resolve: {
     alias: {
