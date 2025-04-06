@@ -6,13 +6,17 @@ services:
       - "5173:5173"
     volumes:
       - .:/app
-      - pnpm-store:/root/.local/share/pnpm/store
-      - pnpm-cache:/root/.cache/pnpm
+      - pnpm-store:/home/node/.local/share/pnpm/store
+      - pnpm-cache:/home/node/.cache/pnpm
     environment:
       - NODE_ENV=development
+      - PNPM_STORE_DIR=/home/node/.local/share/pnpm/store
+      - PNPM_CACHE_DIR=/home/node/.cache/pnpm
     working_dir: /app
     command: sh -c "pnpm install && pnpm dev:host"
 
 volumes:
   pnpm-store:
+    name: ${COMPOSE_PROJECT_NAME:-mychat}-pnpm-store
   pnpm-cache:
+    name: ${COMPOSE_PROJECT_NAME:-mychat}-pnpm-cache

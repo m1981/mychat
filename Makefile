@@ -123,4 +123,10 @@ colima-stop: ## Stop Colima development profile
 colima-list: ## List all Colima profiles
 	colima list
 
+clean-volumes: ## Clean PNPM volumes
+    docker volume rm ${COMPOSE_PROJECT_NAME:-mychat}-pnpm-store ${COMPOSE_PROJECT_NAME:-mychat}-pnpm-cache
+
+prune-cache: ## Prune PNPM cache
+    docker compose run --rm app pnpm store prune
+
 
