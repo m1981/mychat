@@ -2,8 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import useSubmit from '../useSubmit';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
+import type { ModelConfig } from '@type/chat';
 import useStore from '@store/store';
 import { createWrapper } from '@utils/test-utils';
+
+type MockStore = typeof useStore & {
+  getState: vi.Mock;
+  setState: vi.Mock;
+  subscribe: vi.Mock;
+  destroy: vi.Mock;
+};
 
 const mockSetChats = vi.fn();
 const mockSetError = vi.fn();
