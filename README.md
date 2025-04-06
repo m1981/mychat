@@ -127,3 +127,28 @@ graph TD
         style H fill:#99ff99,stroke-width:3px
     end
 ```
+
+
+## Configuration 
+
+```mermaid
+graph TD
+    A[tsconfig.json] -.->|references| B[tsconfig.node.json]
+    C[tsconfig.test.json] -->|extends| A
+    D[vite.config.ts] -->|references| B
+    E[vitest.config.ts] -->|uses| C
+    E -->|setupFiles| F[vitest.setup.ts]
+    G[package.json] -->|scripts| D
+    G -->|scripts| E
+
+    %% Add clarifying notes
+    classDef config fill:#f9f,stroke:#333,stroke-width:2px
+    class A,B,C config
+    
+    %% Add relationship notes
+    note1[tsconfig.json references node.json,<br>not extends it]
+    A --- note1
+    
+    note2[test.json extends base,<br>not the other way around]
+    C --- note2
+```

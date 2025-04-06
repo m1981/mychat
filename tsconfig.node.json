@@ -1,4 +1,16 @@
 {
+  /**
+   * Node-specific TypeScript Configuration
+   * Responsibilities:
+   * - Configuration for Node.js environment
+   * - Build tool configurations (Vite/Vitest)
+   * 
+   * Contracts:
+   * - Must only include configuration files
+   * - Must enable ESM support
+   * - Must not include application source code
+   * - Must maintain compatibility with Vite/Vitest
+   */
   "compilerOptions": {
     "composite": true,
     "module": "ESNext",

@@ -1,3 +1,19 @@
+/**
+ * Vite Configuration
+ * Responsibilities:
+ * - Build configuration and optimization
+ * - Development server setup
+ * - Plugin management
+ * - Asset bundling and chunking
+ * - Path aliases (must match tsconfig.json paths)
+ * 
+ * Contracts:
+ * - Must maintain path aliases in sync with tsconfig.json
+ * - Must not override test configurations (handled by vitest.config.ts)
+ * - Must maintain manual chunks for optimal code splitting
+ * - Must provide all necessary build optimizations
+ * - Must handle WASM and top-level await support
+ */
 import react from '@vitejs/plugin-react-swc';
 import { defineConfig } from 'vite';
 import topLevelAwait from 'vite-plugin-top-level-await';
@@ -53,7 +69,14 @@ export default defineConfig({
             'uuid',
             'lz-string',
             'papaparse'
-          ]
+          ],
+          'testing-utils': [
+            '@testing-library/react',
+            '@testing-library/user-event',
+            '@testing-library/jest-dom'
+          ],
+          'state-management': ['zustand', '@store'],
+          'api-layer': ['@api', '@models']
         }
       }
     },

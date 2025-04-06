@@ -1,4 +1,18 @@
-// vitest.config.ts
+/**
+ * Vitest Test Configuration
+ * Responsibilities:
+ * - Test environment setup
+ * - Coverage configuration
+ * - Test timeouts and retries
+ * - Test-specific path aliases
+ * 
+ * Contracts:
+ * - Must extend/inherit path aliases from vite.config.ts
+ * - Must maintain coverage thresholds
+ * - Must not conflict with Jest DOM matchers
+ * - Must handle all test-specific environment needs
+ * - Must maintain isolation between tests
+ */
 import path from 'path';
 
 import { defineConfig } from 'vitest/config';
@@ -9,6 +23,10 @@ export default defineConfig({
     globals: true,
 
     setupFiles: ['./vitest.setup.ts'],
+    typecheck: {
+      enabled: true,
+      tsconfig: './tsconfig.test.json'
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
@@ -18,8 +36,17 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.test.ts',
         '**/*.config.ts',
-        'coverage/**'
-      ]
+        'coverage/**',
+        '**/*.stories.*',
+        '**/*.constant.*',
+        '**/index.*'
+      ],
+      thresholds: {
+        statements: 80,
+        branches: 80,
+        functions: 80,
+        lines: 80
+      }
     },
     deps: {
       inline: [
@@ -34,6 +61,24 @@ export default defineConfig({
       threads: {
         singleThread: true
       }
+    },
+    retry: 2,
+    isolate: true,
+    watch: {
+      ignored: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/.git/**',
+        '**/coverage/**'
+      ]
+    },
+    snapshotFormat: {
+      printBasicPrototype: false,
+      escapeString: false
+    },
+    env: {
+      NODE_ENV: 'test',
+      VITE_TEST_MODE: 'true'
     }
   },
   resolve: {

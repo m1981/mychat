@@ -1,4 +1,19 @@
 {
+  /**
+   * TypeScript Base Configuration
+   * Responsibilities:
+   * - Core TypeScript compiler options
+   * - Path aliases for imports
+   * - Type checking rules
+   * - Project-wide TypeScript settings
+   * 
+   * Contracts:
+   * - Must maintain path aliases in sync with vite.config.ts
+   * - Must not include test-specific configurations
+   * - Must maintain strict type checking
+   * - Must be extended by tsconfig.test.json
+   * - Must be referenced by tsconfig.node.json
+   */
   "compilerOptions": {
     "types": [
       "vitest/globals",
@@ -32,9 +47,24 @@
       "@utils/*": ["./src/utils/*"],
       "@lib/*": ["./src/lib/*"],
       "@src/*": ["./src/*"]
-    }
+    },
+    // Add these recommended flags
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "verbatimModuleSyntax": true,
+    // Stricter type checking
+    "exactOptionalPropertyTypes": true,
+    // Performance improvements
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo"
   },
   "include": ["src"],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/__tests__/**",
+    "**/node_modules/**"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }],
   "exclude": ["node_modules", "dist", "build"]
 }

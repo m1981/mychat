@@ -16,12 +16,17 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
     "type-check": "tsc --noEmit",
     "type-watch": "tsc --noEmit --watch",
     "deps:check": "depcheck",
     "lint": "eslint . --ext .ts,.tsx --fix",
     "lint:check": "eslint . --ext .ts,.tsx",
-    "vercel-build": "NODE_ENV=test pnpm test && pnpm build"
+    "lint:test": "eslint 'src/**/*.test.{ts,tsx}'",
+    "vercel-build": "NODE_ENV=test pnpm test && pnpm build",
+    "typecheck": "tsc --noEmit && tsc --project tsconfig.test.json --noEmit",
+
+    "validate": "pnpm typecheck && pnpm test && pnpm lint"
   },
   "build": {
     "appId": "better-chatgpt",
