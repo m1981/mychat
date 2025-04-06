@@ -29,8 +29,12 @@ export default defineConfig({
     },
     testTimeout: 10000,
     hookTimeout: 10000,
-    pool: 'vmThreads',
-    threads: false
+    pool: 'forks',
+    poolOptions: {
+      threads: {
+        singleThread: true
+      }
+    }
   },
   resolve: {
     alias: {
