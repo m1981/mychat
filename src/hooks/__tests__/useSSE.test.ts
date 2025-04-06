@@ -1,8 +1,10 @@
 import { renderHook } from '@testing-library/react';
 import { useSSE } from '../useSSE';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach, Mock, MockInstance } from 'vitest';
 
 // Mock EventSource globally
+type MockCall = [string, (event: MessageEvent) => void];
+
 const mockEventSource = {
   addEventListener: vi.fn(),
   removeEventListener: vi.fn(),
@@ -75,8 +77,7 @@ describe('useSSE Hook', () => {
     const messageEvent2 = new MessageEvent('message', { data: 'Second message' });
     
     // Get the message handler from the mock calls
-    type MockCall = [event: string, listener: Function];
-    const mockCalls = (mockEventSource.addEventListener as Mock).mock.calls as MockCall[];
+    const mockCalls = (mockEventSource.addEventListener as MockInstance).mock.calls as MockCall[];
     const messageHandler = mockCalls.find(
       (call) => call[0] === 'message'
     )?.[1];

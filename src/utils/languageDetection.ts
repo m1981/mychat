@@ -50,7 +50,8 @@ export const detectCodeContent = (content: string): ExtendedCodeDetectionResult 
         isCode: true,
         type: 'code',
         language: detection.language || 'text',
-        relevance: detection.relevance
+        relevance: detection.relevance,
+        subLanguages: undefined
       };
     }
   } catch (error) {
