@@ -20,6 +20,9 @@ export default defineConfig({
         '**/*.config.ts',
         'coverage/**'
       ]
+    },
+    deps: {
+      inline: ['@testing-library/jest-dom']
     }
   },
   resolve: {
