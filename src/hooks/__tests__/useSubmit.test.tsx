@@ -5,6 +5,9 @@ import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 import type { ModelConfig } from '@type/chat';
 import useStore from '@store/store';
 import { createWrapper } from '@utils/test-utils';
+import { Mock, MockInstance } from 'vitest';
+import { StoreApi } from 'zustand';
+import { StoreState } from '@store/store';
 
 type MockStore = {
   getState: () => ReturnType<typeof useStore.getState>;
