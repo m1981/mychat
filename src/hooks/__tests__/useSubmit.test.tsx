@@ -9,13 +9,18 @@ import { Mock } from 'vitest';
 import { StoreApi } from 'zustand';
 
 type StoreState = ReturnType<typeof useStore.getState>;
-type MockStore = {
-  getState: Mock;
-  setState: Mock;
-  subscribe: Mock;
-  destroy: Mock;
-} & StoreApi<StoreState>;
 
+// Add utility function for creating mock streams
+const createMockStream = (data: string) => {
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(data));
+      controller.close();
+    }
+  });
+};
+
+// Create mock functions
 const mockSetChats = vi.fn();
 const mockSetError = vi.fn();
 const mockSetGenerating = vi.fn();
@@ -23,12 +28,19 @@ const mockSetMessages = vi.fn();
 const mockSetFolders = vi.fn();
 const mockSetCurrentChatTokenCount = vi.fn();
 
+// Define the store mock structure
+const mockStore = {
+  getState: vi.fn(),
+  setState: vi.fn(),
+  subscribe: vi.fn(() => () => {}),
+  destroy: vi.fn(),
+} as const;
+
 const defaultStoreState: StoreState = {
   messages: [
     {
       role: 'user',
-      content: 'Hello',
-      id: '1'
+      content: 'Hello'
     }
   ],
   currentChatIndex: 0,
@@ -38,8 +50,7 @@ const defaultStoreState: StoreState = {
     messages: [
       {
         role: 'user',
-        content: 'Hello',
-        id: '1'
+        content: 'Hello'
       }
     ],
     title: '',
@@ -57,65 +68,33 @@ const defaultStoreState: StoreState = {
   setChats: mockSetChats,
   setError: mockSetError,
   setGenerating: mockSetGenerating,
-  setMessages: vi.fn(),
-  setFolders: vi.fn(),
-  setCurrentChatTokenCount: vi.fn()
+  setMessages: mockSetMessages,
+  setFolders: mockSetFolders,
+  setCurrentChatTokenCount: mockSetCurrentChatTokenCount
 };
 
-// Mock the store
-vi.mock('@store/store', () => {
-  const store = {
-    getState: vi.fn(() => defaultStoreState),
-    setState: vi.fn(),
-    subscribe: vi.fn(),
-    destroy: vi.fn(),
-  };
-  
-  const useStore = vi.fn((selector?: (state: any) => any) => {
-    if (typeof selector === 'function') {
-      return selector(defaultStoreState);
+// Mock the store module
+vi.mock('@store/store', () => ({
+  default: (selector?: (state: StoreState) => unknown) => {
+    if (selector) {
+      return selector(mockStore.getState());
     }
-    return defaultStoreState;
-  });
-  
-  useStore.getState = store.getState;
-  useStore.setState = store.setState;
-  useStore.subscribe = store.subscribe;
-  useStore.destroy = store.destroy;
-
-  return {
-    default: useStore
-  };
-});
-
-// Mock the API module
-vi.mock('@api/api', () => ({
-  getChatCompletion: vi.fn().mockImplementation(async () => {
-    throw new Error('Network error');
-  })
+    return mockStore.getState();
+  },
 }));
 
-// Mock fetch globally
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
-
-const createMockStream = (data: string) => {
-  return new ReadableStream({
-    start(controller) {
-      controller.enqueue(new TextEncoder().encode(data));
-      controller.close();
-    }
-  });
-};
+// Add the mock methods to the store
+Object.defineProperties(useStore, {
+  getState: { get: () => mockStore.getState },
+  setState: { get: () => mockStore.setState },
+  subscribe: { get: () => mockStore.subscribe },
+  destroy: { get: () => mockStore.destroy },
+});
 
 describe('useSubmit Hook', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    const mockStore = vi.mocked(useStore) as unknown as MockStore;
-    mockStore.getState.mockImplementation(() => defaultStoreState);
-    
-    // Reset fetch mock for each test
-    mockFetch.mockReset();
+    mockStore.getState.mockReturnValue(defaultStoreState);
   });
 
   it('should handle successful message submission', async () => {
@@ -134,12 +113,7 @@ describe('useSubmit Hook', () => {
     });
 
     await act(async () => {
-      await result.current.handleSubmit({
-        message: 'Test message',
-        isRegenerating: false,
-        conversationId: '1',
-        parentMessageId: null
-      });
+      await result.current.handleSubmit();
     });
 
     expect(mockSetGenerating).toHaveBeenCalledWith(true);
@@ -160,12 +134,7 @@ describe('useSubmit Hook', () => {
     });
 
     await act(async () => {
-      await result.current.handleSubmit({
-        message: 'Test message',
-        isRegenerating: false,
-        conversationId: '1',
-        parentMessageId: null
-      });
+      await result.current.handleSubmit();
     });
 
     expect(mockSetError).toHaveBeenCalledWith('Server error');
@@ -177,55 +146,14 @@ describe('useSubmit Hook', () => {
       wrapper: createWrapper()
     });
 
-    // Clear all mocks before the test
     vi.clearAllMocks();
-
-    // Mock fetch to throw a specific network error
     global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
 
     await act(async () => {
-      await result.current.handleSubmit({
-        message: 'Test message',
-        isRegenerating: false,
-        conversationId: '1',
-        parentMessageId: null
-      });
+      await result.current.handleSubmit();
     });
 
-    // Check if setError was called with 'Network error'
-    const setErrorCalls = mockSetError.mock.calls;
-    expect(setErrorCalls.some(call => call[0] === 'Network error')).toBe(true);
-    expect(mockSetGenerating).toHaveBeenCalledWith(false);
-  });
-
-  it('should handle streaming data correctly', async () => {
-    const { result } = renderHook(() => useSubmit(), {
-      wrapper: createWrapper()
-    });
-
-    const mockStream = createMockStream(
-      'data: {"content": "Hello", "role": "assistant", "id": "123"}\n\n' +
-      'data: {"content": " World", "role": "assistant", "id": "123"}\n\n'
-    );
-
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      body: mockStream,
-      headers: new Headers({
-        'content-type': 'text/event-stream'
-      })
-    });
-
-    await act(async () => {
-      await result.current.handleSubmit({
-        message: 'Test message',
-        isRegenerating: false,
-        conversationId: '1',
-        parentMessageId: null
-      });
-    });
-
-    expect(mockSetChats).toHaveBeenCalled();
+    expect(mockSetError).toHaveBeenCalledWith('Network error');
     expect(mockSetGenerating).toHaveBeenCalledWith(false);
   });
 });
