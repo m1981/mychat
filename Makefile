@@ -6,6 +6,7 @@ COLIMA_PROFILE = dev
 COLIMA_CPU = 4
 COLIMA_MEMORY = 8
 COLIMA_DISK = 60
+PNPM_FROZEN_LOCKFILE ?= false
 
 # Colors for help system
 BLUE := \033[36m
@@ -24,13 +25,16 @@ help: ## Display this help
 
 
 ##@ Development
-.PHONY: dev dev-fast clean
+.PHONY: dev dev-strict dev-fast clean
 
-dev: ## Start development environment (clean start)
-	docker compose up --build
+dev: ## Start development environment (allowing lockfile updates)
+	PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE) up --build
+
+dev-strict: ## Start development environment (strict lockfile checking)
+	PNPM_FROZEN_LOCKFILE=true $(DOCKER_COMPOSE) up --build
 
 dev-fast: ## Start development environment (reuse cache)
-	docker compose up
+	PNPM_FROZEN_LOCKFILE=$(PNPM_FROZEN_LOCKFILE) $(DOCKER_COMPOSE) up
 
 clean: ## Clean development environment
 	docker compose down
@@ -54,27 +58,31 @@ pkg-add: ## Add production package(s). Usage: make pkg-add p=package-name
 		echo "Error: Package name required. Usage: make pkg-add p=package-name"; \
 		exit 1; \
 	fi
-	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) add $(p)
+	$(DOCKER_COMPOSE) run --rm app pnpm add $(p)
+	$(MAKE) pkg-sync
 
 pkg-add-dev: ## Add development package(s). Usage: make pkg-add-dev p=package-name
 	@if [ -z "$(p)" ]; then \
 		echo "Error: Package name required. Usage: make pkg-add-dev p=package-name"; \
 		exit 1; \
 	fi
-	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) add -D $(p)
+	$(DOCKER_COMPOSE) run --rm app pnpm add -D $(p)
+	$(MAKE) pkg-sync
 
 pkg-remove: ## Remove package(s). Usage: make pkg-remove p=package-name
 	@if [ -z "$(p)" ]; then \
 		echo "Error: Package name required. Usage: make pkg-remove p=package-name"; \
 		exit 1; \
 	fi
-	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) remove $(p)
+	$(DOCKER_COMPOSE) run --rm app pnpm remove $(p)
+	$(MAKE) pkg-sync
 
-pkg-check: ## Check for unused and missing dependencies
-	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) deps:check
+pkg-sync: ## Sync pnpm-lock.yaml with package.json
+	PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE) run --rm app pnpm install
+	git add package.json pnpm-lock.yaml
 
-pkg-sync: ## Sync yarn.lock with package.json (fix lock file issues)
-	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) install
+pkg-check: ## Check for outdated dependencies
+	$(DOCKER_COMPOSE) run --rm app pnpm outdated
 
 ##@ Building
 .PHONY: build build-quick

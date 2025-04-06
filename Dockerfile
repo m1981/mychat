@@ -15,6 +15,13 @@ COPY --chown=node:node package.json pnpm-lock.yaml ./
 USER node
 
 # Fetch dependencies (will be installed at runtime)
-RUN pnpm fetch
+ARG PNPM_FROZEN_LOCKFILE=false
+ENV PNPM_FROZEN_LOCKFILE=${PNPM_FROZEN_LOCKFILE}
+
+RUN if [ "$PNPM_FROZEN_LOCKFILE" = "true" ] ; then \
+        pnpm fetch --frozen-lockfile ; \
+    else \
+        pnpm fetch ; \
+    fi
 
 CMD ["pnpm", "dev:host"]

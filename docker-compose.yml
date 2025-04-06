@@ -1,6 +1,9 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        - PNPM_FROZEN_LOCKFILE=${PNPM_FROZEN_LOCKFILE:-false}
     container_name: ${CONTAINER_NAME:-mychat-app}
     ports:
       - "5173:5173"
@@ -12,6 +15,7 @@ services:
       - NODE_ENV=development
       - PNPM_STORE_DIR=/home/node/.local/share/pnpm/store
       - PNPM_CACHE_DIR=/home/node/.cache/pnpm
+      - PNPM_FROZEN_LOCKFILE=${PNPM_FROZEN_LOCKFILE:-false}
     working_dir: /app
     command: sh -c "pnpm install && pnpm dev:host"
 
