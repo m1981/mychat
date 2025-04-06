@@ -27,6 +27,22 @@ const mockSetGenerating = vi.fn();
 const mockSetMessages = vi.fn();
 const mockSetFolders = vi.fn();
 const mockSetCurrentChatTokenCount = vi.fn();
+const mockSetCurrentChatIndex = vi.fn();
+const mockSetInputRole = vi.fn();
+const mockSetApiKey = vi.fn();
+const mockSetApiEndpoint = vi.fn();
+const mockSetFirstVisit = vi.fn();
+const mockSetOpenConfig = vi.fn();
+const mockSetTheme = vi.fn();
+const mockSetAutoTitle = vi.fn();
+const mockSetHideMenuOptions = vi.fn();
+const mockSetHideSideMenu = vi.fn();
+const mockSetEnterToSubmit = vi.fn();
+const mockSetLayoutWidth = vi.fn();
+const mockSetDefaultChatConfig = vi.fn();
+const mockSetDefaultSystemMessage = vi.fn();
+const mockSetProvider = vi.fn();
+const mockSetPrompts = vi.fn();
 
 // Define the store mock structure
 const mockStore = {
@@ -45,7 +61,7 @@ const defaultStoreState: StoreState = {
   ],
   currentChatIndex: 0,
   currentChatTokenCount: 0,
-  folders: [],
+  folders: {},
   chats: [{
     messages: [
       {
@@ -55,6 +71,7 @@ const defaultStoreState: StoreState = {
     ],
     title: '',
     id: '1',
+    titleSet: false,
     config: {
       provider: 'openai',
       modelConfig: DEFAULT_MODEL_CONFIG
@@ -65,12 +82,57 @@ const defaultStoreState: StoreState = {
   },
   error: null,
   generating: false,
+  
+  // Chat slice setters
   setChats: mockSetChats,
   setError: mockSetError,
   setGenerating: mockSetGenerating,
   setMessages: mockSetMessages,
   setFolders: mockSetFolders,
-  setCurrentChatTokenCount: mockSetCurrentChatTokenCount
+  setCurrentChatIndex: mockSetCurrentChatIndex,
+  setCurrentChatTokenCount: mockSetCurrentChatTokenCount,
+  
+  // Input slice properties
+  inputRole: 'user',
+  setInputRole: mockSetInputRole,
+
+  // Auth slice properties
+  apiEndpoints: {
+    openai: 'https://api.openai.com/v1/chat/completions',
+    anthropic: 'https://api.anthropic.com/v1/messages'
+  },
+  firstVisit: true,
+  setApiKey: mockSetApiKey,
+  setApiEndpoint: mockSetApiEndpoint,
+  setFirstVisit: mockSetFirstVisit,
+
+  // Prompt slice properties
+  prompts: [],  // Add empty array for prompts
+  setPrompts: mockSetPrompts,  // Add the setPrompts function
+
+  // Config slice properties
+  openConfig: false,
+  theme: 'dark',
+  autoTitle: true,
+  hideMenuOptions: false,
+  hideSideMenu: false,
+  enterToSubmit: true,
+  layoutWidth: 'normal',
+  defaultChatConfig: {
+    provider: 'anthropic',
+    modelConfig: DEFAULT_MODEL_CONFIG,
+  },
+  defaultSystemMessage: 'You are a helpful AI assistant',
+  setOpenConfig: mockSetOpenConfig,
+  setTheme: mockSetTheme,
+  setAutoTitle: mockSetAutoTitle,
+  setHideMenuOptions: mockSetHideMenuOptions,
+  setHideSideMenu: mockSetHideSideMenu,
+  setEnterToSubmit: mockSetEnterToSubmit,
+  setLayoutWidth: mockSetLayoutWidth,
+  setDefaultChatConfig: mockSetDefaultChatConfig,
+  setDefaultSystemMessage: mockSetDefaultSystemMessage,
+  setProvider: mockSetProvider
 };
 
 // Mock the store module
