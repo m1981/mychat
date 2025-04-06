@@ -1,4 +1,9 @@
-FROM node:22-alpine
+# Specify platform explicitly
+FROM --platform=linux/amd64 node:22-alpine
+
+# Add required build dependencies
+RUN apk add --no-cache python3 make g++
+
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
@@ -8,8 +13,11 @@ RUN mkdir -p /home/node/.local/share/pnpm/store /home/node/.cache/pnpm && \
     chown -R node:node /home/node/.local /home/node/.cache && \
     chown -R node:node /app
 
-# Copy package files
-COPY --chown=node:node package.json pnpm-lock.yaml ./
+# Copy package.json first (pnpm-lock.yaml might not exist initially)
+COPY --chown=node:node package.json ./
+
+# Copy pnpm-lock.yaml if it exists
+COPY --chown=node:node pnpm-lock.yaml* ./
 
 # Switch to non-root user for security
 USER node
@@ -18,10 +26,13 @@ USER node
 ARG PNPM_FROZEN_LOCKFILE=false
 ENV PNPM_FROZEN_LOCKFILE=${PNPM_FROZEN_LOCKFILE}
 
-RUN if [ "$PNPM_FROZEN_LOCKFILE" = "true" ] ; then \
-        pnpm fetch --frozen-lockfile ; \
-    else \
-        pnpm fetch ; \
-    fi
+# Force platform-specific installation
+ENV ESBUILD_BINARY_PATH=/app/node_modules/esbuild/bin/esbuild
+
+# Initial install to generate lock file if it doesn't exist
+RUN pnpm install
+
+# Rebuild platform-specific packages
+RUN pnpm rebuild esbuild
 
 CMD ["pnpm", "dev:host"]
