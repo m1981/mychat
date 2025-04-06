@@ -57,12 +57,20 @@ export class TitleGenerator {
     private readonly generateTitle: (messages: MessageInterface[], config: ModelConfig) => Promise<string>,
     private readonly language: string,
     private readonly defaultConfig: ModelConfig
-  ) {}
+  ) {
+    if (!defaultConfig || !defaultConfig.model) {
+      throw new Error('Invalid model configuration');
+    }
+  }
 
   async generateChatTitle(
     userMessage: string,
     assistantMessage: string
   ): Promise<string> {
+    if (!this.defaultConfig || !this.defaultConfig.model) {
+      throw new Error('Invalid model configuration');
+    }
+
     const message: MessageInterface = {
       role: 'user',
       content: `Generate a title in less than 6 words for the following message (language: ${this.language}):\n"""\nUser: ${userMessage}\nAssistant: ${assistantMessage}\n"""`,
