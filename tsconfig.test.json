@@ -15,19 +15,11 @@
    */
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": [
-      "vitest/globals",
-      "@testing-library/jest-dom",
-      "node"
-    ],
-    "isolatedModules": true
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true
   },
-  "include": [
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "src/**/*.spec.ts",
-    "src/**/*.spec.tsx",
-    "src/__tests__/**/*"
-  ],
+  "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.spec.ts", "src/**/*.spec.tsx"],
   "exclude": ["node_modules"]
 }

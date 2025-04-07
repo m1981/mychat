@@ -26,7 +26,8 @@ export default defineConfig({
     typecheck: {
       enabled: true,
       tsconfig: './tsconfig.test.json',
-      include: ['src/**/*.{test,spec}.{ts,tsx}']
+      include: ['src/**/*.{test,spec}.{ts,tsx}'],
+      checker: 'tsc' // explicitly set the checker
     },
     coverage: {
       provider: 'v8',
