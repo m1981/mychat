@@ -1,7 +1,7 @@
 
+import { getEnvVar } from '@utils/env';
 import { officialAPIEndpoint } from '@constants/auth';
 import { ProviderKey } from '@type/chat';
-
 import { StoreSlice } from './store';
 
 export interface AuthSlice {
@@ -15,8 +15,8 @@ export interface AuthSlice {
 
 export const createAuthSlice: StoreSlice<AuthSlice> = (set, get) => ({
   apiKeys: {
-    openai: import.meta.env.VITE_OPENAI_API_KEY || '',
-    anthropic: import.meta.env.VITE_ANTHROPIC_API_KEY || '',
+    openai: getEnvVar('VITE_OPENAI_API_KEY', ''),
+    anthropic: getEnvVar('VITE_ANTHROPIC_API_KEY', ''),
   },
   apiEndpoints: {
     openai: officialAPIEndpoint,
