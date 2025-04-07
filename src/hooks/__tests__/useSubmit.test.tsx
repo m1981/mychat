@@ -164,26 +164,65 @@ describe('useSubmit Hook', () => {
       wrapper: createWrapper()
     });
 
-    // Create a function that returns a new Response each time it's called
-    global.fetch = vi.fn().mockImplementation(() => {
-      return Promise.resolve(new Response(
-        createMockStream('data: {"content": "Hi there", "role": "assistant", "id": "123"}\n\n'),
-        {
-          status: 200,
-          headers: new Headers({
-            'content-type': 'text/event-stream'
-          })
+    // Mock store state
+    mockStore.getState.mockReturnValue({
+      ...defaultStoreState,
+      autoTitle: true,
+      chats: [{
+        messages: [
+          { role: 'user', content: 'Hello' },
+          { role: 'assistant', content: 'Hi there' }
+        ],
+        title: '',
+        id: '1',
+        titleSet: false,
+        config: {
+          provider: 'openai',
+          modelConfig: DEFAULT_MODEL_CONFIG
         }
-      ));
+      }],
+      currentChatIndex: 0
+    });
+
+    // Create response factories to get fresh Response objects
+    const createStreamingResponse = () => new Response(
+      createMockStream('data: {"content": "Hi there", "role": "assistant", "id": "123"}\n\n'),
+      {
+        status: 200,
+        headers: new Headers({ 'content-type': 'text/event-stream' })
+      }
+    );
+
+    const createTitleResponse = () => new Response(
+      JSON.stringify({ content: "Test Chat Title" }),
+      {
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' })
+      }
+    );
+
+    // Mock fetch to return fresh Response objects
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url.includes('/api/chat/openai')) {
+        if (url.includes('stream=true')) {
+          return Promise.resolve(createStreamingResponse());
+        }
+        return Promise.resolve(createTitleResponse());
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });
 
     await act(async () => {
       await result.current.handleSubmit();
     });
 
+    // Add debug logging
+    console.log('Fetch calls:', (global.fetch as Mock).mock.calls.map(call => call[0]));
+
     expect(mockSetGenerating).toHaveBeenCalledWith(true);
     expect(mockSetChats).toHaveBeenCalled();
     expect(mockSetGenerating).toHaveBeenCalledWith(false);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
   it('should handle API errors', async () => {
