@@ -164,14 +164,17 @@ describe('useSubmit Hook', () => {
       wrapper: createWrapper()
     });
 
-    const mockStream = createMockStream('data: {"content": "Hi there", "role": "assistant", "id": "123"}\n\n');
-    
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      body: mockStream,
-      headers: new Headers({
-        'content-type': 'text/event-stream'
-      })
+    // Create a function that returns a new Response each time it's called
+    global.fetch = vi.fn().mockImplementation(() => {
+      return Promise.resolve(new Response(
+        createMockStream('data: {"content": "Hi there", "role": "assistant", "id": "123"}\n\n'),
+        {
+          status: 200,
+          headers: new Headers({
+            'content-type': 'text/event-stream'
+          })
+        }
+      ));
     });
 
     await act(async () => {
@@ -188,11 +191,11 @@ describe('useSubmit Hook', () => {
       wrapper: createWrapper()
     });
 
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-      statusText: 'Server Error',
-      text: () => Promise.resolve('Server error')
+    global.fetch = vi.fn().mockImplementation(() => {
+      return Promise.resolve(new Response('Server error', {
+        status: 500,
+        statusText: 'Server Error'
+      }));
     });
 
     await act(async () => {
@@ -208,14 +211,41 @@ describe('useSubmit Hook', () => {
       wrapper: createWrapper()
     });
 
-    vi.clearAllMocks();
-    global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
+    global.fetch = vi.fn().mockImplementation(() => {
+      throw new Error('Network error');
+    });
 
     await act(async () => {
       await result.current.handleSubmit();
     });
 
     expect(mockSetError).toHaveBeenCalledWith('Network error');
+    expect(mockSetGenerating).toHaveBeenCalledWith(false);
+  });
+
+  it('should handle non-streaming response', async () => {
+    const { result } = renderHook(() => useSubmit(), {
+      wrapper: createWrapper()
+    });
+
+    global.fetch = vi.fn().mockImplementation(() => {
+      return Promise.resolve(new Response(
+        JSON.stringify({ content: "Test response" }), 
+        {
+          status: 200,
+          headers: new Headers({
+            'content-type': 'application/json'
+          })
+        }
+      ));
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    expect(mockSetGenerating).toHaveBeenCalledWith(true);
+    expect(mockSetChats).toHaveBeenCalled();
     expect(mockSetGenerating).toHaveBeenCalledWith(false);
   });
 });
