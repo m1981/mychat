@@ -250,16 +250,44 @@ describe('useSubmit Hook', () => {
       wrapper: createWrapper()
     });
 
-    global.fetch = vi.fn().mockImplementation(() => {
-      throw new Error('Network error');
-    });
+    // Setup mock state
+    const mockState = {
+      ...defaultStoreState,
+      generating: false,
+      chats: [{
+        messages: [{ role: 'user', content: 'Hello' }],
+        title: '',
+        id: '1',
+        titleSet: false,
+        config: {
+          provider: 'openai',
+          modelConfig: DEFAULT_MODEL_CONFIG
+        }
+      }],
+      currentChatIndex: 0
+    };
+    
+    mockStore.getState.mockReturnValue(mockState);
+
+    // Clear all mocks before test
+    vi.clearAllMocks();
+    
+    // Mock fetch to simulate a network error
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
     await act(async () => {
       await result.current.handleSubmit();
     });
 
-    expect(mockSetError).toHaveBeenCalledWith('Network error');
-    expect(mockSetGenerating).toHaveBeenCalledWith(false);
+    // Verify the generating state transitions
+    expect(mockSetGenerating).toHaveBeenCalledTimes(2);
+    expect(mockSetGenerating).toHaveBeenNthCalledWith(1, true);
+    expect(mockSetGenerating).toHaveBeenNthCalledWith(2, false);
+    
+    // Verify that the first call resets the error and the last call sets the network error
+    const errorCalls = mockSetError.mock.calls;
+    expect(errorCalls[0]).toEqual([null]); // First call should reset error
+    expect(errorCalls[errorCalls.length - 1]).toEqual(['Network error']); // Last call should set the network error
   });
 
   it('should handle non-streaming response', async () => {

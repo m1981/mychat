@@ -174,12 +174,19 @@ const useSubmit = () => {
 
   const handleSubmit = async () => {
     const currentState = useStore.getState();
+    
+    if (currentState.generating || !currentState.chats) {
+      return;
+    }
 
-    if (generating || !chats) return;
+    setGenerating(true);
+    setError(null);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
     try {
       await checkStorageQuota();
-      if (useStore.getState().error) return;
 
       const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(currentState.chats));
       const currentMessages = updatedChats[currentState.currentChatIndex].messages;
@@ -190,7 +197,6 @@ const useSubmit = () => {
       });
 
       setChats(updatedChats);
-      setGenerating(true);
 
       const { modelConfig } = updatedChats[currentChatIndex].config;
       
@@ -201,9 +207,6 @@ const useSubmit = () => {
 
       // Separate messages from config
       const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
 
       const response = await fetch(`/api/chat/${providerKey}`, {
         method: 'POST',
@@ -219,18 +222,14 @@ const useSubmit = () => {
         signal: controller.signal,
       });
 
-      clearTimeout(timeout);
-
       if (!response.ok) {
         const errorText = await response.text();
-        setError(errorText || `HTTP error! status: ${response.status}`);
-        return;
+        throw new Error(errorText || `HTTP error! status: ${response.status}`);
       }
 
       const reader = response.body?.getReader();
       if (!reader) {
-        setError('Response body is null');
-        return;
+        throw new Error('Response body is null');
       }
 
       await streamHandler.processStream(reader, (content) => {
@@ -248,8 +247,13 @@ const useSubmit = () => {
 
     } catch (error) {
       console.error('❌ Submit error:', error);
-      setError(error instanceof Error ? error.message : 'An unknown error occurred');
+      // Only set error if it's a non-empty string
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      if (errorMessage) {
+        setError(errorMessage);
+      }
     } finally {
+      clearTimeout(timeout);
       setGenerating(false);
     }
   };
