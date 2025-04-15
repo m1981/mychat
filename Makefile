@@ -9,6 +9,18 @@ COLIMA_DISK = 60
 PNPM_FROZEN_LOCKFILE ?= false
 PLATFORM ?= linux/arm64
 
+# User/Group detection with fallbacks
+UID := $(shell id -u)
+GID := $(shell id -g)
+# If GID is 20 (common conflict), use an alternative
+ifeq ($(GID),20)
+    GID := 1020
+endif
+
+# Export these variables for docker-compose
+export UID
+export GID
+
 # Colors for help system
 BLUE := \033[36m
 YELLOW := \033[33m
@@ -29,18 +41,21 @@ help: ## Display this help
 .PHONY: dev dev-strict dev-fast clean clean-rebuild
 
 dev: ## Start development environment (flexible mode for rapid development)
-	PLATFORM=$(PLATFORM) PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE) up --build
+	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE) up --build
 
 dev-strict: ## Start development environment (strict mode for CI/CD)
-	PNPM_FROZEN_LOCKFILE=true $(DOCKER_COMPOSE) up --build
+	UID=$(UID) GID=$(GID) PNPM_FROZEN_LOCKFILE=true $(DOCKER_COMPOSE) up --build
 
 dev-fast: ## Quick start development (reuse existing cache)
-	PNPM_FROZEN_LOCKFILE=$(PNPM_FROZEN_LOCKFILE) $(DOCKER_COMPOSE) up
+	UID=$(UID) GID=$(GID) PNPM_FROZEN_LOCKFILE=$(PNPM_FROZEN_LOCKFILE) $(DOCKER_COMPOSE) up
 
-clean-rebuild: clean ## Clean and rebuild (full reset of development environment)
-	docker compose down --volumes --remove-orphans
-	docker compose build --no-cache
-	PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE) up --build
+clean: ## Stop and remove containers
+	$(DOCKER_COMPOSE) down
+	rm -rf node_modules
+
+clean-rebuild: clean ## Clean and rebuild development environment
+	$(DOCKER_COMPOSE) build --no-cache
+	make dev
 
 logs: ## Show container logs
 	$(DOCKER_COMPOSE) logs -f
@@ -79,26 +94,17 @@ pkg-sync: ## Synchronize package files and git stage
 pkg-check: ## Check for outdated dependencies
 	$(DOCKER_COMPOSE) run --rm app pnpm outdated
 
-##@ Cache Management
-.PHONY: clean-volumes prune-cache
-
-clean-volumes: ## Clean PNPM volumes (full cache reset)
-	docker volume rm ${COMPOSE_PROJECT_NAME:-mychat}-pnpm-store ${COMPOSE_PROJECT_NAME:-mychat}-pnpm-cache
-
-prune-cache: ## Prune PNPM cache (optimize storage)
-	docker compose run --rm app pnpm store prune
-
-##@ Testing Workflow
+##@ Testing
 .PHONY: test test-watch test-coverage
 
 test: ## Run tests
-	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) test
+	$(DOCKER_COMPOSE) run --rm app sh -c "pnpm install && pnpm test"
 
 test-watch: ## Run tests in watch mode
-	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) test:watch
+	$(DOCKER_COMPOSE) run --rm app sh -c "pnpm install && pnpm test:watch"
 
 test-coverage: ## Run tests with coverage report
-	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) test:coverage
+	$(DOCKER_COMPOSE) run --rm app sh -c "pnpm install && pnpm test:coverage"
 
 ##@ Quality Checks
 .PHONY: lint type-check

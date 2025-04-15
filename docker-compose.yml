@@ -5,29 +5,14 @@ services:
       context: .
       args:
         - USER_ID=${UID:-501}
-        - GROUP_ID=${GID:-501}  # Changed to use same as UID if not specified
-        - PNPM_FROZEN_LOCKFILE=${PNPM_FROZEN_LOCKFILE:-false}
-    container_name: ${CONTAINER_NAME:-mychat-app}
-    security_opt:
-      - seccomp:unconfined
-    init: true
+        - GROUP_ID=${GID:-20}
+    container_name: mychat-app
     ports:
       - "5173:5173"
     volumes:
-      - .:/app:delegated
+      - .:/app
       - /app/node_modules
-      - pnpm-store:/home/node/.local/share/pnpm/store
-      - pnpm-cache:/home/node/.cache/pnpm
     environment:
       - NODE_ENV=development
-      - PNPM_STORE_DIR=/home/node/.local/share/pnpm/store
-      - PNPM_CACHE_DIR=/home/node/.cache/pnpm
-      - PNPM_FROZEN_LOCKFILE=${PNPM_FROZEN_LOCKFILE:-false}
     working_dir: /app
-    command: sh
-
-volumes:
-  pnpm-store:
-    name: ${COMPOSE_PROJECT_NAME:-mychat}-pnpm-store
-  pnpm-cache:
-    name: ${COMPOSE_PROJECT_NAME:-mychat}-pnpm-cache
+    command: sh -c "pnpm install && pnpm dev:host"
