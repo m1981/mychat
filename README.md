@@ -152,3 +152,59 @@ graph TD
     note2[test.json extends base,<br>not the other way around]
     C --- note2
 ```
+
+## Container Setup Architecture
+
+### Package Installation Strategy
+
+Our setup implements a two-stage package installation approach:
+
+1. **Build-time Installation** (Dockerfile)
+```dockerfile
+COPY --chown=node:node package.json ./
+COPY --chown=node:node pnpm-lock.yaml* ./
+RUN pnpm install
+```
+Purpose:
+- Generates initial lock file if missing
+- Creates cached Docker layer for faster rebuilds
+- Ensures platform-specific compilation (linux/amd64)
+- Pre-compiles critical dependencies
+
+2. **Runtime Installation** (docker-compose.yml)
+```yaml
+command: sh -c "pnpm install && pnpm dev:host"
+```
+Purpose:
+- Syncs dependencies with host-mounted changes
+- Enables real-time development workflow
+- Maintains development flexibility
+
+### Volume Strategy
+
+```yaml
+volumes:
+  - .:/app                                        # Source code
+  - pnpm-store:/home/node/.local/share/pnpm/store # Global package cache
+  - pnpm-cache:/home/node/.cache/pnpm             # Project-specific cache
+```
+
+This structure:
+- Maintains fast package operations across container restarts
+- Prevents unnecessary re-downloads
+- Separates global cache from project-specific cache
+
+### Development Modes
+
+The `PNPM_FROZEN_LOCKFILE` flag controls dependency installation behavior:
+- `false`: Flexible mode for local development (allows updates)
+- `true`: Strict mode for CI/CD (enforces lock file)
+
+### Security Considerations
+
+- Non-root user (`node`) for container operations
+- Platform-specific builds (`linux/amd64`)
+- Proper file ownership (`--chown=node:node`)
+- Isolated package caches
+
+This architecture balances development speed, security, and consistency while maintaining proper caching and platform compatibility.
