@@ -98,7 +98,11 @@ export default defineConfig({
   optimizeDeps: {
     include: ['mermaid'],
     esbuildOptions: {
-      target: 'esnext'
+      target: 'esnext',
+      platform: 'node',
+      supported: {
+        'dynamic-import': true
+      }
     }
   },
   server: {
