@@ -1,38 +1,59 @@
-# Specify platform explicitly
-FROM --platform=linux/amd64 node:22-alpine
+FROM node:22-alpine
 
-# Add required build dependencies
-RUN apk add --no-cache python3 make g++
+ARG USER_ID=1000
+ARG GROUP_ID=1000
 
+# Install necessary system packages (grouped for better caching)
+RUN apk add --no-cache \
+    shadow \
+    python3 \
+    make \
+    g++ \
+    su-exec
+
+# Update node user's UID/GID to match host user
+RUN deluser node && \
+    (getent group ${GROUP_ID} || addgroup -g ${GROUP_ID} node) && \
+    adduser -u ${USER_ID} -G $(getent group ${GROUP_ID} | cut -d: -f1) -s /bin/sh -D node
+
+# Enable PNPM
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Create and set ownership of PNPM directories and app directory
-RUN mkdir -p /home/node/.local/share/pnpm/store /home/node/.cache/pnpm && \
-    chown -R node:node /home/node/.local /home/node/.cache && \
-    chown -R node:node /app
+# Create and set ownership of directories (grouped for better layer caching)
+RUN mkdir -p \
+    /home/node/.local/share/pnpm/store \
+    /home/node/.cache/pnpm \
+    /app/node_modules && \
+    chown -R node:$(getent group ${GROUP_ID} | cut -d: -f1) \
+        /home/node \
+        /app
 
-# Copy package.json first (pnpm-lock.yaml might not exist initially)
-COPY --chown=node:node package.json ./
+# Copy package files with correct ownership
+COPY --chown=node:node package.json pnpm-lock.yaml* ./
 
-# Copy pnpm-lock.yaml if it exists
-COPY --chown=node:node pnpm-lock.yaml* ./
-
-# Switch to non-root user for security
+# Switch to non-root user
 USER node
 
-# Fetch dependencies (will be installed at runtime)
+# Configure PNPM environment (grouped related ENV settings)
+ENV PNPM_HOME=/home/node/.local/share/pnpm \
+    PATH=/home/node/.local/share/pnpm:$PATH \
+    PNPM_STORE_DIR=/home/node/.local/share/pnpm/store \
+    PNPM_CACHE_DIR=/home/node/.cache/pnpm \
+    ESBUILD_BINARY_PATH=/app/node_modules/esbuild/bin/esbuild
+
+# Set build-time variables
 ARG PNPM_FROZEN_LOCKFILE=false
 ENV PNPM_FROZEN_LOCKFILE=${PNPM_FROZEN_LOCKFILE}
 
-# Force platform-specific installation
-ENV ESBUILD_BINARY_PATH=/app/node_modules/esbuild/bin/esbuild
+# Initial install and rebuild platform-specific packages
+RUN pnpm install && \
+    pnpm rebuild esbuild
 
-# Initial install to generate lock file if it doesn't exist
-RUN pnpm install
+# Setup entrypoint
+COPY --chown=node:node docker/entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Rebuild platform-specific packages
-RUN pnpm rebuild esbuild
-
-CMD ["pnpm", "dev:host"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["sh"]

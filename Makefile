@@ -7,6 +7,7 @@ COLIMA_CPU = 4
 COLIMA_MEMORY = 8
 COLIMA_DISK = 60
 PNPM_FROZEN_LOCKFILE ?= false
+PLATFORM ?= linux/arm64
 
 # Colors for help system
 BLUE := \033[36m
@@ -28,7 +29,7 @@ help: ## Display this help
 .PHONY: dev dev-strict dev-fast clean clean-rebuild
 
 dev: ## Start development environment (flexible mode for rapid development)
-	PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE) up --build
+	PLATFORM=$(PLATFORM) PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE) up --build
 
 dev-strict: ## Start development environment (strict mode for CI/CD)
 	PNPM_FROZEN_LOCKFILE=true $(DOCKER_COMPOSE) up --build
