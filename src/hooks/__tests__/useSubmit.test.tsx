@@ -1,5 +1,5 @@
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import useSubmit from '../useSubmit';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
@@ -154,9 +154,19 @@ Object.defineProperties(useStore, {
 });
 
 describe('useSubmit Hook', () => {
+  // Add console.error mock
+  const originalConsoleError = console.error;
+  
   beforeEach(() => {
     vi.clearAllMocks();
     mockStore.getState.mockReturnValue(defaultStoreState);
+    // Silence console.error during tests
+    console.error = vi.fn();
+  });
+
+  // Restore console.error after tests
+  afterEach(() => {
+    console.error = originalConsoleError;
   });
 
   it('should handle successful message submission', async () => {
@@ -243,6 +253,11 @@ describe('useSubmit Hook', () => {
 
     expect(mockSetError).toHaveBeenCalledWith('Server error');
     expect(mockSetGenerating).toHaveBeenCalledWith(false);
+    // Optionally verify the error was logged
+    expect(console.error).toHaveBeenCalledWith(
+      '❌ Submit error:',
+      expect.any(Error)
+    );
   });
 
   it('should handle network errors', async () => {
@@ -288,6 +303,11 @@ describe('useSubmit Hook', () => {
     const errorCalls = mockSetError.mock.calls;
     expect(errorCalls[0]).toEqual([null]); // First call should reset error
     expect(errorCalls[errorCalls.length - 1]).toEqual(['Network error']); // Last call should set the network error
+    // Optionally verify the error was logged
+    expect(console.error).toHaveBeenCalledWith(
+      '❌ Submit error:',
+      expect.any(Error)
+    );
   });
 
   it('should handle non-streaming response', async () => {

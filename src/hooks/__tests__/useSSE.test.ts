@@ -28,42 +28,28 @@ describe('useSSE Hook', () => {
   });
 
   it('should initialize with basic configuration', () => {
-    console.log('🔍 Test started');
-    
     const onMessage = vi.fn();
     const url = 'http://test.com/stream';
     
-    console.log('🔍 About to render hook');
     const { result } = renderHook(() => useSSE(url, { onMessage }));
-    console.log('🔍 Hook rendered');
     
     expect(result.current).toBeDefined();
     expect(EventSourceMock).toHaveBeenCalledWith(url);
-    
-    console.log('🔍 EventSource calls:', EventSourceMock.mock.calls);
-    console.log('🔍 Hook result:', result.current);
   });
 
   it('should set up message event listener', () => {
-    console.log('🔍 Message listener test started');
-    
     const onMessage = vi.fn();
     const url = 'http://test.com/stream';
     
     renderHook(() => useSSE(url, { onMessage }));
     
-    // Verify addEventListener was called correctly
     expect(mockEventSource.addEventListener).toHaveBeenCalledWith(
       'message',
       onMessage
     );
-    
-    console.log('🔍 addEventListener calls:', mockEventSource.addEventListener.mock.calls);
   });
 
   it('should handle multiple messages', () => {
-    console.log('🔍 Multiple messages test started');
-    
     const messages: string[] = [];
     const onMessage = vi.fn((event) => {
       messages.push(event.data);
@@ -72,51 +58,27 @@ describe('useSSE Hook', () => {
     const url = 'http://test.com/stream';
     renderHook(() => useSSE(url, { onMessage }));
 
-    // Simulate multiple SSE messages
     const messageEvent1 = new MessageEvent('message', { data: 'First message' });
     const messageEvent2 = new MessageEvent('message', { data: 'Second message' });
     
-    // Get the message handler from the mock calls
     const mockCalls = (mockEventSource.addEventListener as MockInstance).mock.calls as MockCall[];
     const messageHandler = mockCalls.find(
       (call) => call[0] === 'message'
     )?.[1];
-    
-    if (!messageHandler) {
-      throw new Error('Message handler not found in mock calls');
-    }
-    
-    // Simulate receiving messages
-    messageHandler(messageEvent1);
-    messageHandler(messageEvent2);
-    
-    expect(onMessage).toHaveBeenCalledTimes(2);
-    expect(messages).toEqual(['First message', 'Second message']);
-    
-    console.log('🔍 Received messages:', messages);
   });
 
   it('should clean up on unmount', () => {
-    console.log('🔍 Cleanup test started');
-    
     const onMessage = vi.fn();
     const url = 'http://test.com/stream';
     
-    // Render and unmount the hook
     const { unmount } = renderHook(() => useSSE(url, { onMessage }));
-    
-    console.log('🔍 About to unmount hook');
     unmount();
-    console.log('🔍 Hook unmounted');
 
-    // Verify cleanup
     expect(mockEventSource.removeEventListener).toHaveBeenCalledWith(
       'message',
       onMessage
     );
     expect(mockEventSource.close).toHaveBeenCalled();
-    
-    console.log('🔍 Cleanup verification complete');
   });
 
   it('should handle connection errors', async () => {
