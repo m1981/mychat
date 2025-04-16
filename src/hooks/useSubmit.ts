@@ -118,14 +118,19 @@ const useSubmit = () => {
         stream: false
       });
 
-      // Separate messages from config and ensure ModelConfig compatibility
+      // Separate messages from config
       const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
 
-      // Add required ModelConfig properties
-      const completeConfig: ModelConfig = {
-        ...configWithoutMessages,
-        enableThinking: config.enableThinking ?? false,
-        thinkingConfig: config.thinkingConfig ?? {
+      // Create a complete ModelConfig object
+      const modelConfig: ModelConfig = {
+        model: configWithoutMessages.model,
+        max_tokens: configWithoutMessages.max_tokens ?? 2000,
+        temperature: configWithoutMessages.temperature ?? 0.7,
+        top_p: configWithoutMessages.top_p ?? 1,
+        presence_penalty: configWithoutMessages.presence_penalty ?? 0,
+        frequency_penalty: configWithoutMessages.frequency_penalty ?? 0,
+        enableThinking: false,
+        thinkingConfig: {
           budget_tokens: 1000
         }
       };
@@ -133,7 +138,7 @@ const useSubmit = () => {
       return getChatCompletion(
         providerKey,
         formattedMessages,
-        completeConfig,
+        modelConfig,
         currentApiKey
       );
     },
