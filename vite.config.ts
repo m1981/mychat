@@ -69,14 +69,7 @@ export default defineConfig({
             'uuid',
             'lz-string',
             'papaparse'
-          ],
-          'testing-utils': [
-            '@testing-library/react',
-            '@testing-library/user-event',
-            '@testing-library/jest-dom'
-          ],
-          'state-management': ['zustand', './src/store'],
-          'api-layer': ['./src/api', './src/config/models']
+          ]
         }
       }
     },
