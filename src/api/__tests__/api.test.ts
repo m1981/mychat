@@ -163,13 +163,13 @@ describe('getChatCompletion', () => {
 
     const expectedBody = JSON.stringify({
       messages: baseMessages,
-      model: 'gpt-4o',
-      max_tokens: 4096,
-      temperature: 0.7,
-      presence_penalty: 0,
-      top_p: 1,
-      frequency_penalty: 0,
-      stream: false,
+      config: {
+        model: 'gpt-4o',
+        max_tokens: 4096,
+        temperature: 0.7,
+        top_p: 1,
+        stream: false
+      },
       apiKey: 'test-key'
     });
 
@@ -184,5 +184,59 @@ describe('getChatCompletion', () => {
         body: expectedBody
       }
     );
+  });
+
+  it('should format request correctly for Anthropic provider', async () => {
+    global.fetch = vi.fn().mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ content: 'Test response' })
+      })
+    );
+
+    await getChatCompletion(
+      'anthropic',
+      baseMessages,
+      baseConfig,
+      'test-anthropic-key',
+      { 'Custom-Header': 'test' }
+    );
+
+    const expectedBody = JSON.stringify({
+      messages: baseMessages,
+      config: {
+        model: 'gpt-4o',
+        max_tokens: 4096,
+        temperature: 0.7,
+        top_p: 1,
+        stream: false
+      },
+      apiKey: 'test-anthropic-key'
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/chat/anthropic',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Custom-Header': 'test'
+        },
+        body: expectedBody
+      }
+    );
+  });
+
+  it('should handle error responses', async () => {
+    global.fetch = vi.fn().mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: false,
+        text: () => Promise.resolve('API Error')
+      })
+    );
+
+    await expect(
+      getChatCompletion('openai', baseMessages, baseConfig, 'test-key')
+    ).rejects.toThrow('API Error');
   });
 });

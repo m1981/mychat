@@ -19,6 +19,15 @@ export const getChatCompletion = async (
   
   const formattedRequest = provider.formatRequest(messages, { ...config, stream: false });
 
+  // Only include the essential config properties
+  const requestConfig = {
+    model: formattedRequest.model,
+    max_tokens: formattedRequest.max_tokens,
+    temperature: formattedRequest.temperature,
+    top_p: formattedRequest.top_p,
+    stream: false
+  };
+
   const response = await fetch(`/api/chat/${provider.id}`, {
     method: 'POST',
     headers: {
@@ -26,8 +35,9 @@ export const getChatCompletion = async (
       ...customHeaders,
     },
     body: JSON.stringify({
-      ...formattedRequest,
-      apiKey
+      messages: formattedRequest.messages,
+      config: requestConfig,
+      ...(apiKey ? { apiKey } : {})
     }),
   });
 
