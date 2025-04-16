@@ -285,4 +285,41 @@ describe('TitleGenerator', () => {
       generator.generateChatTitle('Hello', 'Hi there')
     ).rejects.toThrow('Invalid response format from title generation');
   });
+
+  it('should handle Anthropic response format', async () => {
+    const anthropicResponse = async () => ({
+      message: {
+        content: '  "Test Title"  '
+      }
+    });
+
+    const generator = new TitleGenerator(anthropicResponse, 'en', baseConfig);
+    const title = await generator.generateChatTitle('Hello', 'Hi there');
+    expect(title).toBe('Test Title');
+  });
+
+  it('should handle direct content response', async () => {
+    const contentResponse = async () => ({
+      content: '  Test Title  '
+    });
+
+    const generator = new TitleGenerator(contentResponse, 'en', baseConfig);
+    const title = await generator.generateChatTitle('Hello', 'Hi there');
+    expect(title).toBe('Test Title');
+  });
+
+  it('should log and throw on invalid response', async () => {
+    const consoleSpy = vi.spyOn(console, 'error');
+    // Cast the invalid response to any to bypass TypeScript checks
+    // since we're intentionally testing invalid input
+    const invalidResponse = async () => ({ unexpected: 'format' }) as any;
+
+    const generator = new TitleGenerator(invalidResponse, 'en', baseConfig);
+
+    await expect(
+      generator.generateChatTitle('Hello', 'Hi there')
+    ).rejects.toThrow('Invalid response format from title generation');
+
+    expect(consoleSpy).toHaveBeenCalled();
+  });
 });

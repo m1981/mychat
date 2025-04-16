@@ -7,6 +7,17 @@ import { providers } from '@type/providers';
 import { getChatCompletion } from '@src/api/api';
 import { checkStorageQuota } from '@utils/storage';
 
+// Add these interfaces at the top of the file
+interface AnthropicResponse {
+  message: {
+    content: string;
+  };
+}
+
+interface ContentResponse {
+  content: string;
+}
+
 // Extracted for testing
 export class ChatStreamHandler {
   constructor(
@@ -54,7 +65,7 @@ export class ChatStreamHandler {
 // Extracted for testing
 export class TitleGenerator {
   constructor(
-    private readonly generateTitle: (messages: MessageInterface[], config: ModelConfig) => Promise<string | { content: string }>,
+    private readonly generateTitle: (messages: MessageInterface[], config: ModelConfig) => Promise<string | ContentResponse | AnthropicResponse>,
     private readonly language: string,
     private readonly defaultConfig: ModelConfig
   ) {
@@ -76,24 +87,35 @@ export class TitleGenerator {
       content: `Generate a title in less than 6 words for the following message (language: ${this.language}):\n"""\nUser: ${userMessage}\nAssistant: ${assistantMessage}\n"""`,
     };
 
-    const response = await this.generateTitle([message], this.defaultConfig);
+    try {
+      const response = await this.generateTitle([message], this.defaultConfig);
 
-    // Handle both string and object responses
-    let title: string;
-    if (typeof response === 'string') {
-      title = response;
-    } else if (response && typeof response === 'object' && 'content' in response) {
-      title = response.content;
-    } else {
+      // Handle different response formats
+      if (typeof response === 'string') {
+        const title = response.trim();
+        return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
+      }
+
+      if (response && typeof response === 'object') {
+        // Handle Anthropic's response format
+        if ('content' in response) {
+          const title = response.content.trim();
+          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
+        }
+
+        // Handle potential nested content structures
+        if ('message' in response && typeof response.message === 'object' && 'content' in response.message) {
+          const title = (response as AnthropicResponse).message.content.trim();
+          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
+        }
+      }
+
+      console.error('Unexpected response format:', response);
       throw new Error('Invalid response format from title generation');
+    } catch (error) {
+      console.error('Title generation error:', error);
+      throw error;
     }
-
-    // Now we can safely trim the title
-    title = title.trim();
-    if (title.startsWith('"') && title.endsWith('"')) {
-      title = title.slice(1, -1);
-    }
-    return title;
   }
 }
 
