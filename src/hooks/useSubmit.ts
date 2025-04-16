@@ -18,6 +18,11 @@ interface ContentResponse {
   content: string;
 }
 
+interface TextResponse {
+  type: 'text';
+  text: string;
+}
+
 // Extracted for testing
 export class ChatStreamHandler {
   constructor(
