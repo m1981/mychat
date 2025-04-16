@@ -54,7 +54,7 @@ export class ChatStreamHandler {
 // Extracted for testing
 export class TitleGenerator {
   constructor(
-    private readonly generateTitle: (messages: MessageInterface[], config: ModelConfig) => Promise<string>,
+    private readonly generateTitle: (messages: MessageInterface[], config: ModelConfig) => Promise<string | { content: string }>,
     private readonly language: string,
     private readonly defaultConfig: ModelConfig
   ) {
@@ -76,7 +76,20 @@ export class TitleGenerator {
       content: `Generate a title in less than 6 words for the following message (language: ${this.language}):\n"""\nUser: ${userMessage}\nAssistant: ${assistantMessage}\n"""`,
     };
 
-    let title = (await this.generateTitle([message], this.defaultConfig)).trim();
+    const response = await this.generateTitle([message], this.defaultConfig);
+
+    // Handle both string and object responses
+    let title: string;
+    if (typeof response === 'string') {
+      title = response;
+    } else if (response && typeof response === 'object' && 'content' in response) {
+      title = response.content;
+    } else {
+      throw new Error('Invalid response format from title generation');
+    }
+
+    // Now we can safely trim the title
+    title = title.trim();
     if (title.startsWith('"') && title.endsWith('"')) {
       title = title.slice(1, -1);
     }

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { getChatCompletionStream, getChatCompletion } from '../api';
 import { MessageInterface, ModelConfig } from '@type/chat';
+import { TitleGenerator } from '@hooks/useSubmit';
 
 describe('getChatCompletionStream', () => {
   const baseMessages: MessageInterface[] = [
@@ -238,5 +239,50 @@ describe('getChatCompletion', () => {
     await expect(
       getChatCompletion('openai', baseMessages, baseConfig, 'test-key')
     ).rejects.toThrow('API Error');
+  });
+});
+
+describe('TitleGenerator', () => {
+  const baseConfig: ModelConfig = {
+    model: 'claude-3-7-sonnet-20250219',
+    max_tokens: 4096,
+    temperature: 0,
+    presence_penalty: 0,
+    frequency_penalty: 0,
+    top_p: 1,
+    enableThinking: false,
+    thinkingConfig: {
+      budget_tokens: 1000
+    }
+  };
+
+  it('should handle string response', async () => {
+    const stringResponse = async (messages: MessageInterface[], config: ModelConfig) => "  Test Title  ";
+    const generator = new TitleGenerator(stringResponse, 'en', baseConfig);
+    const title = await generator.generateChatTitle('Hello', 'Hi there');
+    expect(title).toBe('Test Title');
+  });
+
+  it('should handle object response', async () => {
+    const objectResponse = async (messages: MessageInterface[], config: ModelConfig) => ({ content: "  Test Title  " });
+    const generator = new TitleGenerator(objectResponse, 'en', baseConfig);
+    const title = await generator.generateChatTitle('Hello', 'Hi there');
+    expect(title).toBe('Test Title');
+  });
+
+  it('should handle quoted response', async () => {
+    const quotedResponse = async (messages: MessageInterface[], config: ModelConfig) => '"Test Title"';
+    const generator = new TitleGenerator(quotedResponse, 'en', baseConfig);
+    const title = await generator.generateChatTitle('Hello', 'Hi there');
+    expect(title).toBe('Test Title');
+  });
+
+  it('should handle error cases', async () => {
+    const invalidResponse = async (messages: MessageInterface[], config: ModelConfig) => ({} as any);
+    const generator = new TitleGenerator(invalidResponse, 'en', baseConfig);
+    
+    await expect(
+      generator.generateChatTitle('Hello', 'Hi there')
+    ).rejects.toThrow('Invalid response format from title generation');
   });
 });
