@@ -27,4 +27,10 @@ USER node
 ENV PNPM_HOME=/home/node/.local/share/pnpm \
     PATH=/home/node/.local/share/pnpm:$PATH
 
+# Copy package files
+COPY --chown=node:node package.json pnpm-lock.yaml* ./
+
+# Install dependencies
+RUN pnpm install
+
 CMD ["sh"]

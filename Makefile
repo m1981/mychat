@@ -4,17 +4,18 @@ NODE_PACKAGE_MANAGER = pnpm
 CONTAINER_NAME = mychat-app
 COLIMA_PROFILE = dev
 COLIMA_CPU = 4
-COLIMA_MEMORY = 8
+COLIMA_MEMORY = 2
 COLIMA_DISK = 60
 PNPM_FROZEN_LOCKFILE ?= false
 PLATFORM ?= linux/arm64
+PNPM_DIRS = .pnpm-store .pnpm-cache
 
 # User/Group detection with fallbacks
 UID := $(shell id -u)
 GID := $(shell id -g)
 # If GID is 20 (common conflict), use an alternative
 ifeq ($(GID),20)
-    GID := 1020
+	GID := 1020
 endif
 
 # Export these variables for docker-compose
@@ -40,7 +41,14 @@ help: ## Display this help
 ##@ Development Workflow
 .PHONY: dev dev-strict dev-fast clean clean-rebuild
 
-dev: ## Start development environment (flexible mode for rapid development)
+build: ## Build development environment
+	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE) build --no-cache
+
+ensure-pnpm-dirs:
+	mkdir -p $(PNPM_DIRS)
+	chmod 777 $(PNPM_DIRS)
+
+dev: ensure-pnpm-dirs ## Start development environment (flexible mode for rapid development)
 	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE) up --build
 
 dev-strict: ## Start development environment (strict mode for CI/CD)
@@ -51,7 +59,7 @@ dev-fast: ## Quick start development (reuse existing cache)
 
 clean: ## Stop and remove containers
 	$(DOCKER_COMPOSE) down
-	rm -rf node_modules
+	rm -rf node_modules $(PNPM_DIRS)
 
 clean-rebuild: clean ## Clean and rebuild development environment
 	$(DOCKER_COMPOSE) build --no-cache
@@ -97,11 +105,11 @@ pkg-check: ## Check for outdated dependencies
 ##@ Testing
 .PHONY: test test-watch test-coverage
 
-test: ## Run tests
-	$(DOCKER_COMPOSE) run --rm app sh -c "pnpm install && pnpm test"
+test: ensure-pnpm-dirs ## Run tests
+	$(DOCKER_COMPOSE) run --rm app pnpm test
 
 test-watch: ## Run tests in watch mode
-	$(DOCKER_COMPOSE) run --rm app sh -c "pnpm install && pnpm test:watch"
+	$(DOCKER_COMPOSE) run --rm app sh -c pnpm test:watch"
 
 test-coverage: ## Run tests with coverage report
 	$(DOCKER_COMPOSE) run --rm app sh -c "pnpm install && pnpm test:coverage"
