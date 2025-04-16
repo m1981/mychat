@@ -114,7 +114,7 @@ pkg-check: ## Check for outdated dependencies
 	$(DOCKER_COMPOSE) run --rm app pnpm outdated
 
 ##@ Testing
-.PHONY: test test-watch test-coverage
+.PHONY: test test-watch test-coverage test-file
 
 test: ensure-pnpm-dirs ## Run tests
 	$(DOCKER_COMPOSE) run --rm app pnpm test
@@ -124,6 +124,13 @@ test-watch: ## Run tests in watch mode
 
 test-coverage: ## Run tests with coverage report
 	$(DOCKER_COMPOSE) run --rm app pnpm test:coverage
+
+test-file: ensure-pnpm-dirs ## Run specific test file. Usage: make test-file f=path/to/test.ts
+	@if [ -z "$(f)" ]; then \
+		echo "Error: File path required. Usage: make test-file f=path/to/test.ts"; \
+		exit 1; \
+	fi
+	$(DOCKER_COMPOSE) run --rm app pnpm test $(f)
 
 ##@ Quality Checks
 .PHONY: lint type-check
