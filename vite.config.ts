@@ -75,8 +75,8 @@ export default defineConfig({
             '@testing-library/user-event',
             '@testing-library/jest-dom'
           ],
-          'state-management': ['zustand', '@store'],
-          'api-layer': ['@api', '@models']
+          'state-management': ['zustand', './src/store'],
+          'api-layer': ['./src/api', './src/config/models']
         }
       }
     },

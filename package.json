@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "vite",
     "dev:host": "vite --host 0.0.0.0",
+    "prebuild": "rm -rf dist",
     "build": "pnpm type-check && NODE_ENV=production TS_NODE_BASEURL=./ pnpm build:vite",
     "build:vite": "NODE_OPTIONS='--max_old_space_size=8192' vite build",
     "build:quick": "vite build --mode development",
@@ -23,7 +24,7 @@
     "lint": "eslint . --ext .ts,.tsx --fix",
     "lint:check": "eslint . --ext .ts,.tsx",
     "lint:test": "eslint 'src/**/*.test.{ts,tsx}'",
-    "vercel-build": "NODE_ENV=test pnpm test && pnpm build",
+    "vercel-build": "NODE_ENV=production pnpm test && pnpm build",
     "typecheck": "tsc --noEmit && tsc --project tsconfig.test.json --noEmit",
     "validate": "pnpm typecheck && pnpm test && pnpm lint"
   },
