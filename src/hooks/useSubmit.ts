@@ -70,7 +70,7 @@ export class ChatStreamHandler {
 // Extracted for testing
 export class TitleGenerator {
   constructor(
-    private readonly generateTitle: (messages: MessageInterface[], config: ModelConfig) => Promise<string | ContentResponse | AnthropicResponse>,
+    private readonly generateTitle: (messages: MessageInterface[], config: ModelConfig) => Promise<string | ContentResponse | AnthropicResponse | TextResponse | TextResponse[]>,
     private readonly language: string,
     private readonly defaultConfig: ModelConfig
   ) {
@@ -95,20 +95,34 @@ export class TitleGenerator {
     try {
       const response = await this.generateTitle([message], this.defaultConfig);
 
-      // Handle different response formats
+      // First, handle array response
+      if (Array.isArray(response)) {
+        if (response.length > 0 && 'type' in response[0] && response[0].type === 'text') {
+          const title = response[0].text.trim();
+          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
+        }
+      }
+
+      // Handle single response cases
       if (typeof response === 'string') {
         const title = response.trim();
         return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
       }
 
       if (response && typeof response === 'object') {
+        // Handle single TextResponse
+        if ('type' in response && response.type === 'text' && 'text' in response) {
+          const title = response.text.trim();
+          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
+        }
+
         // Handle Anthropic's response format
         if ('content' in response) {
           const title = response.content.trim();
           return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
         }
 
-        // Handle potential nested content structures
+        // Handle nested content structures
         if ('message' in response && typeof response.message === 'object' && 'content' in response.message) {
           const title = (response as AnthropicResponse).message.content.trim();
           return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
