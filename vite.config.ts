@@ -22,90 +22,54 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [
-    react(),
+    react({
+      // Enable Fast Refresh
+      fastRefresh: true
+    }),
     wasm(),
     topLevelAwait()
   ],
+
+  define: {
+    'process.env': {},
+    'process.platform': JSON.stringify(process.platform),
+    'process.version': JSON.stringify(process.version),
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+    global: 'globalThis',
+  },
   build: {
     sourcemap: true,
+    target: 'esnext',
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks: {
-          // Core vendor chunks
           'core-vendor': ['react', 'react-dom', 'zustand'],
-
-          // Markdown processing
-          'markdown-core': [
-            'react-markdown',
-            'remark-gfm',
-            'remark-math'
-          ],
-          'markdown-plugins': [
-            'rehype-highlight',
-            'rehype-katex'
-          ],
-
-          // Mermaid - simplified chunking
+          'markdown-core': ['react-markdown', 'remark-gfm', 'remark-math'],
+          'markdown-plugins': ['rehype-highlight', 'rehype-katex'],
           'mermaid': ['mermaid'],
-
-          // UI and functionality
-          'ui-utils': [
-            'react-hot-toast',
-            'html2canvas',
-            'jspdf'
-          ],
-
-          // i18n
-          'i18n': [
-            'i18next',
-            'react-i18next',
-            'i18next-browser-languagedetector',
-            'i18next-http-backend'
-          ],
-
-          // Data handling
-          'data-utils': [
-            'lodash',
-            'uuid',
-            'lz-string',
-            'papaparse'
-          ]
+          'ui-utils': ['react-hot-toast', 'html2canvas', 'jspdf'],
+          'i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
+          'data-utils': ['lodash', 'uuid', 'lz-string', 'papaparse']
         }
-      }
-    },
-    chunkSizeWarningLimit: 1600,
-    target: 'esnext',
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: false,
-        drop_debugger: false
-      }
-    },
-
-    // Improve build performance
-    reportCompressedSize: false,
-    cssCodeSplit: true
-  },
-
-  optimizeDeps: {
-    include: ['mermaid'],
-    esbuildOptions: {
-      target: 'esnext',
-      platform: 'node',
-      supported: {
-        'dynamic-import': true
       }
     }
   },
+
   server: {
     proxy: {
       '/api': {
         target: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
-      },
+        ws: true
+      }
     },
+    hmr: {
+      overlay: true
+    },
+    host: true,
+    port: 5173
   },
   resolve: {
     alias: {
