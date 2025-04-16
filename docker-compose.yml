@@ -45,6 +45,14 @@ services:
       - GID=${GID}
     working_dir: /app
     command: sh -c "pnpm dev:host"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
 
 
 volumes:

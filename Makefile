@@ -57,6 +57,7 @@ build: init-volumes ## Build development environment
 ensure-pnpm-dirs:
 	mkdir -p $(PNPM_DIRS)
 	chmod 777 $(PNPM_DIRS)
+	touch $(PNPM_DIRS)/.keep
 
 dev: ensure-pnpm-dirs ## Start development environment (flexible mode for rapid development)
 	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE) up --build

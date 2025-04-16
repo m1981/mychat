@@ -131,5 +131,16 @@ export default defineConfig({
     port: 4173,
     host: true,
     strictPort: true,
+  },
+  test: {
+    // Limit the number of threads
+    poolOptions: {
+      threads: {
+        singleThread: true,  // Or adjust maxThreads
+      }
+    },
+    // Adjust memory usage
+    pool: 'threads',
+    isolate: false,
   }
 });
