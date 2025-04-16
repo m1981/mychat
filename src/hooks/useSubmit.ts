@@ -118,13 +118,22 @@ const useSubmit = () => {
         stream: false
       });
 
-      // Separate messages from config as you do in handleSubmit
+      // Separate messages from config and ensure ModelConfig compatibility
       const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
+
+      // Add required ModelConfig properties
+      const completeConfig: ModelConfig = {
+        ...configWithoutMessages,
+        enableThinking: config.enableThinking ?? false,
+        thinkingConfig: config.thinkingConfig ?? {
+          budget_tokens: 1000
+        }
+      };
 
       return getChatCompletion(
         providerKey,
         formattedMessages,
-        configWithoutMessages,
+        completeConfig,
         currentApiKey
       );
     },
