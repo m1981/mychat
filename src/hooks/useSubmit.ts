@@ -111,15 +111,20 @@ const useSubmit = () => {
       if (!config || !config.model) {
         throw new Error('Invalid model configuration');
       }
-      // Ensure stream is explicitly set to false for title generation
-      const titleConfig = {
+
+      // Format request based on provider
+      const formattedRequest = provider.formatRequest(messages, {
         ...config,
         stream: false
-      };
+      });
+
+      // Separate messages from config as you do in handleSubmit
+      const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
+
       return getChatCompletion(
         providerKey,
-        messages,
-        titleConfig,
+        formattedMessages,
+        configWithoutMessages,
         currentApiKey
       );
     },
