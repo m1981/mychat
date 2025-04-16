@@ -5,17 +5,55 @@ services:
       context: .
       args:
         - USER_ID=${UID:-501}
-        - GROUP_ID=${GID:-20}
+        - GROUP_ID=${GID:-501}
+      dockerfile: Dockerfile
     container_name: mychat-app
     ports:
       - "5173:5173"
     volumes:
-      - .:/app
-      - ./.pnpm-store:/home/node/.local/share/pnpm/store
-      - ./.pnpm-cache:/home/node/.cache/pnpm
-      - /app/node_modules
+      - type: bind
+        source: .
+        target: /app
+        bind:
+          create_host_path: true
+      # PNPM store for package data
+      - type: volume
+        source: pnpm_store
+        target: /home/node/.local/share/pnpm/store
+        volume:
+          nocopy: false  # Allow initial copy
+      # PNPM cache for metadata
+      - type: volume
+        source: pnpm_cache
+        target: /home/node/.cache/pnpm
+        volume:
+          nocopy: false  # Allow initial copy
+      # Node modules
+      - type: volume
+        source: node_modules
+        target: /app/node_modules
+        volume:
+          nocopy: false  # Allow initial copy
     environment:
       - NODE_ENV=development
       - PNPM_HOME=/home/node/.local/share/pnpm
+      - PATH=/home/node/.local/share/pnpm:$PATH
+      - PACKAGE_HASH=${PACKAGE_HASH:-default}
+      - PNPM_STORE_DIR=/home/node/.local/share/pnpm/store
+      - PNPM_CACHE_DIR=/home/node/.cache/pnpm
+      - UID=${UID}
+      - GID=${GID}
     working_dir: /app
     command: sh -c "pnpm dev:host"
+
+
+volumes:
+  node_modules:
+    name: "mychat-node_modules"
+    external: true
+  pnpm_store:
+    name: "mychat-pnpm_store"
+    external: true
+  pnpm_cache:
+    name: "mychat-pnpm_cache"
+    external: true

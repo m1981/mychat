@@ -1,2 +1,37 @@
-/.github
-/Dockerfile
+# Version control
+**/.git
+**/.gitignore
+**/.gitattributes
+**/.github
+
+# Dependencies
+**/node_modules
+**/.pnpm-store
+**/.pnpm-cache
+
+# Build outputs
+**/dist
+**/build
+**/.next
+**/.nuxt
+**/.output
+
+# Development
+**/.vscode
+**/.idea
+**/.DS_Store
+**/coverage
+**/*.log
+**/.env*
+!.env.example
+
+# Testing
+**/__tests__
+**/*.test.*
+**/*.spec.*
+**/jest.config.*
+**/vitest.config.*
+
+# Documentation
+**/*.md
+**/docs

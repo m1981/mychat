@@ -41,7 +41,17 @@ help: ## Display this help
 ##@ Development Workflow
 .PHONY: dev dev-strict dev-fast clean clean-rebuild
 
-build: ## Build development environment
+init-volumes: ## Initialize volumes with correct permissions
+	docker volume create mychat-pnpm_store || true
+	docker volume create mychat-pnpm_cache || true
+	docker volume create mychat-node_modules || true
+	docker run --rm \
+		-v mychat-pnpm_store:/data/pnpm_store \
+		-v mychat-pnpm_cache:/data/pnpm_cache \
+		-v mychat-node_modules:/data/node_modules \
+		alpine sh -c "chown -R $(UID):$(GID) /data/*"
+
+build: init-volumes ## Build development environment
 	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE) build --no-cache
 
 ensure-pnpm-dirs:
@@ -109,10 +119,10 @@ test: ensure-pnpm-dirs ## Run tests
 	$(DOCKER_COMPOSE) run --rm app pnpm test
 
 test-watch: ## Run tests in watch mode
-	$(DOCKER_COMPOSE) run --rm app sh -c pnpm test:watch"
+	$(DOCKER_COMPOSE) run --rm app pnpm test:watch
 
 test-coverage: ## Run tests with coverage report
-	$(DOCKER_COMPOSE) run --rm app sh -c "pnpm install && pnpm test:coverage"
+	$(DOCKER_COMPOSE) run --rm app sh pnpm test:coverage
 
 ##@ Quality Checks
 .PHONY: lint type-check
