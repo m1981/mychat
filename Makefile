@@ -123,7 +123,7 @@ test-watch: ## Run tests in watch mode
 	$(DOCKER_COMPOSE) run --rm app pnpm test:watch
 
 test-coverage: ## Run tests with coverage report
-	$(DOCKER_COMPOSE) run --rm app sh pnpm test:coverage
+	$(DOCKER_COMPOSE) run --rm app pnpm test:coverage
 
 ##@ Quality Checks
 .PHONY: lint type-check
