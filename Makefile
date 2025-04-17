@@ -1,7 +1,6 @@
 # Configuration
 DOCKER_COMPOSE = docker compose
 NODE_PACKAGE_MANAGER = pnpm
-CONTAINER_NAME = mychat-app
 COLIMA_PROFILE = dev
 COLIMA_CPU = 4
 COLIMA_MEMORY = 2
