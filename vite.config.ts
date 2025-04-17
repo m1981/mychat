@@ -157,7 +157,6 @@ export default defineConfig(({ mode }) => {
     },
 
     esbuild: {
-      jsxInject: `import React from 'react'`,
       supported: {
         'dynamic-import': true,
         'import-meta': true
