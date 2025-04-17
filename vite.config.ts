@@ -40,12 +40,18 @@ export default defineConfig(({ mode }) => {
       'process.version': JSON.stringify(process.version),
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
       global: 'globalThis',
+      'global.process': process,
+      '__dirname': JSON.stringify('')
     },
 
     build: {
       sourcemap: true,
       target: 'esnext',
       minify: 'esbuild',
+      commonjsOptions: {
+        include: [/node_modules/],
+        transformMixedEsModules: true
+      },
       rollupOptions: {
         output: {
           manualChunks: {
@@ -111,30 +117,55 @@ export default defineConfig(({ mode }) => {
     },
 
     test: {
-      // Limit the number of threads
+      globals: true,
+      environment: 'jsdom',
       poolOptions: {
         threads: {
-          singleThread: true,  // Or adjust maxThreads
+          singleThread: true,
         }
       },
       // Adjust memory usage
       pool: 'threads',
       isolate: false,
+      deps: {
+        inline: [/@testing-library\//, /vitest/]
+      },
+      setupFiles: ['./vitest.setup.ts']
     },
 
     // Optimize dependencies
     optimizeDeps: {
       include: [
-        'react', 
-        'react-dom', 
+        'react',
+        'react-dom',
         'zustand',
         'react-markdown',
         'mermaid'
       ],
       exclude: ['@swc/core'],
       esbuildOptions: {
-        target: 'esnext'
+        target: 'esnext',
+        platform: 'browser',
+        supported: {
+          'dynamic-import': true,
+          'import-meta': true
+        },
+        define: {
+          global: 'globalThis'
+        }
       }
+    },
+
+    esbuild: {
+      jsxInject: `import React from 'react'`,
+      supported: {
+        'dynamic-import': true,
+        'import-meta': true
+      }
+    },
+
+    css: {
+      devSourcemap: true
     }
   };
 });
