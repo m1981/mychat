@@ -39,9 +39,9 @@ export default defineConfig(({ mode }) => {
       'process.platform': JSON.stringify(process.platform),
       'process.version': JSON.stringify(process.version),
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-      global: 'globalThis',
-      'global.process': process,
-      '__dirname': JSON.stringify('')
+      'global': 'globalThis',
+      'globalThis': 'globalThis',
+      '__dirname': JSON.stringify(''),
     },
 
     build: {
@@ -50,10 +50,14 @@ export default defineConfig(({ mode }) => {
       minify: 'esbuild',
       commonjsOptions: {
         include: [/node_modules/],
-        transformMixedEsModules: true
+        transformMixedEsModules: true,
+        requireReturnsDefault: 'auto',
+        esmExternals: true
       },
       rollupOptions: {
+        external: ['fsevents'],
         output: {
+          format: 'es',
           manualChunks: {
             'core-vendor': ['react', 'react-dom', 'zustand'],
             'markdown-core': ['react-markdown', 'remark-gfm', 'remark-math'],
