@@ -41,7 +41,8 @@ COPY --chown=node:node package.json pnpm-lock.yaml* ./
 # Install dependencies with cache
 RUN --mount=type=cache,target=/home/node/.local/share/pnpm/store,uid=${USER_ID},gid=${GROUP_ID} \
     --mount=type=cache,target=/home/node/.cache/pnpm,uid=${USER_ID},gid=${GROUP_ID} \
-    pnpm install --frozen-lockfile && \
     pnpm add -g vitest  # Install vitest globally
+
+ENV MOCK_AI=true
 
 CMD ["sh"]
