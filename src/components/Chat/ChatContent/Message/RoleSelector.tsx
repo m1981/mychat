@@ -14,9 +14,6 @@ const RoleSelector = React.memo(({ role, messageIndex, isComposer }: RoleSelecto
 
   return (
     <div className='prose dark:prose-invert'>
-      <span className='text-sm text-gray-700 dark:text-gray-200'>
-        {role === 'user' ? 'You' : t(role)}
-      </span>
     </div>
   );
 });
