@@ -13,37 +13,29 @@ def group_prompts_by_conversation(prompts):
 
 def extract_meaningful_content(text):
     """
-    Extract meaningful content from a prompt, keeping only alphanumeric characters,
-    spaces, and line breaks (\r\n).
+    Extract meaningful content from a prompt by stopping at technical indicators
+    like code blocks, file paths, or system messages.
+    Preserves original letter case and ensures non-empty output.
     """
-    # Remove code blocks (text between triple backticks)
-    text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
-
-    # Remove inline code (text between single backticks)
-    text = re.sub(r'`.*?`', '', text)
-
-    # Keep only alphanumeric characters, spaces, and line breaks
-    # First, replace \r\n with a special marker
-    text = text.replace('\r\n', '<<CRLF>>')
-    text = text.replace('\n', '<<LF>>')
-
-    # Remove non-alphanumeric characters (except spaces)
-    text = re.sub(r'[^a-zA-Z0-9 <<CRLF>><<LF>>]', '', text)
-
-    # Restore line breaks
-    text = text.replace('<<CRLF>>', '\r\n')
-    text = text.replace('<<LF>>', '\n')
-
-    # Remove extra spaces
-    text = re.sub(r' +', ' ', text)
-
-    # Remove spaces at the beginning of lines
-    text = re.sub(r'(\r\n|\n) +', r'\1', text)
-
-    # Remove empty lines
-    text = re.sub(r'(\r\n|\n){2,}', r'\1', text)
-
-    return text.strip()
+    # Technical characters that indicate start of code/logs/errors
+    technical_indicators = {'`', '|', '/', '\\', '$', '#', '>', '<', '{', '}', '[', ']', '(', ')', '.py', '.json', '.xml'}
+    
+    result = []
+    words = text.split()
+    
+    for word in words:
+        # Stop if we hit any technical indicator
+        if any(indicator in word for indicator in technical_indicators):
+            break
+        
+        # Only keep words with at least one alphanumeric character
+        if any(c.isalnum() for c in word):
+            result.append(word)  # Keep original case
+    
+    meaningful_content = ' '.join(result).strip()
+    
+    # Return original text if parsed content would be empty
+    return meaningful_content if meaningful_content else text.strip()
 
 def main():
     parser = argparse.ArgumentParser(description="Process and analyze chat prompts")
@@ -62,10 +54,10 @@ def main():
         for prompt in conv_prompts:
             meaningful_content = extract_meaningful_content(prompt["prompt"])
             result[conv_id].append({
-                "original_prompt": prompt["prompt"],
+#                 "original_prompt": prompt["prompt"],
                 "meaningful_content": meaningful_content,
-                "request_id": prompt["request_id"],
-                "timestamp": prompt.get("timestamp", "")
+#                 "request_id": prompt["request_id"],
+#                 "timestamp": prompt.get("timestamp", "")
             })
 
     save_json_output(result, args.output)
