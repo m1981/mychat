@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  prompt-processor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/app/data

@@ -10,6 +10,7 @@ services:
     container_name: mychat-app
     ports:
       - "5173:5173"
+      - "3000:3000"  # Add this if you need the API port
     volumes:
       - type: bind
         source: .
@@ -43,8 +44,16 @@ services:
       - PNPM_CACHE_DIR=/home/node/.cache/pnpm
       - UID=${UID}
       - GID=${GID}
+      - MOCK_AI=true
+      - VITE_DEV_SERVER_FORCE_CLOSE=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - mychat-network
     working_dir: /app
     command: sh -c "pnpm dev:host"
+    stop_signal: SIGINT
+    stop_grace_period: 30s
     deploy:
       resources:
         limits:
@@ -54,6 +63,10 @@ services:
           cpus: '1'
           memory: 1G
 
+
+networks:
+  mychat-network:
+    driver: bridge
 
 volumes:
   node_modules:
