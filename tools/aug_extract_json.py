@@ -4,6 +4,7 @@ import json
 import xml.etree.ElementTree as ET
 import sys
 import os
+import argparse
 
 def extract_json_from_xml(xml_file, output_file=None):
     """Extract base64-encoded JSON from XML and save to a file."""
@@ -49,12 +50,40 @@ def extract_json_from_xml(xml_file, output_file=None):
         print(f"Error processing file: {e}")
         return None
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python agu_extract.py <xml_file> [output_json_file]")
+def main():
+    parser = argparse.ArgumentParser(description="Extract JSON from XML")
+    parser.add_argument("input_file", help="Input XML file path")
+    parser.add_argument("output_file", nargs='?', help="Output file path (default: stdout)")
+    args = parser.parse_args()
+
+    try:
+        tree = ET.parse(args.input_file)
+        root = tree.getroot()
+
+        # Find the CHAT_STATE entry
+        for entry in root.findall(".//entry[@key='CHAT_STATE']"):
+            if 'value' in entry.attrib:
+                value = entry.attrib['value']
+                try:
+                    decoded_bytes = base64.b64decode(value)
+                    json_str = decoded_bytes.decode('utf-8')
+                except:
+                    json_str = value
+
+                json_data = json.loads(json_str)
+                if args.output_file and args.output_file != '-':
+                    with open(args.output_file, 'w', encoding='utf-8') as f:
+                        json.dump(json_data, f)
+                else:
+                    json.dump(json_data, sys.stdout)
+                return
+
+        print("Error: No CHAT_STATE entry found", file=sys.stderr)
         sys.exit(1)
 
-    xml_file = sys.argv[1]
-    output_file = sys.argv[2] if len(sys.argv) > 2 else None
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
-    extract_json_from_xml(xml_file, output_file)
+if __name__ == "__main__":
+    main()

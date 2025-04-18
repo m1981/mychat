@@ -86,8 +86,9 @@ def format_output(prompts, include_timestamps, include_conversation_id, output_f
         return "\n\n".join(lines)
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract human prompts from GitHub Copilot chat JSON")
-    parser.add_argument("input_file", help="Input JSON file path")
+    parser = argparse.ArgumentParser(description="Extract human prompts from chat JSON")
+    parser.add_argument("input_file", nargs='?', default='-',
+                       help="Input JSON file path (default: stdin)")
     parser.add_argument("--output", "-o", help="Output file path (default: stdout)")
     parser.add_argument("--format", "-f", choices=["text", "json", "csv"], default="text",
                         help="Output format (default: text)")
@@ -95,12 +96,14 @@ def main():
                         help="Include timestamps with prompts")
     parser.add_argument("--conversation-id", "-c", action="store_true",
                         help="Include conversation IDs with prompts")
-
     args = parser.parse_args()
 
     try:
-        with open(args.input_file, 'r', encoding='utf-8') as f:
-            json_data = json.load(f)
+        if args.input_file == '-':
+            json_data = json.load(sys.stdin)
+        else:
+            with open(args.input_file, 'r', encoding='utf-8') as f:
+                json_data = json.load(f)
 
         prompts = extract_human_prompts(json_data)
         formatted_output = format_output(
@@ -113,15 +116,11 @@ def main():
         if args.output:
             with open(args.output, 'w', encoding='utf-8') as f:
                 f.write(formatted_output)
-            print(f"Extracted {len(prompts)} prompts to {args.output}")
         else:
             print(formatted_output)
 
     except json.JSONDecodeError:
-        print(f"Error: {args.input_file} is not a valid JSON file", file=sys.stderr)
-        sys.exit(1)
-    except FileNotFoundError:
-        print(f"Error: File {args.input_file} not found", file=sys.stderr)
+        print(f"Error: Invalid JSON input", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

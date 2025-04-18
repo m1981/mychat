@@ -155,7 +155,7 @@ def analyze_json_file(json_file: str, output_file: Optional[str] = None) -> None
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python agu_gen_schema.py <json_file> [output_schema_file]")
+        print("Usage: python aug_gen_schema.py <json_file> [output_schema_file]")
         sys.exit(1)
 
     json_file = sys.argv[1]

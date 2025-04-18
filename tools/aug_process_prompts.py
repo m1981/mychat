@@ -6,7 +6,7 @@ import re
 from collections import defaultdict
 
 def extract_human_prompts(json_data):
-    """Extract all human prompts from the GitHub Copilot chat JSON data."""
+    """Extract all human prompts from the Augment plugin chat JSON data."""
     prompts = []
 
     for conv_id, conversation in json_data.get("conversations", {}).items():
