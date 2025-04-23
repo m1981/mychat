@@ -260,20 +260,9 @@ const useSubmit = () => {
   const handleSubmit = async () => {
     console.log('🚀 Starting submission process');
     const testMode = getEnvVar('VITE_TEST_MODE', 'false');
-
-    console.log('🔍 Environment:', {
-      testMode,
-      currentProvider: providerKey,
-      isGenerating: generating
-    });
-
     const currentState = useStore.getState();
     
     if (currentState.generating || !currentState.chats) {
-      console.log('⚠️ Submission blocked:', { 
-        generating: currentState.generating, 
-        hasChats: !!currentState.chats 
-      });
       return;
     }
 
@@ -281,14 +270,10 @@ const useSubmit = () => {
     setError(null);
 
     abortControllerRef.current = new AbortController();
-    const timeout = setTimeout(() => {
-      console.log('⏰ Request timeout triggered');
-      abortControllerRef.current?.abort();
-    }, 30000);
+    const timeout = setTimeout(() => abortControllerRef.current?.abort(), 30000);
 
     try {
       await checkStorageQuota();
-      console.log('✅ Storage quota check passed');
 
       const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(currentState.chats));
       const currentMessages = updatedChats[currentState.currentChatIndex].messages;
@@ -299,7 +284,6 @@ const useSubmit = () => {
       });
 
       setChats(updatedChats);
-      console.log('📝 Added empty assistant message');
 
       // Updated test mode check
       if (testMode === 'true') {
@@ -315,18 +299,11 @@ const useSubmit = () => {
           updatedMessages[updatedMessages.length - 1].content += content;
           setChats(updatedChats);
         });
-        console.log('✨ Simulation completed');
         return;
       }
 
       console.log('🌐 Running with real API');
       const { modelConfig } = updatedChats[currentChatIndex].config;
-      
-      console.log('📊 Request configuration:', {
-        provider: providerKey,
-        model: modelConfig.model,
-        hasApiKey: !!currentApiKey
-      });
 
       const formattedRequest = provider.formatRequest(currentMessages, {
         ...modelConfig,
@@ -336,7 +313,6 @@ const useSubmit = () => {
       // Separate messages from config
       const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
 
-      console.log('🔄 Making API request...');
       const response = await fetch(`/api/chat/${providerKey}`, {
         method: 'POST',
         headers: {
@@ -353,18 +329,11 @@ const useSubmit = () => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ API response error:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorText
-        });
         throw new Error(errorText || `HTTP error! status: ${response.status}`);
       }
 
-      console.log('✅ API response received');
       const reader = response.body?.getReader();
       if (!reader) {
-        console.error('❌ No response body reader available');
         throw new Error('Response body is null');
       }
 
@@ -383,18 +352,12 @@ const useSubmit = () => {
 
     } catch (error) {
       console.error('❌ Submit error:', error);
-      console.log('📍 Error context:', {
-        isAbortError: error instanceof DOMException && error.name === 'AbortError',
-        generating: useStore.getState().generating,
-        abortController: !!abortControllerRef.current
-      });
       // Only set error if it's a non-empty string
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       if (errorMessage) {
         setError(errorMessage);
       }
     } finally {
-      console.log('🧹 Cleaning up submission process');
       clearTimeout(timeout);
       abortControllerRef.current = null;
       setGenerating(false);

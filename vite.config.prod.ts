@@ -20,7 +20,6 @@ import wasm from 'vite-plugin-wasm';
 import path from 'path';
 
 export default defineConfig({
-  cacheDir: '.vite-cache',
   plugins: [
     react(),
     wasm(),
