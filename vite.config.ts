@@ -26,6 +26,22 @@ export default defineConfig({
     wasm(),
     topLevelAwait()
   ],
+  define: {
+    // Properly define process.cwd as a function
+    'process.cwd': 'function() { return "/" }',
+    // Ensure process is defined
+    'process.env': JSON.stringify(process.env)
+  },
+  optimizeDeps: {
+    include: ['mermaid'],
+    esbuildOptions: {
+      target: 'esnext',
+      platform: 'browser',
+      supported: {
+        'dynamic-import': true
+      }
+    }
+  },
   build: {
     sourcemap: true,
     rollupOptions: {
@@ -87,18 +103,22 @@ export default defineConfig({
     reportCompressedSize: false,
     cssCodeSplit: true
   },
-
-  optimizeDeps: {
-    include: ['mermaid'],
-    esbuildOptions: {
-      target: 'esnext',
-      platform: 'node',
-      supported: {
-        'dynamic-import': true
-      }
-    }
-  },
   server: {
+    hmr: {
+      overlay: true,    // Enable/disable the HMR error overlay
+      timeout: 30000,   // Timeout for HMR connection attempts
+      protocol: 'ws',   // WebSocket protocol
+      host: 'localhost', // Changed from 0.0.0.0
+      port: 3000,       // HMR port
+      clientPort: 3000, // Port that the client will connect to
+    },
+    watch: {
+      usePolling: true,     // Required for Docker volumes
+      interval: 1000,       // Polling interval
+    },
+    host: '0.0.0.0',       // Server host (different from HMR host)
+    port: 3000,            // Server port
+    strictPort: true,      // Fail if port is already in use
     proxy: {
       '/api': {
         target: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
