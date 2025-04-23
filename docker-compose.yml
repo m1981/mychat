@@ -7,7 +7,7 @@ services:
         - USER_ID=${UID:-501}
         - GROUP_ID=${GID:-501}
       dockerfile: Dockerfile
-    container_name: mychat-app
+    container_name: ${COMPOSE_PROJECT_NAME:-mychat}-app
     ports:
       - "5173:5173"
       - "3000:3000"  # Add this if you need the API port
@@ -48,9 +48,8 @@ services:
       - VITE_DEV_SERVER_FORCE_CLOSE=true
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    networks:
-      - mychat-network
     working_dir: /app
+    network_mode: "host"
     command: sh -c "pnpm dev:host"
     stop_signal: SIGINT
     stop_grace_period: 30s
@@ -62,11 +61,6 @@ services:
         reservations:
           cpus: '1'
           memory: 1G
-
-
-networks:
-  mychat-network:
-    driver: bridge
 
 volumes:
   node_modules:

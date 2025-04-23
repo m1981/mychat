@@ -8,6 +8,9 @@ COLIMA_DISK = 60
 PNPM_FROZEN_LOCKFILE ?= false
 PLATFORM ?= linux/arm64
 PNPM_DIRS = .pnpm-store .pnpm-cache
+COMPOSE_PROJECT_NAME ?= mychat
+# Add consistent container naming for run commands
+DOCKER_COMPOSE_RUN = $(DOCKER_COMPOSE) run --rm --name $(COMPOSE_PROJECT_NAME)-app-run
 
 # User/Group detection with fallbacks
 UID := $(shell id -u)
@@ -68,12 +71,14 @@ dev-fast: ## Quick start development (reuse existing cache)
 	UID=$(UID) GID=$(GID) PNPM_FROZEN_LOCKFILE=$(PNPM_FROZEN_LOCKFILE) $(DOCKER_COMPOSE) up
 
 clean: ## Stop and remove containers
-	$(DOCKER_COMPOSE) down
+	$(DOCKER_COMPOSE) down -v
 	rm -rf node_modules $(PNPM_DIRS)
+	# Add cleanup for any lingering containers
+	docker rm -f $(COMPOSE_PROJECT_NAME)-app $(COMPOSE_PROJECT_NAME)-app-run 2>/dev/null || true
 
 clean-rebuild: clean ## Clean and rebuild development environment
-	$(DOCKER_COMPOSE) build --no-cache
-	make dev
+	$(MAKE) build
+	$(MAKE) dev
 
 logs: ## Show container logs
 	$(DOCKER_COMPOSE) logs -f
@@ -86,7 +91,7 @@ pkg-add: ## Add production package(s) with auto-sync
 		echo "Error: Package name required. Usage: make pkg-add p=package-name"; \
 		exit 1; \
 	fi
-	$(DOCKER_COMPOSE) run --rm app pnpm add $(p)
+	$(DOCKER_COMPOSE_RUN) app pnpm add $(p)
 	$(MAKE) pkg-sync
 
 pkg-add-dev: ## Add development package(s). Usage: make pkg-add-dev p=package-name
@@ -94,7 +99,7 @@ pkg-add-dev: ## Add development package(s). Usage: make pkg-add-dev p=package-na
 		echo "Error: Package name required. Usage: make pkg-add-dev p=package-name"; \
 		exit 1; \
 	fi
-	$(DOCKER_COMPOSE) run --rm app pnpm add -D $(p)
+	$(DOCKER_COMPOSE_RUN) app pnpm add -D $(p)
 	$(MAKE) pkg-sync
 
 pkg-remove: ## Remove package(s). Usage: make pkg-remove p=package-name
@@ -102,43 +107,43 @@ pkg-remove: ## Remove package(s). Usage: make pkg-remove p=package-name
 		echo "Error: Package name required. Usage: make pkg-remove p=package-name"; \
 		exit 1; \
 	fi
-	$(DOCKER_COMPOSE) run --rm app pnpm remove $(p)
+	$(DOCKER_COMPOSE_RUN) app pnpm remove $(p)
 	$(MAKE) pkg-sync
 
 pkg-sync: ## Synchronize package files and git stage
-	PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE) run --rm app pnpm install
+	PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE_RUN) app pnpm install
 	git add package.json pnpm-lock.yaml
 
 pkg-check: ## Check for outdated dependencies
-	$(DOCKER_COMPOSE) run --rm app pnpm outdated
+	$(DOCKER_COMPOSE_RUN) app pnpm outdated
 
 ##@ Testing
 .PHONY: test test-watch test-coverage test-file
 
 test: ensure-pnpm-dirs ## Run tests
-	$(DOCKER_COMPOSE) run --rm app pnpm test
+	$(DOCKER_COMPOSE_RUN) app pnpm test
 
-test-watch: ## Run tests in watch mode
-	$(DOCKER_COMPOSE) run --rm app pnpm test:watch
+test-watch: ensure-pnpm-dirs ## Run tests in watch mode
+	$(DOCKER_COMPOSE_RUN) app pnpm test:watch
 
-test-coverage: ## Run tests with coverage report
-	$(DOCKER_COMPOSE) run --rm app pnpm test:coverage
+test-coverage: ensure-pnpm-dirs ## Run tests with coverage report
+	$(DOCKER_COMPOSE_RUN) app pnpm test:coverage
 
 test-file: ensure-pnpm-dirs ## Run specific test file. Usage: make test-file f=path/to/test.ts
 	@if [ -z "$(f)" ]; then \
 		echo "Error: File path required. Usage: make test-file f=path/to/test.ts"; \
 		exit 1; \
 	fi
-	$(DOCKER_COMPOSE) run --rm app pnpm test $(f)
+	$(DOCKER_COMPOSE_RUN) app pnpm test $(f)
 
 ##@ Quality Checks
 .PHONY: lint type-check
 
 lint: ## Run linter and fix issues
-	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) lint
+	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint
 
 type: ## Run type checking
-	$(DOCKER_COMPOSE) run --rm app $(NODE_PACKAGE_MANAGER) type-check
+	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) type-check
 
 ##@ Infrastructure Management
 .PHONY: colima-start colima-stop colima-status colima-list colima-delete
