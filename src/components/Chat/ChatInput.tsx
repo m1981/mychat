@@ -1,10 +1,24 @@
-import React from 'react';
-
+import { FC } from 'react';
+import useSubmit from '@hooks/useSubmit';
 import SendIcon from '@icon/SendIcon';
 
-const ChatInput = () => {
+interface ChatInputProps {
+  className?: string;
+}
+
+const ChatInput: FC<ChatInputProps> = ({ className }) => {
+  const { handleSubmit, stopGeneration, regenerateMessage, generating } = useSubmit();
+
+  const handleStop = () => {
+    stopGeneration();
+  };
+
+  const handleRegenerate = async () => {
+    await regenerateMessage();
+  };
+
   return (
-    <div className='w-full border-t md:border-t-0 dark:border-white/20 md:border-transparent md:dark:border-transparent md:bg-vert-light-gradient bg-white dark:bg-gray-800 md:!bg-transparent dark:md:bg-vert-dark-gradient'>
+    <div className={`w-full border-t md:border-t-0 dark:border-white/20 md:border-transparent md:dark:border-transparent md:bg-vert-light-gradient bg-white dark:bg-gray-800 md:!bg-transparent dark:md:bg-vert-dark-gradient ${className || ''}`}>
       <form className='stretch mx-2 flex flex-row gap-3 pt-2 last:mb-2 md:last:mb-6 lg:mx-auto lg:max-w-3xl lg:pt-6'>
         <div className='relative flex h-full flex-1 md:flex-col'>
           <TextField />
