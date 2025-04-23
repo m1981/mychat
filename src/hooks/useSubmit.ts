@@ -7,7 +7,7 @@ import { providers } from '@type/providers';
 import { getChatCompletion } from '@src/api/api';
 import { checkStorageQuota } from '@utils/storage';
 import { useRef } from 'react';
-import { isDevelopment } from '@utils/env';
+import { getEnvVar } from '@utils/env';
 
 // Add these interfaces at the top of the file
 interface AnthropicResponse {
@@ -38,7 +38,7 @@ export class ChatStreamHandler {
   ): Promise<void> {
     while (true) {
       const { done, value } = await reader.read();
-      
+
       if (done) {
         console.log('Stream complete');
         break;
@@ -219,7 +219,7 @@ const useSubmit = () => {
       modelConfig: currentChat?.config.modelConfig,
       defaultConfig: DEFAULT_MODEL_CONFIG
     });
-    
+
     try {
       const currentState = useStore.getState();
       if (!currentState.chats || currentState.currentChatIndex < 0) {
@@ -227,13 +227,13 @@ const useSubmit = () => {
       }
 
       const currentMessages = currentState.chats[currentState.currentChatIndex].messages;
-      
+
       // Get the last user and assistant messages
       const lastUserMessage = currentMessages
         .slice()
         .reverse()
         .find(msg => msg.role === 'user')?.content || '';
-      
+
       const lastAssistantMessage = currentMessages
         .slice()
         .reverse()
@@ -259,7 +259,7 @@ const useSubmit = () => {
 
   const handleSubmit = async () => {
     const currentState = useStore.getState();
-    
+
     if (currentState.generating || !currentState.chats) {
       return;
     }
@@ -301,7 +301,7 @@ const useSubmit = () => {
 
       console.log('🌐 Running with real API');
       const { modelConfig } = updatedChats[currentChatIndex].config;
-      
+
       const formattedRequest = provider.formatRequest(currentMessages, {
         ...modelConfig,
         stream: true
@@ -363,14 +363,14 @@ const useSubmit = () => {
 
   const regenerateMessage = async () => {
     const currentState = useStore.getState();
-    
+
     if (currentState.generating || !currentState.chats) {
       return;
     }
 
     // Create a copy of chats
     const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(currentState.chats));
-    
+
     // Remove the last assistant message if it exists
     const currentMessages = updatedChats[currentState.currentChatIndex].messages;
     if (currentMessages[currentMessages.length - 1]?.role === 'assistant') {
@@ -397,7 +397,7 @@ const simulateStreamResponse = async (
   console.log('🔧 Running in simulation mode');
   const testMessage = "This is a simulated response. It will stream word by word to test the UI rendering. You can test stop and retry functionality with this message.";
   const words = testMessage.split(' ');
-  
+
   for (const word of words) {
     // Check if reader is closed before continuing
     try {
