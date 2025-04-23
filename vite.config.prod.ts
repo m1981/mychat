@@ -1,8 +1,7 @@
 /**
- * Vite Configuration
+ * Vite Production Configuration
  * Responsibilities:
  * - Build configuration and optimization
- * - Development server setup
  * - Plugin management
  * - Asset bundling and chunking
  * - Path aliases (must match tsconfig.json paths)
@@ -21,15 +20,14 @@ import wasm from 'vite-plugin-wasm';
 import path from 'path';
 
 export default defineConfig({
+  cacheDir: '.vite-cache',
   plugins: [
     react(),
     wasm(),
     topLevelAwait()
   ],
   define: {
-    // Properly define process.cwd as a function
     'process.cwd': 'function() { return "/" }',
-    // Ensure process is defined
     'process.env': JSON.stringify(process.env)
   },
   optimizeDeps: {
@@ -47,10 +45,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Core vendor chunks
           'core-vendor': ['react', 'react-dom', 'zustand'],
-
-          // Markdown processing
           'markdown-core': [
             'react-markdown',
             'remark-gfm',
@@ -60,26 +55,18 @@ export default defineConfig({
             'rehype-highlight',
             'rehype-katex'
           ],
-
-          // Mermaid - simplified chunking
           'mermaid': ['mermaid'],
-
-          // UI and functionality
           'ui-utils': [
             'react-hot-toast',
             'html2canvas',
             'jspdf'
           ],
-
-          // i18n
           'i18n': [
             'i18next',
             'react-i18next',
             'i18next-browser-languagedetector',
             'i18next-http-backend'
           ],
-
-          // Data handling
           'data-utils': [
             'lodash',
             'uuid',
@@ -98,34 +85,8 @@ export default defineConfig({
         drop_debugger: false
       }
     },
-
-    // Improve build performance
     reportCompressedSize: false,
     cssCodeSplit: true
-  },
-  server: {
-    hmr: {
-      overlay: true,    // Enable/disable the HMR error overlay
-      timeout: 30000,   // Timeout for HMR connection attempts
-      protocol: 'ws',   // WebSocket protocol
-      host: 'localhost', // Changed from 0.0.0.0
-      port: 3000,       // HMR port
-      clientPort: 3000, // Port that the client will connect to
-    },
-    watch: {
-      usePolling: true,     // Required for Docker volumes
-      interval: 1000,       // Polling interval
-    },
-    host: '0.0.0.0',       // Server host (different from HMR host)
-    port: 3000,            // Server port
-    strictPort: true,      // Fail if port is already in use
-    proxy: {
-      '/api': {
-        target: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
-      },
-    },
   },
   resolve: {
     alias: {
@@ -143,24 +104,10 @@ export default defineConfig({
       '@src': path.resolve(__dirname, './src')
     }
   },
-
   base: '/',
-
-  // Add preview configuration for production testing
   preview: {
     port: 4173,
     host: true,
     strictPort: true,
-  },
-  test: {
-    // Limit the number of threads
-    poolOptions: {
-      threads: {
-        singleThread: true,  // Or adjust maxThreads
-      }
-    },
-    // Adjust memory usage
-    pool: 'threads',
-    isolate: false,
   }
 });
