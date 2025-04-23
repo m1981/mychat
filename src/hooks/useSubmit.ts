@@ -260,50 +260,97 @@ const useSubmit = () => {
   const handleSubmit = async () => {
     console.log('🚀 Starting submission process');
     const simMode = getEnvVar('VITE_SIM_MODE', 'false');
+    console.log('🔧 Simulation mode:', simMode);
+
     const currentState = useStore.getState();
-    
+    console.log('📊 Current state:', {
+      generating: currentState.generating,
+      hasChats: !!currentState.chats,
+      currentIndex: currentState.currentChatIndex
+    });
+
     if (currentState.generating || !currentState.chats) {
+      console.log('⚠️ Submission blocked');
       return;
     }
 
     setGenerating(true);
     setError(null);
 
-    abortControllerRef.current = new AbortController();
-    const timeout = setTimeout(() => abortControllerRef.current?.abort(), 30000);
-
     try {
       await checkStorageQuota();
+      console.log('✅ Storage quota check passed');
 
       const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(currentState.chats));
       const currentMessages = updatedChats[currentState.currentChatIndex].messages;
 
+      // Add empty assistant message
       currentMessages.push({
         role: 'assistant',
         content: '',
       });
 
+      console.log('📝 Adding empty message to chat:', {
+        chatIndex: currentState.currentChatIndex,
+        messageCount: currentMessages.length
+      });
+
       setChats(updatedChats);
 
-      // Updated test mode check
       if (simMode === 'true') {
         console.log('🔬 Development mode detected');
         console.log('⚡ Test mode enabled:', simMode);
         console.log('🎮 Starting simulation...');
-        const mockReader = new ReadableStream().getReader();
+
+        const mockReader = new ReadableStream({
+          start(controller) {
+            console.log('📡 Mock stream started');
+          },
+          cancel() {
+            console.log('❌ Mock stream cancelled');
+          }
+        }).getReader();
+
         await simulateStreamResponse(mockReader, (content) => {
+          console.log(`📨 Received content: "${content}"`);
+          
+          const latestState = useStore.getState();
+          console.log('🔄 Current store state:', {
+            chatCount: latestState.chats?.length,
+            currentIndex: latestState.currentChatIndex
+          });
+
           const updatedChats: ChatInterface[] = JSON.parse(
-            JSON.stringify(useStore.getState().chats)
+            JSON.stringify(latestState.chats)
           );
-          const updatedMessages = updatedChats[currentChatIndex].messages;
-          updatedMessages[updatedMessages.length - 1].content += content;
-          setChats(updatedChats);
+
+          if (!updatedChats || latestState.currentChatIndex < 0) {
+            console.error('❌ Invalid chat state');
+            return;
+          }
+
+          const updatedMessages = updatedChats[latestState.currentChatIndex].messages;
+          const lastMessage = updatedMessages[updatedMessages.length - 1];
+          
+          if (lastMessage && lastMessage.role === 'assistant') {
+            lastMessage.content += content;
+            console.log('✏️ Updated message content:', {
+              messageIndex: updatedMessages.length - 1,
+              newContent: lastMessage.content
+            });
+            
+            setChats(updatedChats);
+          } else {
+            console.error('❌ No assistant message found to update');
+          }
         });
+
+        console.log('✨ Simulation completed');
         return;
       }
 
       console.log('🌐 Running with real API');
-      const { modelConfig } = updatedChats[currentChatIndex].config;
+      const { modelConfig } = updatedChats[currentState.currentChatIndex].config;
 
       const formattedRequest = provider.formatRequest(currentMessages, {
         ...modelConfig,
@@ -341,7 +388,7 @@ const useSubmit = () => {
         const updatedChats: ChatInterface[] = JSON.parse(
           JSON.stringify(useStore.getState().chats)
         );
-        const updatedMessages = updatedChats[currentChatIndex].messages;
+        const updatedMessages = updatedChats[currentState.currentChatIndex].messages;
         updatedMessages[updatedMessages.length - 1].content += content;
         setChats(updatedChats);
       });
@@ -392,27 +439,41 @@ const useSubmit = () => {
 
 export default useSubmit;
 
-// Add this helper outside the hook
+// Add this helper outside the hook with enhanced debugging
 const simulateStreamResponse = async (
   reader: ReadableStreamDefaultReader<Uint8Array>,
   onContent: (content: string) => void
 ) => {
-  console.log('🔧 Running in simulation mode');
+  console.log('🔧 Starting simulation stream');
   const testMessage = "This is a simulated response. It will stream word by word to test the UI rendering. You can test stop and retry functionality with this message.";
   const words = testMessage.split(' ');
   
+  console.log('📝 Simulation words:', words.length);
+  
   for (const word of words) {
-    // Check if reader is closed before continuing
     try {
-      // Simply checking if the promise is rejected is enough
-      await reader.closed;
-    } catch {
-      console.log('🛑 Simulation stopped by user');
-      // If reader is aborted or closed, this will throw
+      // Check if simulation was stopped
+      const readerState = await Promise.race([
+        reader.closed,
+        new Promise(resolve => setTimeout(() => resolve('timeout'), 100))
+      ]);
+
+      if (readerState !== 'timeout') {
+        console.log('🛑 Simulation stopped by user');
+        break;
+      }
+
+      console.log(`🔤 Streaming word: "${word}"`);
+      onContent(word + ' ');
+      
+      // Add debug for content update
+      console.log('✍️ Content updated in simulation');
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+    } catch (error) {
+      console.error('❌ Simulation error:', error);
       break;
     }
-
-    await new Promise(resolve => setTimeout(resolve, 200)); // Simulate network delay
-    onContent(word + ' ');
   }
+  console.log('🏁 Simulation complete');
 };

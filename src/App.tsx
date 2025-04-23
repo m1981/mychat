@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 
 import Chat from '@components/Chat';
 import Menu from '@components/Menu';
+import Debug from '@components/Debug';
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
 import useStore from '@store/store';
 import { ChatInterface } from '@type/chat';
@@ -78,6 +79,7 @@ function App() {
       <Menu />
       <Chat />
       <Toaster />
+      {process.env.NODE_ENV === 'development' && <Debug />}
     </div>
   );
 }
