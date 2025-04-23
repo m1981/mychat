@@ -259,7 +259,7 @@ const useSubmit = () => {
 
   const handleSubmit = async () => {
     console.log('🚀 Starting submission process');
-    const testMode = getEnvVar('VITE_TEST_MODE', 'false');
+    const simMode = getEnvVar('VITE_SIM_MODE', 'false');
     const currentState = useStore.getState();
     
     if (currentState.generating || !currentState.chats) {
@@ -286,9 +286,9 @@ const useSubmit = () => {
       setChats(updatedChats);
 
       // Updated test mode check
-      if (testMode === 'true') {
+      if (simMode === 'true') {
         console.log('🔬 Development mode detected');
-        console.log('⚡ Test mode enabled:', testMode);
+        console.log('⚡ Test mode enabled:', simMode);
         console.log('🎮 Starting simulation...');
         const mockReader = new ReadableStream().getReader();
         await simulateStreamResponse(mockReader, (content) => {

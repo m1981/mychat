@@ -44,7 +44,7 @@ services:
       - PNPM_CACHE_DIR=/home/node/.cache/pnpm
       - UID=${UID}
       - GID=${GID}
-      - MOCK_AI=true
+      - VITE_SIM_MODE=${VITE_SIM_MODE:-false}
       - VITE_DEV_SERVER_FORCE_CLOSE=true
     extra_hosts:
       - "host.docker.internal:host-gateway"

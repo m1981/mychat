@@ -58,10 +58,11 @@ export default defineConfig({
     },
     testTimeout: 10000,
     hookTimeout: 10000,
-    pool: 'forks',
+    pool: 'threads',
     poolOptions: {
       threads: {
-        singleThread: true
+        minThreads: 1,
+        maxThreads: 4
       }
     },
     retry: 2,
@@ -80,7 +81,6 @@ export default defineConfig({
     },
     env: {
       NODE_ENV: 'test',
-      VITE_TEST_MODE: 'true'
     }
   },
   resolve: {
