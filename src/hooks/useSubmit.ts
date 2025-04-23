@@ -38,7 +38,7 @@ export class ChatStreamHandler {
   ): Promise<void> {
     while (true) {
       const { done, value } = await reader.read();
-
+      
       if (done) {
         console.log('Stream complete');
         break;
@@ -219,7 +219,7 @@ const useSubmit = () => {
       modelConfig: currentChat?.config.modelConfig,
       defaultConfig: DEFAULT_MODEL_CONFIG
     });
-
+    
     try {
       const currentState = useStore.getState();
       if (!currentState.chats || currentState.currentChatIndex < 0) {
@@ -227,13 +227,13 @@ const useSubmit = () => {
       }
 
       const currentMessages = currentState.chats[currentState.currentChatIndex].messages;
-
+      
       // Get the last user and assistant messages
       const lastUserMessage = currentMessages
         .slice()
         .reverse()
         .find(msg => msg.role === 'user')?.content || '';
-
+      
       const lastAssistantMessage = currentMessages
         .slice()
         .reverse()
@@ -258,9 +258,22 @@ const useSubmit = () => {
   };
 
   const handleSubmit = async () => {
-    const currentState = useStore.getState();
+    console.log('🚀 Starting submission process');
+    const testMode = getEnvVar('VITE_TEST_MODE', 'false');
 
+    console.log('🔍 Environment:', {
+      testMode,
+      currentProvider: providerKey,
+      isGenerating: generating
+    });
+
+    const currentState = useStore.getState();
+    
     if (currentState.generating || !currentState.chats) {
+      console.log('⚠️ Submission blocked:', { 
+        generating: currentState.generating, 
+        hasChats: !!currentState.chats 
+      });
       return;
     }
 
@@ -268,10 +281,14 @@ const useSubmit = () => {
     setError(null);
 
     abortControllerRef.current = new AbortController();
-    const timeout = setTimeout(() => abortControllerRef.current?.abort(), 30000);
+    const timeout = setTimeout(() => {
+      console.log('⏰ Request timeout triggered');
+      abortControllerRef.current?.abort();
+    }, 30000);
 
     try {
       await checkStorageQuota();
+      console.log('✅ Storage quota check passed');
 
       const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(currentState.chats));
       const currentMessages = updatedChats[currentState.currentChatIndex].messages;
@@ -282,11 +299,13 @@ const useSubmit = () => {
       });
 
       setChats(updatedChats);
+      console.log('📝 Added empty assistant message');
 
-      // Add test mode check with logging
-      if (isDevelopment && process.env.VITE_TEST_MODE === 'true') {
+      // Updated test mode check
+      if (testMode === 'true') {
         console.log('🔬 Development mode detected');
-        console.log('⚡ Test mode enabled:', process.env.VITE_TEST_MODE);
+        console.log('⚡ Test mode enabled:', testMode);
+        console.log('🎮 Starting simulation...');
         const mockReader = new ReadableStream().getReader();
         await simulateStreamResponse(mockReader, (content) => {
           const updatedChats: ChatInterface[] = JSON.parse(
@@ -296,11 +315,18 @@ const useSubmit = () => {
           updatedMessages[updatedMessages.length - 1].content += content;
           setChats(updatedChats);
         });
+        console.log('✨ Simulation completed');
         return;
       }
 
       console.log('🌐 Running with real API');
       const { modelConfig } = updatedChats[currentChatIndex].config;
+      
+      console.log('📊 Request configuration:', {
+        provider: providerKey,
+        model: modelConfig.model,
+        hasApiKey: !!currentApiKey
+      });
 
       const formattedRequest = provider.formatRequest(currentMessages, {
         ...modelConfig,
@@ -310,6 +336,7 @@ const useSubmit = () => {
       // Separate messages from config
       const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
 
+      console.log('🔄 Making API request...');
       const response = await fetch(`/api/chat/${providerKey}`, {
         method: 'POST',
         headers: {
@@ -326,11 +353,18 @@ const useSubmit = () => {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('❌ API response error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
         throw new Error(errorText || `HTTP error! status: ${response.status}`);
       }
 
+      console.log('✅ API response received');
       const reader = response.body?.getReader();
       if (!reader) {
+        console.error('❌ No response body reader available');
         throw new Error('Response body is null');
       }
 
@@ -349,12 +383,18 @@ const useSubmit = () => {
 
     } catch (error) {
       console.error('❌ Submit error:', error);
+      console.log('📍 Error context:', {
+        isAbortError: error instanceof DOMException && error.name === 'AbortError',
+        generating: useStore.getState().generating,
+        abortController: !!abortControllerRef.current
+      });
       // Only set error if it's a non-empty string
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       if (errorMessage) {
         setError(errorMessage);
       }
     } finally {
+      console.log('🧹 Cleaning up submission process');
       clearTimeout(timeout);
       abortControllerRef.current = null;
       setGenerating(false);
@@ -363,14 +403,14 @@ const useSubmit = () => {
 
   const regenerateMessage = async () => {
     const currentState = useStore.getState();
-
+    
     if (currentState.generating || !currentState.chats) {
       return;
     }
 
     // Create a copy of chats
     const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(currentState.chats));
-
+    
     // Remove the last assistant message if it exists
     const currentMessages = updatedChats[currentState.currentChatIndex].messages;
     if (currentMessages[currentMessages.length - 1]?.role === 'assistant') {
@@ -397,7 +437,7 @@ const simulateStreamResponse = async (
   console.log('🔧 Running in simulation mode');
   const testMessage = "This is a simulated response. It will stream word by word to test the UI rendering. You can test stop and retry functionality with this message.";
   const words = testMessage.split(' ');
-
+  
   for (const word of words) {
     // Check if reader is closed before continuing
     try {
