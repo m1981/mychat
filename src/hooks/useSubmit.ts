@@ -7,6 +7,7 @@ import { providers } from '@type/providers';
 import { getChatCompletion } from '@src/api/api';
 import { checkStorageQuota } from '@utils/storage';
 import { useRef } from 'react';
+import { isDevelopment } from '@utils/env';
 
 // Add these interfaces at the top of the file
 interface AnthropicResponse {
@@ -266,7 +267,6 @@ const useSubmit = () => {
     setGenerating(true);
     setError(null);
 
-    // Store the controller in ref for access from stopGeneration
     abortControllerRef.current = new AbortController();
     const timeout = setTimeout(() => abortControllerRef.current?.abort(), 30000);
 
@@ -283,6 +283,23 @@ const useSubmit = () => {
 
       setChats(updatedChats);
 
+      // Add test mode check with logging
+      if (isDevelopment && process.env.VITE_TEST_MODE === 'true') {
+        console.log('🔬 Development mode detected');
+        console.log('⚡ Test mode enabled:', process.env.VITE_TEST_MODE);
+        const mockReader = new ReadableStream().getReader();
+        await simulateStreamResponse(mockReader, (content) => {
+          const updatedChats: ChatInterface[] = JSON.parse(
+            JSON.stringify(useStore.getState().chats)
+          );
+          const updatedMessages = updatedChats[currentChatIndex].messages;
+          updatedMessages[updatedMessages.length - 1].content += content;
+          setChats(updatedChats);
+        });
+        return;
+      }
+
+      console.log('🌐 Running with real API');
       const { modelConfig } = updatedChats[currentChatIndex].config;
       
       const formattedRequest = provider.formatRequest(currentMessages, {
@@ -367,7 +384,32 @@ const useSubmit = () => {
     await handleSubmit();
   };
 
-  return { handleSubmit, stopGeneration, regenerateMessage, error };
+  return { handleSubmit, stopGeneration, regenerateMessage, error, generating };
 };
 
 export default useSubmit;
+
+// Add this helper outside the hook
+const simulateStreamResponse = async (
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  onContent: (content: string) => void
+) => {
+  console.log('🔧 Running in simulation mode');
+  const testMessage = "This is a simulated response. It will stream word by word to test the UI rendering. You can test stop and retry functionality with this message.";
+  const words = testMessage.split(' ');
+  
+  for (const word of words) {
+    // Check if reader is closed before continuing
+    try {
+      // Simply checking if the promise is rejected is enough
+      await reader.closed;
+    } catch {
+      console.log('🛑 Simulation stopped by user');
+      // If reader is aborted or closed, this will throw
+      break;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 200)); // Simulate network delay
+    onContent(word + ' ');
+  }
+};
