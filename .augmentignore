@@ -1,5 +1,7 @@
-**/*
-**
-*
-!tools
+.idea
+dist
+bin
+.pmpm-cache
+.pnpm-store
+
 
