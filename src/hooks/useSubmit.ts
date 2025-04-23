@@ -6,7 +6,7 @@ import { ChatInterface, MessageInterface, ModelConfig } from '@type/chat';
 import { providers } from '@type/providers';
 import { getChatCompletion } from '@src/api/api';
 import { checkStorageQuota } from '@utils/storage';
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 
 // Add these interfaces at the top of the file
 interface AnthropicResponse {
@@ -26,9 +26,6 @@ interface TextResponse {
 
 // Extracted for testing
 export class ChatStreamHandler {
-  private buffer: string = '';
-  private readonly chunkSize = 32 * 1024; // 32KB chunks
-
   constructor(
     private readonly decoder = new TextDecoder(),
     private readonly provider: typeof providers[keyof typeof providers]
@@ -38,68 +35,36 @@ export class ChatStreamHandler {
     reader: ReadableStreamDefaultReader<Uint8Array>,
     onContent: (content: string) => void
   ): Promise<void> {
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        
-        if (done) {
-          // Process any remaining buffer
-          if (this.buffer) {
-            await this.processBuffer(this.buffer, onContent);
-          }
-          console.log('Stream complete');
-          break;
-        }
-
-        // Decode chunk and add to buffer
-        this.buffer += this.decoder.decode(value, { stream: true });
-        
-        // Process complete lines from buffer
-        if (this.buffer.length > this.chunkSize) {
-          const lastNewlineIndex = this.buffer.lastIndexOf('\n');
-          if (lastNewlineIndex > 0) {
-            const completeLines = this.buffer.slice(0, lastNewlineIndex);
-            this.buffer = this.buffer.slice(lastNewlineIndex + 1);
-            await this.processBuffer(completeLines, onContent);
-          }
-        }
-      }
-    } finally {
-      reader.releaseLock();
-    }
-  }
-
-  private async processBuffer(buffer: string, onContent: (content: string) => void): Promise<void> {
-    // Process lines in chunks to avoid blocking the main thread
-    const lines = buffer.split('\n');
-    const chunks = this.chunkArray(lines, 50); // Process 50 lines at a time
-
-    for (const chunk of chunks) {
-      await new Promise(resolve => setTimeout(resolve, 0)); // Yield to main thread
+    while (true) {
+      const { done, value } = await reader.read();
       
-      for (const line of chunk) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6);
-          if (data === '[DONE]') continue;
-
-          try {
-            const result = JSON.parse(data);
-            const content = this.provider.parseStreamingResponse(result);
-            if (content) onContent(content);
-          } catch (e) {
-            console.error('Failed to parse chunk:', e);
-          }
-        }
+      if (done) {
+        console.log('Stream complete');
+        break;
       }
+
+      const chunk = this.decoder.decode(value);
+      await this.processChunk(chunk, onContent);
     }
   }
 
-  private chunkArray<T>(array: T[], size: number): T[][] {
-    const chunks: T[][] = [];
-    for (let i = 0; i < array.length; i += size) {
-      chunks.push(array.slice(i, i + size));
+  private async processChunk(chunk: string, onContent: (content: string) => void): Promise<void> {
+    const lines = chunk.split('\n').filter(line => line.trim() !== '');
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6);
+        if (data === '[DONE]') continue;
+
+        try {
+          const result = JSON.parse(data);
+          const content = this.provider.parseStreamingResponse(result);
+          if (content) onContent(content);
+        } catch (e) {
+          console.error('Failed to parse chunk:', e);
+        }
+      }
     }
-    return chunks;
   }
 }
 
@@ -291,31 +256,9 @@ const useSubmit = () => {
     }
   };
 
-  const MAX_MESSAGE_SIZE = 1024 * 1024; // 1MB limit per message
-  const MAX_TOTAL_MESSAGES = 100; // Limit total messages in chat
-
   const handleSubmit = async () => {
     const currentState = useStore.getState();
     
-    if (!currentState.chats || currentState.currentChatIndex < 0) {
-      setError('No active chat found');
-      return;
-    }
-
-    const messageSize = new TextEncoder().encode(
-      JSON.stringify(currentState.chats[currentChatIndex])
-    ).length;
-    
-    if (messageSize > MAX_MESSAGE_SIZE) {
-      setError(`Message size exceeds limit of ${MAX_MESSAGE_SIZE / 1024 / 1024}MB`);
-      return;
-    }
-
-    if (currentState.chats[currentChatIndex].messages.length >= MAX_TOTAL_MESSAGES) {
-      setError(`Maximum message limit of ${MAX_TOTAL_MESSAGES} reached`);
-      return;
-    }
-
     if (currentState.generating || !currentState.chats) {
       return;
     }
@@ -330,7 +273,7 @@ const useSubmit = () => {
     try {
       await checkStorageQuota();
 
-      const updatedChats: ChatInterface[] = structuredClone(currentState.chats);
+      const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(currentState.chats));
       const currentMessages = updatedChats[currentState.currentChatIndex].messages;
 
       currentMessages.push({
@@ -374,44 +317,14 @@ const useSubmit = () => {
         throw new Error('Response body is null');
       }
 
-      // Batch content updates
-      const contentBuffer = useRef<string>('');
-      const updateTimeout = useRef<NodeJS.Timeout>();
-      
-      const batchedContentUpdate = (content: string) => {
-        contentBuffer.current += content;
-        
-        // Clear existing timeout
-        if (updateTimeout.current) {
-          clearTimeout(updateTimeout.current);
-        }
-        
-        // Schedule state update
-        updateTimeout.current = setTimeout(() => {
-          const currentState = useStore.getState();
-          if (!currentState.chats) return;
-
-          const updatedChats = updateLastMessage(
-            currentState.chats,
-            currentChatIndex,
-            contentBuffer.current
-          );
-          
-          setChats(updatedChats);
-          contentBuffer.current = '';
-        }, 100); // Batch updates every 100ms
-      };
-
-      await streamHandler.processStream(reader, batchedContentUpdate);
-      
-      // Cleanup on unmount
-      useEffect(() => {
-        return () => {
-          if (updateTimeout.current) {
-            clearTimeout(updateTimeout.current);
-          }
-        };
-      }, []);
+      await streamHandler.processStream(reader, (content) => {
+        const updatedChats: ChatInterface[] = JSON.parse(
+          JSON.stringify(useStore.getState().chats)
+        );
+        const updatedMessages = updatedChats[currentChatIndex].messages;
+        updatedMessages[updatedMessages.length - 1].content += content;
+        setChats(updatedChats);
+      });
 
       console.log('✨ Starting title generation');
       await handleTitleGeneration();
@@ -439,7 +352,7 @@ const useSubmit = () => {
     }
 
     // Create a copy of chats
-    const updatedChats: ChatInterface[] = structuredClone(currentState.chats);
+    const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(currentState.chats));
     
     // Remove the last assistant message if it exists
     const currentMessages = updatedChats[currentState.currentChatIndex].messages;
@@ -455,22 +368,6 @@ const useSubmit = () => {
   };
 
   return { handleSubmit, stopGeneration, regenerateMessage, error };
-};
-
-const updateLastMessage = (chats: ChatInterface[], chatIndex: number, content: string): ChatInterface[] => {
-  const chat = { ...chats[chatIndex] };
-  const messages = [...chat.messages];
-  messages[messages.length - 1] = {
-    ...messages[messages.length - 1],
-    content
-  };
-  chat.messages = messages;
-  
-  return [
-    ...chats.slice(0, chatIndex),
-    chat,
-    ...chats.slice(chatIndex + 1)
-  ];
 };
 
 export default useSubmit;
