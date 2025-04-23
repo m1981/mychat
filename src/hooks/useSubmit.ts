@@ -25,26 +25,34 @@ interface TextResponse {
 }
 
 export class ChatStreamHandler {
+  private aborted = false;
+
   constructor(
     private readonly decoder = new TextDecoder(),
     private readonly provider: typeof providers[keyof typeof providers]
-  ) {}
+  ) {
+    console.log('🔧 ChatStreamHandler initialized');
+  }
 
   async processStream(
     reader: ReadableStreamDefaultReader<Uint8Array>,
     onContent: (content: string) => void,
     signal: AbortSignal
   ): Promise<void> {
-    try {
-      while (true) {
-        if (signal.aborted) {
-          throw new Error('Stream aborted');
-        }
+    console.log('📡 Starting stream processing');
+    
+    signal.addEventListener('abort', () => {
+      console.log('🛑 Abort signal received in ChatStreamHandler');
+      this.aborted = true;
+      reader.cancel().catch(e => console.error('❌ Reader cancel error:', e));
+    }, { once: true });
 
+    try {
+      while (!this.aborted) {
         const { done, value } = await reader.read();
         
-        if (done) {
-          console.log('Stream complete');
+        if (done || this.aborted) {
+          console.log(`🏁 Stream ended. Done: ${done}, Aborted: ${this.aborted}`);
           break;
         }
 
@@ -52,28 +60,48 @@ export class ChatStreamHandler {
         await this.processChunk(chunk, onContent);
       }
     } catch (error) {
-      if (error.message === 'Stream aborted') {
-        console.log('Stream processing aborted');
-      } else {
-        throw error;
+      console.error('❌ Stream processing error:', error);
+      throw error;
+    } finally {
+      console.log('🧹 Cleaning up stream resources');
+      this.aborted = false;
+      try {
+        await reader.cancel();
+        console.log('✅ Reader cancelled successfully');
+      } catch (e) {
+        console.error('❌ Reader cleanup error:', e);
       }
     }
   }
 
   private async processChunk(chunk: string, onContent: (content: string) => void): Promise<void> {
+    if (this.aborted) {
+      console.log('🚫 Chunk processing skipped - stream aborted');
+      return;
+    }
+
     const lines = chunk.split('\n').filter(line => line.trim() !== '');
+    console.log(`📦 Processing ${lines.length} lines from chunk`);
 
     for (const line of lines) {
+      if (this.aborted) {
+        console.log('🚫 Line processing interrupted - stream aborted');
+        break;
+      }
+      
       if (line.startsWith('data: ')) {
         const data = line.slice(6);
-        if (data === '[DONE]') continue;
+        if (data === '[DONE]') {
+          console.log('✅ Received [DONE] signal');
+          continue;
+        }
 
         try {
           const result = JSON.parse(data);
           const content = this.provider.parseStreamingResponse(result);
           if (content) onContent(content);
         } catch (e) {
-          console.error('Failed to parse chunk:', e);
+          console.error('❌ Chunk parsing error:', e);
         }
       }
     }
@@ -148,8 +176,11 @@ export class TitleGenerator {
 const useSubmit = () => {
   const { i18n } = useTranslation('api');
   const store = useStore();
-  const simMode = getEnvVar('VITE_SIM_MODE', 'false');
   const abortControllerRef = useRef<AbortController | null>(null);
+  const streamHandlerRef = useRef<ChatStreamHandler | null>(null);
+  
+  // Add simMode initialization at the top with other variables
+  const simMode = getEnvVar('VITE_SIM_MODE', 'false');
   
   const {
     currentChatIndex,
@@ -162,21 +193,27 @@ const useSubmit = () => {
     setChats,
   } = store;
 
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-    };
-  }, []);
-
   const currentChat = chats?.[currentChatIndex];
   const providerKey = currentChat?.config.provider || DEFAULT_PROVIDER;
   const provider = providers[providerKey];
   const currentApiKey = apiKeys[providerKey];
 
-  const streamHandler = new ChatStreamHandler(new TextDecoder(), provider);
+  // Initialize streamHandler once with provider
+  useEffect(() => {
+    if (!streamHandlerRef.current) {
+      console.log('🔧 Initializing ChatStreamHandler (once)');
+      streamHandlerRef.current = new ChatStreamHandler(new TextDecoder(), provider);
+    }
+    
+    return () => {
+      console.log('🧹 Cleaning up resources');
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, [provider]); // Add provider as dependency
+
   const titleGenerator = new TitleGenerator(
     async (messages, config) => {
       if (!config || !config.model) {
@@ -202,14 +239,15 @@ const useSubmit = () => {
   );
 
   const stopGeneration = useCallback(() => {
-    console.log('Stopping generation');
+    console.log('🛑 Stop generation requested');
     setGenerating(false);
     
     if (abortControllerRef.current) {
+      console.log('⚡ Aborting current request');
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
-  }, []);
+  }, [setGenerating]);
 
   const simulateStreamResponse = async (
     onContent: (content: string) => void
@@ -217,12 +255,16 @@ const useSubmit = () => {
     const testMessage = "This is a simulated response. It will stream word by word to test the UI rendering.";
     const words = testMessage.split(' ');
     
-    abortControllerRef.current = new AbortController();
-    
     try {
       for (const word of words) {
+        // Check if generation should stop
+        if (!useStore.getState().generating) {
+          console.log('🛑 Simulation stopped - generating flag is false');
+          return;
+        }
+
         if (abortControllerRef.current?.signal.aborted) {
-          console.log('Simulation aborted');
+          console.log('🛑 Simulation stopped - abort signal received');
           return;
         }
 
@@ -230,25 +272,28 @@ const useSubmit = () => {
         await new Promise((resolve, reject) => {
           const timeoutId = setTimeout(resolve, 200);
           
+          // Clean up timeout if aborted
           abortControllerRef.current?.signal.addEventListener('abort', () => {
             clearTimeout(timeoutId);
             reject(new Error('Aborted'));
-          });
+          }, { once: true });
         });
       }
     } catch (error) {
       if (error.message === 'Aborted') {
-        console.log('Simulation stopped');
+        console.log('🛑 Simulation aborted cleanly');
       } else {
+        console.error('❌ Simulation error:', error);
         throw error;
       }
-    } finally {
-      abortControllerRef.current = null;
     }
   };
 
   const handleSubmit = async () => {
+    console.log('🚀 Starting submission', { simMode, generating });
+    
     if (generating || !chats) {
+      console.log('⚠️ Submission blocked - already generating or no chats');
       return;
     }
 
@@ -258,6 +303,7 @@ const useSubmit = () => {
 
     try {
       await checkStorageQuota();
+      console.log('✅ Storage quota check passed');
 
       const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(chats));
       const currentMessages = updatedChats[currentChatIndex].messages;
@@ -270,8 +316,12 @@ const useSubmit = () => {
       setChats(updatedChats);
 
       if (simMode === 'true') {
+        console.log('🎮 Starting simulation mode');
         try {
           await simulateStreamResponse((content) => {
+            // Only update if we're still generating
+            if (!useStore.getState().generating) return;
+
             const latestState = useStore.getState();
             const updatedChats = JSON.parse(JSON.stringify(latestState.chats));
             
@@ -285,7 +335,11 @@ const useSubmit = () => {
               setChats(updatedChats);
             }
           });
+        } catch (error) {
+          console.error('❌ Simulation error:', error);
+          throw error;
         } finally {
+          console.log('✨ Simulation complete');
           setGenerating(false);
         }
         return;
@@ -324,7 +378,8 @@ const useSubmit = () => {
         throw new Error('Response body is null');
       }
 
-      await streamHandler.processStream(
+      console.log('📡 Starting stream processing');
+      await streamHandlerRef.current?.processStream(
         reader,
         (content) => {
           const updatedChats: ChatInterface[] = JSON.parse(
@@ -356,9 +411,10 @@ const useSubmit = () => {
         }
       }
     } catch (error) {
-      console.error('Submission error:', error);
+      console.error('❌ Submit error:', error);
       setError(error.message || 'An error occurred during submission');
     } finally {
+      console.log('✨ Submission complete');
       setGenerating(false);
       abortControllerRef.current = null;
     }
