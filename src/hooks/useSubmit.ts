@@ -405,7 +405,6 @@ const useSubmit = () => {
         setError(errorMessage);
       }
     } finally {
-      clearTimeout(timeout);
       abortControllerRef.current = null;
       setGenerating(false);
     }
