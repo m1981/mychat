@@ -6,10 +6,9 @@ import { ChatInterface, MessageInterface, ModelConfig } from '@type/chat';
 import { providers } from '@type/providers';
 import { getChatCompletion } from '@src/api/api';
 import { checkStorageQuota } from '@utils/storage';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { getEnvVar } from '@utils/env';
 
-// Add these interfaces at the top of the file
 interface AnthropicResponse {
   message: {
     content: string;
@@ -25,7 +24,6 @@ interface TextResponse {
   text: string;
 }
 
-// Extracted for testing
 export class ChatStreamHandler {
   constructor(
     private readonly decoder = new TextDecoder(),
@@ -34,18 +32,31 @@ export class ChatStreamHandler {
 
   async processStream(
     reader: ReadableStreamDefaultReader<Uint8Array>,
-    onContent: (content: string) => void
+    onContent: (content: string) => void,
+    signal: AbortSignal
   ): Promise<void> {
-    while (true) {
-      const { done, value } = await reader.read();
-      
-      if (done) {
-        console.log('Stream complete');
-        break;
-      }
+    try {
+      while (true) {
+        if (signal.aborted) {
+          throw new Error('Stream aborted');
+        }
 
-      const chunk = this.decoder.decode(value);
-      await this.processChunk(chunk, onContent);
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log('Stream complete');
+          break;
+        }
+
+        const chunk = this.decoder.decode(value);
+        await this.processChunk(chunk, onContent);
+      }
+    } catch (error) {
+      if (error.message === 'Stream aborted') {
+        console.log('Stream processing aborted');
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -69,7 +80,6 @@ export class ChatStreamHandler {
   }
 }
 
-// Extracted for testing
 export class TitleGenerator {
   constructor(
     private readonly generateTitle: (messages: MessageInterface[], config: ModelConfig) => Promise<string | ContentResponse | AnthropicResponse | TextResponse | TextResponse[]>,
@@ -97,7 +107,6 @@ export class TitleGenerator {
     try {
       const response = await this.generateTitle([message], this.defaultConfig);
 
-      // First, handle array response
       if (Array.isArray(response)) {
         if (response.length > 0 && 'type' in response[0] && response[0].type === 'text') {
           const title = response[0].text.trim();
@@ -105,26 +114,22 @@ export class TitleGenerator {
         }
       }
 
-      // Handle single response cases
       if (typeof response === 'string') {
         const title = response.trim();
         return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
       }
 
       if (response && typeof response === 'object') {
-        // Handle single TextResponse
         if ('type' in response && response.type === 'text' && 'text' in response) {
           const title = response.text.trim();
           return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
         }
 
-        // Handle Anthropic's response format
         if ('content' in response) {
           const title = response.content.trim();
           return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
         }
 
-        // Handle nested content structures
         if ('message' in response && typeof response.message === 'object' && 'content' in response.message) {
           const title = (response as AnthropicResponse).message.content.trim();
           return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
@@ -140,10 +145,12 @@ export class TitleGenerator {
   }
 }
 
-// Main hook with dependencies injected for testing
 const useSubmit = () => {
   const { i18n } = useTranslation('api');
   const store = useStore();
+  const simMode = getEnvVar('VITE_SIM_MODE', 'false');
+  const abortControllerRef = useRef<AbortController | null>(null);
+  
   const {
     currentChatIndex,
     chats,
@@ -155,15 +162,6 @@ const useSubmit = () => {
     setChats,
   } = store;
 
-  const currentChat = chats?.[currentChatIndex];
-  const providerKey = currentChat?.config.provider || DEFAULT_PROVIDER;
-  const provider = providers[providerKey];
-  const currentApiKey = apiKeys[providerKey];
-
-  // Add AbortController as a ref to persist between renders
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  // Add cleanup effect
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -173,16 +171,11 @@ const useSubmit = () => {
     };
   }, []);
 
-  const stopGeneration = () => {
-    if (abortControllerRef.current) {
-      console.log('Aborting fetch request...');
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-      setGenerating(false);
-    }
-  };
+  const currentChat = chats?.[currentChatIndex];
+  const providerKey = currentChat?.config.provider || DEFAULT_PROVIDER;
+  const provider = providers[providerKey];
+  const currentApiKey = apiKeys[providerKey];
 
-  // Extracted for testing
   const streamHandler = new ChatStreamHandler(new TextDecoder(), provider);
   const titleGenerator = new TitleGenerator(
     async (messages, config) => {
@@ -190,33 +183,17 @@ const useSubmit = () => {
         throw new Error('Invalid model configuration');
       }
 
-      // Format request based on provider
       const formattedRequest = provider.formatRequest(messages, {
         ...config,
         stream: false
       });
 
-      // Separate messages from config
       const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
-
-      // Create a complete ModelConfig object
-      const modelConfig: ModelConfig = {
-        model: configWithoutMessages.model,
-        max_tokens: configWithoutMessages.max_tokens ?? 2000,
-        temperature: configWithoutMessages.temperature ?? 0.7,
-        top_p: configWithoutMessages.top_p ?? 1,
-        presence_penalty: configWithoutMessages.presence_penalty ?? 0,
-        frequency_penalty: configWithoutMessages.frequency_penalty ?? 0,
-        enableThinking: false,
-        thinkingConfig: {
-          budget_tokens: 1000
-        }
-      };
 
       return getChatCompletion(
         providerKey,
         formattedMessages,
-        modelConfig,
+        configWithoutMessages,
         currentApiKey
       );
     },
@@ -224,76 +201,67 @@ const useSubmit = () => {
     currentChat?.config.modelConfig || DEFAULT_MODEL_CONFIG
   );
 
-  const handleTitleGeneration = async () => {
-    console.log('Title generation config:', {
-      providerKey,
-      provider: providers[providerKey],
-      modelConfig: currentChat?.config.modelConfig,
-      defaultConfig: DEFAULT_MODEL_CONFIG
-    });
+  const stopGeneration = useCallback(() => {
+    console.log('Stopping generation');
+    setGenerating(false);
+    
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, []);
+
+  const simulateStreamResponse = async (
+    onContent: (content: string) => void
+  ): Promise<void> => {
+    const testMessage = "This is a simulated response. It will stream word by word to test the UI rendering.";
+    const words = testMessage.split(' ');
+    
+    abortControllerRef.current = new AbortController();
     
     try {
-      const currentState = useStore.getState();
-      if (!currentState.chats || currentState.currentChatIndex < 0) {
-        throw new Error('No active chat found');
-      }
+      for (const word of words) {
+        if (abortControllerRef.current?.signal.aborted) {
+          console.log('Simulation aborted');
+          return;
+        }
 
-      const currentMessages = currentState.chats[currentState.currentChatIndex].messages;
-      
-      // Get the last user and assistant messages
-      const lastUserMessage = currentMessages
-        .slice()
-        .reverse()
-        .find(msg => msg.role === 'user')?.content || '';
-      
-      const lastAssistantMessage = currentMessages
-        .slice()
-        .reverse()
-        .find(msg => msg.role === 'assistant')?.content || '';
-
-      const title = await titleGenerator.generateChatTitle(lastUserMessage, lastAssistantMessage);
-      console.log('Title generated:', title);
-
-      // Update the chat title
-      if (currentState.chats) {
-        const updatedChats = [...currentState.chats];
-        updatedChats[currentState.currentChatIndex].title = title;
-        setChats(updatedChats);
+        onContent(word + ' ');
+        await new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(resolve, 200);
+          
+          abortControllerRef.current?.signal.addEventListener('abort', () => {
+            clearTimeout(timeoutId);
+            reject(new Error('Aborted'));
+          });
+        });
       }
     } catch (error) {
-      console.error('Title generation failed:', {
-        error,
-        state: useStore.getState()
-      });
-      throw error;
+      if (error.message === 'Aborted') {
+        console.log('Simulation stopped');
+      } else {
+        throw error;
+      }
+    } finally {
+      abortControllerRef.current = null;
     }
   };
 
   const handleSubmit = async () => {
-    console.log('🚀 Starting submission process');
-    const simMode = getEnvVar('VITE_SIM_MODE', 'false');
-    console.log('🔧 Simulation mode:', simMode);
-
-    const currentState = useStore.getState();
-
-    if (currentState.generating || !currentState.chats) {
-      console.log('⚠️ Submission blocked');
+    if (generating || !chats) {
       return;
     }
 
-    // Initialize new AbortController
     abortControllerRef.current = new AbortController();
     setGenerating(true);
     setError(null);
 
     try {
       await checkStorageQuota();
-      console.log('✅ Storage quota check passed');
 
-      const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(currentState.chats));
-      const currentMessages = updatedChats[currentState.currentChatIndex].messages;
+      const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(chats));
+      const currentMessages = updatedChats[currentChatIndex].messages;
 
-      // Add empty assistant message
       currentMessages.push({
         role: 'assistant',
         content: '',
@@ -302,52 +270,34 @@ const useSubmit = () => {
       setChats(updatedChats);
 
       if (simMode === 'true') {
-        console.log('🎮 Starting simulation...');
-
-        const mockReader = new ReadableStream({
-          start(controller) {
-            console.log('📡 Mock stream started');
-          },
-          cancel() {
-            console.log('❌ Mock stream cancelled');
-          }
-        }).getReader();
-
-        await simulateStreamResponse(mockReader, (content) => {
-          const latestState = useStore.getState();
-          const updatedChats: ChatInterface[] = JSON.parse(
-            JSON.stringify(latestState.chats)
-          );
-
-          if (!updatedChats || latestState.currentChatIndex < 0) {
-            console.error('❌ Invalid chat state');
-            return;
-          }
-
-          const updatedMessages = updatedChats[latestState.currentChatIndex].messages;
-          const lastMessage = updatedMessages[updatedMessages.length - 1];
-          
-          if (lastMessage && lastMessage.role === 'assistant') {
-            lastMessage.content += content;
-            setChats(updatedChats);
-          } else {
-            console.error('❌ No assistant message found to update');
-          }
-        });
-
-        console.log('✨ Simulation completed');
+        try {
+          await simulateStreamResponse((content) => {
+            const latestState = useStore.getState();
+            const updatedChats = JSON.parse(JSON.stringify(latestState.chats));
+            
+            if (!updatedChats || latestState.currentChatIndex < 0) return;
+            
+            const updatedMessages = updatedChats[latestState.currentChatIndex].messages;
+            const lastMessage = updatedMessages[updatedMessages.length - 1];
+            
+            if (lastMessage && lastMessage.role === 'assistant') {
+              lastMessage.content += content;
+              setChats(updatedChats);
+            }
+          });
+        } finally {
+          setGenerating(false);
+        }
         return;
       }
 
-      console.log('🌐 Running with real API');
-      const { modelConfig } = updatedChats[currentState.currentChatIndex].config;
+      const { modelConfig } = updatedChats[currentChatIndex].config;
 
       const formattedRequest = provider.formatRequest(currentMessages, {
         ...modelConfig,
         stream: true
       });
 
-      // Separate messages from config
       const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
 
       const response = await fetch(`/api/chat/${providerKey}`, {
@@ -361,7 +311,7 @@ const useSubmit = () => {
           config: configWithoutMessages,
           apiKey: currentApiKey,
         }),
-        signal: abortControllerRef.current.signal, // Use the abort signal
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
@@ -374,44 +324,53 @@ const useSubmit = () => {
         throw new Error('Response body is null');
       }
 
-      await streamHandler.processStream(reader, (content) => {
-        const updatedChats: ChatInterface[] = JSON.parse(
-          JSON.stringify(useStore.getState().chats)
-        );
-        const updatedMessages = updatedChats[currentState.currentChatIndex].messages;
-        updatedMessages[updatedMessages.length - 1].content += content;
-        setChats(updatedChats);
-      });
+      await streamHandler.processStream(
+        reader,
+        (content) => {
+          const updatedChats: ChatInterface[] = JSON.parse(
+            JSON.stringify(useStore.getState().chats)
+          );
+          const updatedMessages = updatedChats[currentChatIndex].messages;
+          updatedMessages[updatedMessages.length - 1].content += content;
+          setChats(updatedChats);
+        },
+        abortControllerRef.current.signal
+      );
 
-      console.log('✨ Starting title generation');
-      await handleTitleGeneration();
-      console.log('🏷️ Title generation complete');
+      const messages = updatedChats[currentChatIndex].messages;
+      const lastUserMessage = messages[messages.length - 2]?.content || '';
+      const lastAssistantMessage = messages[messages.length - 1]?.content || '';
 
+      if (!currentChat.title && lastUserMessage && lastAssistantMessage) {
+        try {
+          const title = await titleGenerator.generateChatTitle(
+            lastUserMessage,
+            lastAssistantMessage
+          );
+          
+          const updatedChats = JSON.parse(JSON.stringify(useStore.getState().chats));
+          updatedChats[currentChatIndex].title = title;
+          setChats(updatedChats);
+        } catch (error) {
+          console.error('Failed to generate title:', error);
+        }
+      }
     } catch (error) {
-      console.error('❌ Submit error:', error);
-      if (error.name === 'AbortError') {
-        console.log('Fetch aborted by user');
-        return;
-      }
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      if (errorMessage) {
-        setError(errorMessage);
-      }
+      console.error('Submission error:', error);
+      setError(error.message || 'An error occurred during submission');
     } finally {
-      abortControllerRef.current = null;
       setGenerating(false);
+      abortControllerRef.current = null;
     }
   };
 
   const regenerateMessage = async () => {
-    const currentState = useStore.getState();
-    
-    if (currentState.generating || !currentState.chats) {
+    if (generating || !chats) {
       return;
     }
 
-    const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(currentState.chats));
-    const currentMessages = updatedChats[currentState.currentChatIndex].messages;
+    const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(chats));
+    const currentMessages = updatedChats[currentChatIndex].messages;
     if (currentMessages[currentMessages.length - 1]?.role === 'assistant') {
       currentMessages.pop();
     }
@@ -424,36 +383,3 @@ const useSubmit = () => {
 };
 
 export default useSubmit;
-
-// Add this helper outside the hook with enhanced debugging
-const simulateStreamResponse = async (
-  reader: ReadableStreamDefaultReader<Uint8Array>,
-  onContent: (content: string) => void
-) => {
-  console.log('🔧 Starting simulation stream');
-  const testMessage = "This is a simulated response. It will stream word by word to test the UI rendering. You can test stop and retry functionality with this message.";
-  const words = testMessage.split(' ');
-  
-  for (const word of words) {
-    try {
-      // Check if simulation was stopped
-      const readerState = await Promise.race([
-        reader.closed,
-        new Promise(resolve => setTimeout(() => resolve('timeout'), 100))
-      ]);
-
-      if (readerState !== 'timeout') {
-        console.log('🛑 Simulation stopped by user');
-        break;
-      }
-
-      onContent(word + ' ');
-
-      await new Promise(resolve => setTimeout(resolve, 200));
-    } catch (error) {
-      console.error('❌ Simulation error:', error);
-      break;
-    }
-  }
-  console.log('🏁 Simulation complete');
-};
