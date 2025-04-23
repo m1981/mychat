@@ -6,7 +6,7 @@ import { ChatInterface, MessageInterface, ModelConfig } from '@type/chat';
 import { providers } from '@type/providers';
 import { getChatCompletion } from '@src/api/api';
 import { checkStorageQuota } from '@utils/storage';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { getEnvVar } from '@utils/env';
 
 // Add these interfaces at the top of the file
@@ -163,9 +163,21 @@ const useSubmit = () => {
   // Add AbortController as a ref to persist between renders
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Add cleanup effect
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, []);
+
   const stopGeneration = () => {
     if (abortControllerRef.current) {
+      console.log('Aborting fetch request...');
       abortControllerRef.current.abort();
+      abortControllerRef.current = null;
       setGenerating(false);
     }
   };
@@ -263,17 +275,14 @@ const useSubmit = () => {
     console.log('🔧 Simulation mode:', simMode);
 
     const currentState = useStore.getState();
-    console.log('📊 Current state:', {
-      generating: currentState.generating,
-      hasChats: !!currentState.chats,
-      currentIndex: currentState.currentChatIndex
-    });
 
     if (currentState.generating || !currentState.chats) {
       console.log('⚠️ Submission blocked');
       return;
     }
 
+    // Initialize new AbortController
+    abortControllerRef.current = new AbortController();
     setGenerating(true);
     setError(null);
 
@@ -290,16 +299,9 @@ const useSubmit = () => {
         content: '',
       });
 
-      console.log('📝 Adding empty message to chat:', {
-        chatIndex: currentState.currentChatIndex,
-        messageCount: currentMessages.length
-      });
-
       setChats(updatedChats);
 
       if (simMode === 'true') {
-        console.log('🔬 Development mode detected');
-        console.log('⚡ Test mode enabled:', simMode);
         console.log('🎮 Starting simulation...');
 
         const mockReader = new ReadableStream({
@@ -312,14 +314,7 @@ const useSubmit = () => {
         }).getReader();
 
         await simulateStreamResponse(mockReader, (content) => {
-          console.log(`📨 Received content: "${content}"`);
-          
           const latestState = useStore.getState();
-          console.log('🔄 Current store state:', {
-            chatCount: latestState.chats?.length,
-            currentIndex: latestState.currentChatIndex
-          });
-
           const updatedChats: ChatInterface[] = JSON.parse(
             JSON.stringify(latestState.chats)
           );
@@ -334,11 +329,6 @@ const useSubmit = () => {
           
           if (lastMessage && lastMessage.role === 'assistant') {
             lastMessage.content += content;
-            console.log('✏️ Updated message content:', {
-              messageIndex: updatedMessages.length - 1,
-              newContent: lastMessage.content
-            });
-            
             setChats(updatedChats);
           } else {
             console.error('❌ No assistant message found to update');
@@ -371,7 +361,7 @@ const useSubmit = () => {
           config: configWithoutMessages,
           apiKey: currentApiKey,
         }),
-        signal: abortControllerRef.current.signal,
+        signal: abortControllerRef.current.signal, // Use the abort signal
       });
 
       if (!response.ok) {
@@ -399,7 +389,10 @@ const useSubmit = () => {
 
     } catch (error) {
       console.error('❌ Submit error:', error);
-      // Only set error if it's a non-empty string
+      if (error.name === 'AbortError') {
+        console.log('Fetch aborted by user');
+        return;
+      }
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       if (errorMessage) {
         setError(errorMessage);
@@ -417,19 +410,13 @@ const useSubmit = () => {
       return;
     }
 
-    // Create a copy of chats
     const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(currentState.chats));
-    
-    // Remove the last assistant message if it exists
     const currentMessages = updatedChats[currentState.currentChatIndex].messages;
     if (currentMessages[currentMessages.length - 1]?.role === 'assistant') {
       currentMessages.pop();
     }
 
-    // Update the chats first
     setChats(updatedChats);
-
-    // Then trigger a new submission
     await handleSubmit();
   };
 
@@ -447,8 +434,6 @@ const simulateStreamResponse = async (
   const testMessage = "This is a simulated response. It will stream word by word to test the UI rendering. You can test stop and retry functionality with this message.";
   const words = testMessage.split(' ');
   
-  console.log('📝 Simulation words:', words.length);
-  
   for (const word of words) {
     try {
       // Check if simulation was stopped
@@ -462,12 +447,8 @@ const simulateStreamResponse = async (
         break;
       }
 
-      console.log(`🔤 Streaming word: "${word}"`);
       onContent(word + ' ');
-      
-      // Add debug for content update
-      console.log('✍️ Content updated in simulation');
-      
+
       await new Promise(resolve => setTimeout(resolve, 200));
     } catch (error) {
       console.error('❌ Simulation error:', error);
