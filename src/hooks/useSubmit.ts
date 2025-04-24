@@ -67,7 +67,7 @@ export class ChatStreamHandler {
     private readonly decoder = new TextDecoder(),
     private readonly provider: typeof providers[keyof typeof providers]
   ) {
-    console.log('🔧 ChatStreamHandler initialized');
+    console.log('🔧 ChatStreamHandler initialized with provider:', provider.id);
   }
 
   async processStream(
@@ -79,9 +79,9 @@ export class ChatStreamHandler {
     
     if (signal) {
       signal.addEventListener('abort', () => {
-        console.log('🛑 Abort signal received in ChatStreamHandler');
+        console.log('🛑 Abort signal received');
         this.aborted = true;
-        reader.cancel().catch(e => console.error('❌ Reader cancel error:', e));
+        reader.cancel().catch(console.error);
       }, { once: true });
     }
 
@@ -89,58 +89,47 @@ export class ChatStreamHandler {
       while (!this.aborted) {
         const { done, value } = await reader.read();
         
-        if (done || this.aborted) {
-          console.log(`🏁 Stream ended. Done: ${done}, Aborted: ${this.aborted}`);
+        if (done) {
+          console.log('🏁 Stream ended. Done:', done, 'Aborted:', this.aborted);
           break;
         }
 
         const chunk = this.decoder.decode(value);
-        await this.processChunk(chunk, onContent);
+        console.log(`📦 Processing chunk of length: ${chunk.length}`);
+        
+        const lines = chunk.split('\n').filter(line => line.trim() !== '');
+        console.log(`📦 Processing ${lines.length} lines from chunk`);
+
+        for (const line of lines) {
+          if (this.aborted) break;
+          
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              console.log('✅ Received [DONE] signal');
+              continue;
+            }
+
+            try {
+              const result = JSON.parse(data);
+              const content = this.provider.parseStreamingResponse(result);
+              if (content) {
+                console.log('📝 Content received:', content.slice(0, 50) + '...');
+                onContent(content);
+              }
+            } catch (e) {
+              console.error('❌ Failed to parse chunk:', e);
+            }
+          }
+        }
       }
-    } catch (error) {
-      console.error('❌ Stream processing error:', error);
-      throw error;
     } finally {
       console.log('🧹 Cleaning up stream resources');
-      this.aborted = false;
       try {
         await reader.cancel();
         console.log('✅ Reader cancelled successfully');
       } catch (e) {
-        console.error('❌ Reader cleanup error:', e);
-      }
-    }
-  }
-
-  private async processChunk(chunk: string, onContent: (content: string) => void): Promise<void> {
-    if (this.aborted) {
-      console.log('🚫 Chunk processing skipped - stream aborted');
-      return;
-    }
-
-    const lines = chunk.split('\n').filter(line => line.trim() !== '');
-    console.log(`📦 Processing ${lines.length} lines from chunk`);
-
-    for (const line of lines) {
-      if (this.aborted) {
-        console.log('🚫 Line processing interrupted - stream aborted');
-        break;
-      }
-      
-      if (line.startsWith('data: ')) {
-        const data = line.slice(6);
-        if (data === '[DONE]') {
-          console.log('✅ Received [DONE] signal');
-          continue;
-        }
-
-        try {
-          const result = JSON.parse(data);
-          const content = this.provider.parseStreamingResponse(result);
-          if (content) onContent(content);
-        } catch (e) {
-          console.error('❌ Chunk parsing error:', e);
-        }
+        console.error('❌ Error cancelling reader:', e);
       }
     }
   }
@@ -424,55 +413,34 @@ const useSubmit = () => {
   }
 
   const handleSubmit = async () => {
-    console.log('🚀 Starting submission', { simMode, generating });
+    console.log('🚀 Starting submission');
     
-    if (generating || !chats || !currentChat) {  // Add currentChat check
-      console.log('⚠️ Submission blocked - already generating, no chats, or no current chat');
+    const currentState = useStore.getState();
+    if (currentState.generating || !currentState.chats) {
+      console.log('⚠️ Submission blocked - already generating or no chats');
       return;
     }
 
-    abortControllerRef.current = new AbortController();
     setGenerating(true);
     setError(null);
+    abortControllerRef.current = new AbortController();
 
     try {
       await checkStorageQuota();
-      console.log('✅ Storage quota check passed');
+      
+      const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(currentState.chats));
+      const currentMessages = updatedChats[currentState.currentChatIndex].messages;
 
-      const updatedChats = prepareChatUpdate(chats, currentChatIndex);
+      // Add empty assistant message
+      currentMessages.push({
+        role: 'assistant',
+        content: '',
+      });
       setChats(updatedChats);
 
-      // Get current messages after chat update
-      const currentMessages = updatedChats[currentChatIndex].messages;
-
-      if (simMode === 'true') {
-        console.log('🎮 Starting simulation mode');
-        try {
-          await simulateStreamResponse((content) => {
-            if (!useStore.getState().generating) return;
-            const latestState = useStore.getState();
-            if (!latestState.chats) return;
-            
-            const updatedChats = updateMessageContent(
-              latestState.chats,
-              latestState.currentChatIndex,
-              content
-            );
-            if (!updatedChats || latestState.currentChatIndex < 0) return;
-            setChats(updatedChats);
-          });
-        } catch (error) {
-          console.error('❌ Simulation error:', error);
-          throw error;
-        } finally {
-          console.log('✨ Simulation complete');
-          setGenerating(false);
-        }
-        return;
-      }
-
-      const { modelConfig } = updatedChats[currentChatIndex].config;
-
+      const { modelConfig } = updatedChats[currentState.currentChatIndex].config;
+      
+      console.log('📤 Preparing request for provider:', providerKey);
       const formattedRequest = provider.formatRequest(currentMessages, {
         ...modelConfig,
         stream: true
@@ -500,52 +468,34 @@ const useSubmit = () => {
       }
 
       const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('Response body is null');
-      }
+      if (!reader) throw new Error('Response body is null');
 
       console.log('📡 Starting stream processing');
       await streamHandlerRef.current?.processStream(
         reader,
         (content) => {
-          const updatedChats: ChatInterface[] = JSON.parse(
-            JSON.stringify(useStore.getState().chats)
-          );
-          const updatedMessages = updatedChats[currentChatIndex].messages;
-          updatedMessages[updatedMessages.length - 1].content += content;
-          setChats(updatedChats);
+          const latestState = useStore.getState();
+          if (!latestState.chats) return;
+          
+          const updatedChats = JSON.parse(JSON.stringify(latestState.chats));
+          const messages = updatedChats[currentState.currentChatIndex].messages;
+          const lastMessage = messages[messages.length - 1];
+          
+          if (lastMessage?.role === 'assistant') {
+            lastMessage.content += content;
+            setChats(updatedChats);
+          }
         },
         abortControllerRef.current.signal
       );
 
-      const messages = updatedChats[currentChatIndex].messages;
-      const lastUserMessage = messages[messages.length - 2]?.content || '';
-      const lastAssistantMessage = messages[messages.length - 1]?.content || '';
-
-      // Add null check for currentChat
-      if (currentChat && !currentChat.title && lastUserMessage && lastAssistantMessage) {
-        try {
-          const title = await titleGenerator.generateChatTitle(
-            lastUserMessage,
-            lastAssistantMessage
-          );
-          
-          const updatedChats = JSON.parse(JSON.stringify(useStore.getState().chats));
-          updatedChats[currentChatIndex].title = title;
-          setChats(updatedChats);
-        } catch (error) {
-          console.error('Failed to generate title:', error);
-        }
-      }
+      await handleTitleGeneration();
     } catch (error) {
       console.error('❌ Submit error:', error);
-      // Handle the unknown error type
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred during submission';
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       setError(errorMessage);
     } finally {
-      console.log('✨ Submission complete');
       setGenerating(false);
-      submissionLock.current.release();
       abortControllerRef.current = null;
     }
   };
