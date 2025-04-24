@@ -1,4 +1,13 @@
-FROM node:22-alpine
+# Change from alpine to debian-based image for better compatibility
+FROM node:22-slim
+
+# Install build essentials and Python (needed for some node modules)
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
@@ -18,11 +27,14 @@ USER node
 ARG PNPM_FROZEN_LOCKFILE=false
 ENV PNPM_FROZEN_LOCKFILE=${PNPM_FROZEN_LOCKFILE}
 
+# Install dependencies with platform-specific binaries
 RUN if [ "$PNPM_FROZEN_LOCKFILE" = "true" ] ; then \
-        pnpm fetch --frozen-lockfile ; \
+        pnpm install --frozen-lockfile ; \
     else \
-        pnpm fetch ; \
-    fi
+        pnpm install ; \
+    fi && \
+    # Force install platform-specific Rollup
+    pnpm rebuild @rollup/rollup-linux-x64-gnu @rollup/rollup-linux-arm64-gnu
 
 CMD ["pnpm", "dev:host"]
 

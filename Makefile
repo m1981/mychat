@@ -6,9 +6,25 @@ COLIMA_CPU = 4
 COLIMA_MEMORY = 2
 COLIMA_DISK = 60
 PNPM_FROZEN_LOCKFILE ?= false
-PLATFORM ?= linux/arm64
-PNPM_DIRS = .pnpm-store .pnpm-cache
 COMPOSE_PROJECT_NAME ?= mychat
+
+# PNPM directories
+PNPM_DIRS = .pnpm-store .pnpm-cache
+
+# Platform detection
+UNAME_M := $(shell uname -m)
+ifeq ($(UNAME_M),x86_64)
+	PLATFORM ?= linux/amd64
+else ifeq ($(UNAME_M),amd64)
+	PLATFORM ?= linux/amd64
+else ifeq ($(UNAME_M),arm64)
+	PLATFORM ?= linux/arm64
+else ifeq ($(UNAME_M),aarch64)
+	PLATFORM ?= linux/arm64
+else
+	$(error Unsupported architecture: $(UNAME_M))
+endif
+
 # Add consistent container naming for run commands
 DOCKER_COMPOSE_RUN = $(DOCKER_COMPOSE) run --rm --name $(COMPOSE_PROJECT_NAME)-app-run
 
@@ -23,6 +39,7 @@ endif
 # Export these variables for docker-compose
 export UID
 export GID
+export PLATFORM
 
 # Colors for help system
 BLUE := \033[36m
@@ -38,6 +55,7 @@ help: ## Display this help
 	@awk 'BEGIN {FS = ":.*##"; printf "\n$(BLUE)Usage:$(RESET)\n  make $(YELLOW)<target>$(RESET)\n"} \
 		/^[a-zA-Z0-9_-]+:.*?##/ { printf "  $(YELLOW)%-20s$(RESET) %s\n", $$1, $$2 } \
 		/^##@/ { printf "\n$(GREEN)%s$(RESET)\n", substr($$0, 5) }' $(MAKEFILE_LIST)
+	@echo "Current platform: $(PLATFORM) ($(UNAME_M))"
 
 
 ##@ Development Workflow
@@ -121,20 +139,20 @@ pkg-check: ## Check for outdated dependencies
 .PHONY: test test-watch test-coverage test-file
 
 test: ensure-pnpm-dirs ## Run tests
-	$(DOCKER_COMPOSE_RUN) app pnpm test
+	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm test"
 
 test-watch: ensure-pnpm-dirs ## Run tests in watch mode
-	$(DOCKER_COMPOSE_RUN) app pnpm test:watch
+	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm test:watch"
 
 test-coverage: ensure-pnpm-dirs ## Run tests with coverage report
-	$(DOCKER_COMPOSE_RUN) app pnpm test:coverage
+	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm test:coverage"
 
 test-file: ensure-pnpm-dirs ## Run specific test file. Usage: make test-file f=path/to/test.ts
 	@if [ -z "$(f)" ]; then \
 		echo "Error: File path required. Usage: make test-file f=path/to/test.ts"; \
 		exit 1; \
 	fi
-	$(DOCKER_COMPOSE_RUN) app pnpm test $(f)
+	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm test $(f)"
 
 ##@ Quality Checks
 .PHONY: lint type-check

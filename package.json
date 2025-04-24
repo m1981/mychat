@@ -12,7 +12,7 @@
     "dev:host": "vite --config vite.config.dev.ts --host",
     "build": "pnpm type-check && NODE_ENV=production TS_NODE_BASEURL=./ pnpm build:vite",
     "build:vite": "NODE_OPTIONS='--max_old_space_size=8192' vite build  --config vite.config.prod.ts",
-    "test": "NODE_ENV=test vitest run --typecheck=false",
+    "test": "NODE_ENV=test vitest run",
     "test:watch": "NODE_ENV=test vitest watch",
     "test:coverage": "NODE_ENV=test vitest run --coverage",
     "test:ui": "NODE_ENV=test vitest --ui",
@@ -56,8 +56,8 @@
     "@dqbd/tiktoken": "^1.0.2",
     "@types/react-beautiful-dnd": "^13.1.8",
     "depcheck": "^1.4.7",
-    "html2canvas": "^1.4.1",
     "highlight.js": "^11.11.1",
+    "html2canvas": "^1.4.1",
     "i18next": "^22.4.11",
     "i18next-browser-languagedetector": "^7.0.1",
     "i18next-http-backend": "^2.1.1",
@@ -118,7 +118,7 @@
     "vite": "^4.1.0",
     "vite-plugin-top-level-await": "^1.3.0",
     "vite-plugin-wasm": "^3.2.2",
-    "vitest": "^3.0.6"
+    "vitest": "^3.1.1"
   },
   "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af"
 }
