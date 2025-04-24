@@ -515,6 +515,54 @@ const useSubmit = () => {
     await handleSubmit();
   };
 
+  const handleTitleGeneration = async () => {
+    console.log('Title generation config:', {
+      providerKey,
+      provider: providers[providerKey],
+      modelConfig: currentChat?.config.modelConfig,
+      defaultConfig: DEFAULT_MODEL_CONFIG
+    });
+    
+    try {
+      const currentState = useStore.getState();
+      if (!currentState.chats || currentState.currentChatIndex < 0) {
+        throw new Error('No active chat found');
+      }
+
+      const currentMessages = currentState.chats[currentState.currentChatIndex].messages;
+      
+      // Get the last user and assistant messages
+      const lastUserMessage = currentMessages
+        .slice()
+        .reverse()
+        .find(msg => msg.role === 'user')?.content || '';
+      
+      const lastAssistantMessage = currentMessages
+        .slice()
+        .reverse()
+        .find(msg => msg.role === 'assistant')?.content || '';
+
+      const title = await titleGenerator.generateChatTitle(lastUserMessage, lastAssistantMessage);
+      console.log('Title generated:', title);
+
+      // Update the chat title
+      const updatedChats = [...currentState.chats];
+      updatedChats[currentState.currentChatIndex] = {
+        ...updatedChats[currentState.currentChatIndex],
+        title,
+        titleSet: true
+      };
+      setChats(updatedChats);
+    } catch (error) {
+      console.error('Title generation failed:', {
+        error,
+        state: useStore.getState()
+      });
+      // Re-throw the error as it was in the original implementation
+      throw error;
+    }
+  };
+
   return { handleSubmit, stopGeneration, regenerateMessage, error, generating };
 };
 
