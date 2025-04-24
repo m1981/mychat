@@ -179,3 +179,89 @@ describe('TitleGenerator', () => {
     consoleSpy.mockRestore();
   });
 });
+
+describe('Provider-specific title generation', () => {
+  it('should handle OpenAI title generation', async () => {
+    const mockConfig: ModelConfig = {
+      model: 'gpt-4o',
+      max_tokens: 4096,
+      temperature: 0.7,
+      top_p: 1,
+      presence_penalty: 0,
+      frequency_penalty: 0,
+      enableThinking: false,
+      thinkingConfig: {
+        budget_tokens: 1000
+      }
+    };
+
+    const mockGenerateTitle = vi.fn().mockResolvedValue({
+      content: 'OpenAI Generated Title'
+    });
+
+    const titleGenerator = new TitleGenerator(
+      mockGenerateTitle,
+      'en',
+      mockConfig
+    );
+
+    const result = await titleGenerator.generateChatTitle(
+      'Test question',
+      'Test response'
+    );
+
+    expect(result).toBe('OpenAI Generated Title');
+    expect(mockGenerateTitle).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'user',
+          content: expect.stringContaining('Test question')
+        })
+      ]),
+      mockConfig
+    );
+  });
+
+  it('should handle Anthropic title generation', async () => {
+    const mockConfig: ModelConfig = {
+      model: 'claude-3-7-sonnet-20250219',
+      max_tokens: 4096,
+      temperature: 0,
+      top_p: 1,
+      presence_penalty: 0,
+      frequency_penalty: 0,
+      enableThinking: false,
+      thinkingConfig: {
+        budget_tokens: 1000
+      }
+    };
+
+    const mockGenerateTitle = vi.fn().mockResolvedValue({
+      message: {
+        content: 'Anthropic Generated Title'
+      }
+    });
+
+    const titleGenerator = new TitleGenerator(
+      mockGenerateTitle,
+      'en',
+      mockConfig
+    );
+
+    const result = await titleGenerator.generateChatTitle(
+      'Test question',
+      'Test response'
+    );
+
+    expect(result).toBe('Anthropic Generated Title');
+    expect(mockGenerateTitle).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'user',
+          content: expect.stringContaining('Test question')
+        })
+      ]),
+      mockConfig
+    );
+  });
+});

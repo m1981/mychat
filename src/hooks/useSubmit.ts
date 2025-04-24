@@ -9,6 +9,42 @@ import { checkStorageQuota } from '@utils/storage';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { getEnvVar } from '@utils/env';
 
+class SubmissionLock {
+  private locked = false;
+  
+  isLocked(): boolean {
+    return this.locked;
+  }
+  
+  async acquire(): Promise<boolean> {
+    if (this.locked) return false;
+    this.locked = true;
+    return true;
+  }
+  
+  release(): void {
+    this.locked = false;
+  }
+}
+
+class ResponseCache {
+  private cache = new Map<string, Promise<Response>>();
+  
+  async getOrCreate(
+    key: string,
+    factory: () => Promise<Response>
+  ): Promise<Response> {
+    if (!this.cache.has(key)) {
+      this.cache.set(key, factory());
+    }
+    return this.cache.get(key)!;
+  }
+  
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
 interface AnthropicResponse {
   message: {
     content: string;
@@ -173,11 +209,60 @@ export class TitleGenerator {
   }
 }
 
+interface SubmissionService {
+  submit(messages: MessageInterface[], config: ModelConfig): Promise<void>;
+  abort(): void;
+}
+
+class ChatSubmissionService implements SubmissionService {
+  constructor(
+    private provider: typeof providers[keyof typeof providers],
+    private apiKey: string,
+    private onContent: (content: string) => void,
+    private streamHandler: ChatStreamHandler
+  ) {}
+
+  async submit(messages: MessageInterface[], config: ModelConfig): Promise<void> {
+    const formattedRequest = this.provider.formatRequest(messages, {
+      ...config,
+      stream: true
+    });
+
+    const response = await fetch(`/api/chat/${this.provider.key}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+      },
+      body: JSON.stringify({
+        messages: formattedRequest.messages,
+        config: formattedRequest,
+        apiKey: this.apiKey,
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('Response body is null');
+
+    await this.streamHandler.processStream(reader, this.onContent);
+  }
+
+  abort(): void {
+    // Implement abort logic
+  }
+}
+
 const useSubmit = () => {
   const { i18n } = useTranslation('api');
   const store = useStore();
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamHandlerRef = useRef<ChatStreamHandler | null>(null);
+  const submissionLock = useRef(new SubmissionLock());
+  const cache = useRef(new ResponseCache());
   
   // Add simMode initialization at the top with other variables
   const simMode = getEnvVar('VITE_SIM_MODE', 'false');
@@ -289,6 +374,36 @@ const useSubmit = () => {
     }
   };
 
+  // Pure function to prepare chat update
+  function prepareChatUpdate(chats: ChatInterface[], currentIndex: number): ChatInterface[] {
+    const updatedChats = JSON.parse(JSON.stringify(chats));
+    const currentMessages = updatedChats[currentIndex].messages;
+    
+    currentMessages.push({
+      role: 'assistant',
+      content: '',
+    });
+    
+    return updatedChats;
+  }
+
+  // Pure function to update message content
+  function updateMessageContent(
+    chats: ChatInterface[],
+    currentIndex: number,
+    content: string
+  ): ChatInterface[] {
+    const updatedChats = JSON.parse(JSON.stringify(chats));
+    const messages = updatedChats[currentIndex].messages;
+    const lastMessage = messages[messages.length - 1];
+    
+    if (lastMessage?.role === 'assistant') {
+      lastMessage.content += content;
+    }
+    
+    return updatedChats;
+  }
+
   const handleSubmit = async () => {
     console.log('🚀 Starting submission', { simMode, generating });
     
@@ -305,35 +420,25 @@ const useSubmit = () => {
       await checkStorageQuota();
       console.log('✅ Storage quota check passed');
 
-      const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(chats));
-      const currentMessages = updatedChats[currentChatIndex].messages;
-
-      currentMessages.push({
-        role: 'assistant',
-        content: '',
-      });
-
+      const updatedChats = prepareChatUpdate(chats, currentChatIndex);
       setChats(updatedChats);
+
+      // Get current messages after chat update
+      const currentMessages = updatedChats[currentChatIndex].messages;
 
       if (simMode === 'true') {
         console.log('🎮 Starting simulation mode');
         try {
           await simulateStreamResponse((content) => {
-            // Only update if we're still generating
             if (!useStore.getState().generating) return;
-
             const latestState = useStore.getState();
-            const updatedChats = JSON.parse(JSON.stringify(latestState.chats));
-            
+            const updatedChats = updateMessageContent(
+              latestState.chats,
+              latestState.currentChatIndex,
+              content
+            );
             if (!updatedChats || latestState.currentChatIndex < 0) return;
-            
-            const updatedMessages = updatedChats[latestState.currentChatIndex].messages;
-            const lastMessage = updatedMessages[updatedMessages.length - 1];
-            
-            if (lastMessage && lastMessage.role === 'assistant') {
-              lastMessage.content += content;
-              setChats(updatedChats);
-            }
+            setChats(updatedChats);
           });
         } catch (error) {
           console.error('❌ Simulation error:', error);
@@ -416,6 +521,7 @@ const useSubmit = () => {
     } finally {
       console.log('✨ Submission complete');
       setGenerating(false);
+      submissionLock.current.release();
       abortControllerRef.current = null;
     }
   };
