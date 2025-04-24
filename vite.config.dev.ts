@@ -3,6 +3,7 @@ import { defineConfig } from 'vite';
 import type { UserConfig } from 'vite';
 import wasm from 'vite-plugin-wasm';
 import topLevelAwait from 'vite-plugin-top-level-await';
+import fs from 'fs';
 
 // Shared base configuration
 const baseConfig: UserConfig = {
@@ -26,29 +27,54 @@ const baseConfig: UserConfig = {
     }
   },
   optimizeDeps: {
-    exclude: ['@webassembly/*']
+    exclude: ['@webassembly/*'],
+    force: true
   }
 };
 
 // Development-specific configurations
 const devConfig: UserConfig = {
   server: {
-    hmr: { timeout: 1000 },
-    watch: { usePolling: false },
-    host: 'localhost',
-    proxy: {
-      '/api': {
-        target: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
-      },
+    hmr: {
+      timeout: 1000,
+      protocol: 'ws',
+      host: '0.0.0.0',
+      port: 5173,
+      clientPort: 5173
     },
-  }
+    watch: {
+      usePolling: true,
+      interval: 100
+    },
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
+    cors: true,
+    force: true,
+    headers: {
+      'Access-Control-Allow-Origin': '*'
+    },
+    middlewareMode: false,
+    fs: {
+      strict: false,
+      allow: ['/app']
+    }
+  },
+  optimizeDeps: {
+    exclude: ['@webassembly/*']
+  },
+  build: {
+    sourcemap: true,
+    minify: false
+  },
+  logLevel: 'info'
 };
 
-export default defineConfig(({ command }) => {
+export default defineConfig(({ command, mode }) => {
   if (command === 'serve') {
-    console.log('🚀 Running development config');
+    console.log('🚀 Running development config with mode:', mode);
+    console.log('📁 Current working directory:', process.cwd());
+    console.log('📦 Node modules exists:', fs.existsSync('/app/node_modules'));
     return { ...baseConfig, ...devConfig };
   }
   throw new Error('This config is for development only');

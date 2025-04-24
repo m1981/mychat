@@ -62,10 +62,12 @@ help: ## Display this help
 .PHONY: dev dev-strict dev-fast clean clean-rebuild
 
 init-volumes: ## Initialize volumes with correct permissions
+	docker volume create mychat-vite_cache || true
 	docker volume create mychat-pnpm_store || true
 	docker volume create mychat-pnpm_cache || true
 	docker volume create mychat-node_modules || true
 	docker run --rm \
+		-v mychat-vite_cache:/data/vite_cache \
 		-v mychat-pnpm_store:/data/pnpm_store \
 		-v mychat-pnpm_cache:/data/pnpm_cache \
 		-v mychat-node_modules:/data/node_modules \
@@ -138,8 +140,11 @@ pkg-check: ## Check for outdated dependencies
 ##@ Testing
 .PHONY: test test-watch test-coverage test-file
 
-test: ensure-pnpm-dirs ## Run tests
-	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm test"
+test: init-volumes ensure-pnpm-dirs ## Run tests
+	$(DOCKER_COMPOSE_RUN) \
+		-e NODE_ENV=test \
+		-e PLATFORM=$(PLATFORM) \
+		app sh -c "pnpm --version && pnpm install && pnpm test"
 
 test-watch: ensure-pnpm-dirs ## Run tests in watch mode
 	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm test:watch"
@@ -160,8 +165,11 @@ test-file: ensure-pnpm-dirs ## Run specific test file. Usage: make test-file f=p
 lint: ## Run linter and fix issues
 	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint
 
-type: ## Run type checking
+type-check: ## Run type checking
 	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) type-check
+
+type-watch: ## Run type checking
+	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) type-watch
 
 ##@ Infrastructure Management
 .PHONY: colima-start colima-stop colima-status colima-list colima-delete

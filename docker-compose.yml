@@ -10,31 +10,31 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME:-mychat}-app
     ports:
       - "5173:5173"
-      - "3000:3000"  # Add this if you need the API port
+      - "3000:3000"
     volumes:
       - type: bind
         source: .
         target: /app
         bind:
           create_host_path: true
-      # PNPM store for package data
+      - type: volume
+        source: node_modules
+        target: /app/node_modules
       - type: volume
         source: pnpm_store
         target: /home/node/.local/share/pnpm/store
         volume:
-          nocopy: false  # Allow initial copy
-      # PNPM cache for metadata
+          nocopy: false
       - type: volume
         source: pnpm_cache
         target: /home/node/.cache/pnpm
         volume:
-          nocopy: false  # Allow initial copy
-      # Node modules
+          nocopy: false
       - type: volume
-        source: node_modules
-        target: /app/node_modules
+        source: vite_cache
+        target: /app/node_modules/.vite
         volume:
-          nocopy: false  # Allow initial copy
+          nocopy: false
     environment:
       - NODE_ENV=development
       - PNPM_HOME=/home/node/.local/share/pnpm
@@ -46,11 +46,6 @@ services:
       - GID=${GID}
       - VITE_SIM_MODE=${VITE_SIM_MODE:-false}
       - VITE_DEV_SERVER_FORCE_CLOSE=true
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    working_dir: /app
-    network_mode: "host"
-    command: sh -c "pnpm dev:host"
     stop_signal: SIGINT
     stop_grace_period: 30s
     deploy:
@@ -71,4 +66,7 @@ volumes:
     external: true
   pnpm_cache:
     name: "mychat-pnpm_cache"
+    external: true
+  vite_cache:
+    name: "mychat-vite_cache"
     external: true

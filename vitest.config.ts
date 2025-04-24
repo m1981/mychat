@@ -23,12 +23,6 @@ export default defineConfig({
     globals: true,
 
     setupFiles: ['./vitest.setup.ts'],
-    typecheck: {
-      enabled: true,
-      tsconfig: './tsconfig.test.json',
-      include: ['src/**/*.{test,spec}.{ts,tsx}'],
-      checker: 'tsc' // explicitly set the checker
-    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
@@ -51,21 +45,26 @@ export default defineConfig({
       }
     },
     deps: {
-      inline: [
-        '@testing-library/jest-dom',
-        '@testing-library/react'
-      ]
+      optimizer: {
+        web: {
+          include: ['@testing-library/jest-dom', '@testing-library/react']
+        }
+      }
     },
     testTimeout: 10000,
     hookTimeout: 10000,
-    pool: 'threads',
+    pool: 'vmThreads',
     poolOptions: {
-      threads: {
-        minThreads: 1,
-        maxThreads: 4
+      vmThreads: {
+        useAtomics: true,
       }
     },
-    retry: 2,
+    typecheck: {
+      enabled: false, // Enable only in CI
+    },
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['**/node_modules/**', '**/dist/**'],
+    retry: 0,
     isolate: true,
     watch: {
       ignored: [
@@ -83,6 +82,7 @@ export default defineConfig({
       NODE_ENV: 'test',
     }
   },
+  cacheDir: '.vite/vitest',
   resolve: {
     alias: {
       '@src': path.resolve(__dirname, './src'),

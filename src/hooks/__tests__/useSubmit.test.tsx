@@ -1,16 +1,44 @@
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import useSubmit from '../useSubmit';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
+import { ChatInterface, MessageInterface } from '@type/chat';
+
+// Define interface for store state
+interface MockStoreState {
+  messages: MessageInterface[];
+  currentChatIndex: number;
+  currentChatTokenCount: number;
+  folders: Record<string, any>;
+  chats: ChatInterface[];
+  apiKeys: {
+    openai: string;
+    [key: string]: string;
+  };
+  error: string | null;
+  generating: boolean;
+  setChats: Mock;
+  setError: Mock;
+  setGenerating: Mock;
+  setMessages: Mock;
+  setFolders: Mock;
+  setCurrentChatIndex: Mock;
+  setCurrentChatTokenCount: Mock;
+}
+
+// Define store type
+type MockStore = ((selector?: (state: MockStoreState) => any) => any) & {
+  getState: () => MockStoreState;
+};
 
 // Mock the storage module
 vi.mock('@utils/storage', () => ({
   checkStorageQuota: vi.fn().mockResolvedValue(undefined)
 }));
 
-// Define the store mock structure
-const createMockStore = () => ({
+// Define the store mock structure with proper typing
+const createMockStore = (): MockStoreState => ({
   messages: [{ role: 'user', content: 'Hello' }],
   currentChatIndex: 0,
   currentChatTokenCount: 0,
@@ -37,17 +65,21 @@ const createMockStore = () => ({
   setCurrentChatTokenCount: vi.fn(),
 });
 
-let mockStoreState;
+let mockStoreState: MockStoreState;
 
 // Mock the store module
 vi.mock('@store/store', () => {
-  const store = vi.fn((selector) => {
+  const storeFunction = (selector?: (state: MockStoreState) => any) => {
     if (selector) {
       return selector(mockStoreState);
     }
     return mockStoreState;
-  });
-  store.getState = vi.fn(() => mockStoreState);
+  };
+
+  const store = Object.assign(storeFunction, {
+    getState: () => mockStoreState
+  }) as MockStore;
+
   return { default: store };
 });
 
@@ -91,14 +123,12 @@ describe('useSubmit hook', () => {
       await result.current.handleSubmit();
     });
 
-    // Verify initial error clearing and final error setting
     expect(mockStoreState.setError).toHaveBeenCalledTimes(2);
     expect(mockStoreState.setError).toHaveBeenNthCalledWith(1, null);
     expect(mockStoreState.setError).toHaveBeenNthCalledWith(2, 'API Error');
   });
 
   it('should not submit when already generating', async () => {
-    // Set up store state with generating = true
     mockStoreState.generating = true;
 
     const { result } = renderHook(() => useSubmit());

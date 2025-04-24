@@ -73,15 +73,17 @@ export class ChatStreamHandler {
   async processStream(
     reader: ReadableStreamDefaultReader<Uint8Array>,
     onContent: (content: string) => void,
-    signal: AbortSignal
+    signal?: AbortSignal
   ): Promise<void> {
     console.log('📡 Starting stream processing');
     
-    signal.addEventListener('abort', () => {
-      console.log('🛑 Abort signal received in ChatStreamHandler');
-      this.aborted = true;
-      reader.cancel().catch(e => console.error('❌ Reader cancel error:', e));
-    }, { once: true });
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        console.log('🛑 Abort signal received in ChatStreamHandler');
+        this.aborted = true;
+        reader.cancel().catch(e => console.error('❌ Reader cancel error:', e));
+      }, { once: true });
+    }
 
     try {
       while (!this.aborted) {
@@ -228,7 +230,7 @@ class ChatSubmissionService implements SubmissionService {
       stream: true
     });
 
-    const response = await fetch(`/api/chat/${this.provider.key}`, {
+    const response = await fetch(`/api/chat/${this.provider.id}`, {  // Changed from key to id
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -312,10 +314,27 @@ const useSubmit = () => {
 
       const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
 
+      // Extract base config from the formatted request
+      const baseConfig = configWithoutMessages as Partial<ModelConfig>;
+
+      // Create a complete ModelConfig object with all required properties
+      const fullConfig: ModelConfig = {
+        model: baseConfig.model || DEFAULT_MODEL_CONFIG.model,
+        max_tokens: baseConfig.max_tokens || DEFAULT_MODEL_CONFIG.max_tokens,
+        temperature: baseConfig.temperature || DEFAULT_MODEL_CONFIG.temperature,
+        presence_penalty: baseConfig.presence_penalty || DEFAULT_MODEL_CONFIG.presence_penalty,
+        top_p: baseConfig.top_p || DEFAULT_MODEL_CONFIG.top_p,
+        frequency_penalty: baseConfig.frequency_penalty || DEFAULT_MODEL_CONFIG.frequency_penalty,
+        enableThinking: false,
+        thinkingConfig: {
+          budget_tokens: 0
+        }
+      };
+
       return getChatCompletion(
         providerKey,
         formattedMessages,
-        configWithoutMessages,
+        fullConfig,
         currentApiKey
       );
     },
@@ -364,8 +383,8 @@ const useSubmit = () => {
           }, { once: true });
         });
       }
-    } catch (error) {
-      if (error.message === 'Aborted') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === 'Aborted') {
         console.log('🛑 Simulation aborted cleanly');
       } else {
         console.error('❌ Simulation error:', error);
@@ -407,8 +426,8 @@ const useSubmit = () => {
   const handleSubmit = async () => {
     console.log('🚀 Starting submission', { simMode, generating });
     
-    if (generating || !chats) {
-      console.log('⚠️ Submission blocked - already generating or no chats');
+    if (generating || !chats || !currentChat) {  // Add currentChat check
+      console.log('⚠️ Submission blocked - already generating, no chats, or no current chat');
       return;
     }
 
@@ -432,6 +451,8 @@ const useSubmit = () => {
           await simulateStreamResponse((content) => {
             if (!useStore.getState().generating) return;
             const latestState = useStore.getState();
+            if (!latestState.chats) return;
+            
             const updatedChats = updateMessageContent(
               latestState.chats,
               latestState.currentChatIndex,
@@ -501,7 +522,8 @@ const useSubmit = () => {
       const lastUserMessage = messages[messages.length - 2]?.content || '';
       const lastAssistantMessage = messages[messages.length - 1]?.content || '';
 
-      if (!currentChat.title && lastUserMessage && lastAssistantMessage) {
+      // Add null check for currentChat
+      if (currentChat && !currentChat.title && lastUserMessage && lastAssistantMessage) {
         try {
           const title = await titleGenerator.generateChatTitle(
             lastUserMessage,
@@ -517,7 +539,9 @@ const useSubmit = () => {
       }
     } catch (error) {
       console.error('❌ Submit error:', error);
-      setError(error.message || 'An error occurred during submission');
+      // Handle the unknown error type
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred during submission';
+      setError(errorMessage);
     } finally {
       console.log('✨ Submission complete');
       setGenerating(false);
