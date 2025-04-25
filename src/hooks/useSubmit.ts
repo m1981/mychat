@@ -4,10 +4,17 @@ import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 import useStore from '@store/store';
 import { ChatInterface, MessageInterface, ModelConfig } from '@type/chat';
 import { providers } from '@type/providers';
+import { AIProvider } from '@type/provider';
 import { getChatCompletion } from '@src/api/api';
 import { checkStorageQuota } from '@utils/storage';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { getEnvVar } from '@utils/env';
+
+// Add this type definition
+type TitleGeneratorFunction = (
+  messages: MessageInterface[],
+  config: ModelConfig
+) => Promise<string>;
 
 class SubmissionLock {
   private locked = false;
@@ -137,6 +144,7 @@ export class ChatStreamHandler {
 
 export class TitleGenerator {
   constructor(
+    private readonly generateTitleFn: (messages: MessageInterface[], config: ModelConfig) => Promise<any>,
     private readonly provider: AIProvider,
     private readonly language: string,
     private readonly defaultConfig: ModelConfig
@@ -156,7 +164,7 @@ export class TitleGenerator {
     };
 
     try {
-      const response = await this.provider.generateTitle([message], this.defaultConfig);
+      const response = await this.generateTitleFn([message], this.defaultConfig);
       const parsedResponse = this.provider.parseResponse(response);
       const title = parsedResponse.trim();
       return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
@@ -270,17 +278,14 @@ const useSubmit = () => {
 
       const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
 
-      // Extract base config from the formatted request
-      const baseConfig = configWithoutMessages as Partial<ModelConfig>;
-
       // Create a complete ModelConfig object with all required properties
       const fullConfig: ModelConfig = {
-        model: baseConfig.model || DEFAULT_MODEL_CONFIG.model,
-        max_tokens: baseConfig.max_tokens || DEFAULT_MODEL_CONFIG.max_tokens,
-        temperature: baseConfig.temperature || DEFAULT_MODEL_CONFIG.temperature,
-        presence_penalty: baseConfig.presence_penalty || DEFAULT_MODEL_CONFIG.presence_penalty,
-        top_p: baseConfig.top_p || DEFAULT_MODEL_CONFIG.top_p,
-        frequency_penalty: baseConfig.frequency_penalty || DEFAULT_MODEL_CONFIG.frequency_penalty,
+        model: configWithoutMessages.model || DEFAULT_MODEL_CONFIG.model,
+        max_tokens: configWithoutMessages.max_tokens || DEFAULT_MODEL_CONFIG.max_tokens,
+        temperature: configWithoutMessages.temperature || DEFAULT_MODEL_CONFIG.temperature,
+        presence_penalty: configWithoutMessages.presence_penalty || DEFAULT_MODEL_CONFIG.presence_penalty,
+        top_p: configWithoutMessages.top_p || DEFAULT_MODEL_CONFIG.top_p,
+        frequency_penalty: configWithoutMessages.frequency_penalty || DEFAULT_MODEL_CONFIG.frequency_penalty,
         enableThinking: false,
         thinkingConfig: {
           budget_tokens: 0
@@ -294,6 +299,7 @@ const useSubmit = () => {
         currentApiKey
       );
     },
+    provider,
     i18n.language,
     currentChat?.config.modelConfig || DEFAULT_MODEL_CONFIG
   );

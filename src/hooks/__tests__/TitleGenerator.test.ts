@@ -7,6 +7,8 @@ import { AIProvider } from '@type/provider';
 describe('TitleGenerator', () => {
   let mockConfig: ModelConfig;
   let mockProvider: AIProvider;
+  let mockGenerateTitleFn: ReturnType<typeof vi.fn>;
+  let mockParseResponse: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockConfig = {
@@ -22,22 +24,28 @@ describe('TitleGenerator', () => {
       }
     };
 
+    mockParseResponse = vi.fn();
+    mockGenerateTitleFn = vi.fn();
+
     mockProvider = {
-      parseResponse: vi.fn(),
+      parseResponse: mockParseResponse,
       parseStreamingResponse: vi.fn(),
       formatRequest: vi.fn(),
-      generateTitle: vi.fn(),
-      id: 'mock-provider'
+      id: 'mock-provider',
+      name: 'Mock Provider',
+      endpoints: ['/api/mock/completions'],
+      models: ['mock-model-1', 'mock-model-2']
     };
 
     vi.clearAllMocks();
   });
 
   it('should handle standard text response', async () => {
-    mockProvider.parseResponse.mockReturnValue('Generated Title');
-    mockProvider.generateTitle.mockResolvedValue('Raw Response');
+    mockParseResponse.mockReturnValue('Generated Title');
+    mockGenerateTitleFn.mockResolvedValue('Raw Response');
 
     const titleGenerator = new TitleGenerator(
+      mockGenerateTitleFn,
       mockProvider,
       'en',
       mockConfig
@@ -49,7 +57,7 @@ describe('TitleGenerator', () => {
     );
 
     expect(result).toBe('Generated Title');
-    expect(mockProvider.generateTitle).toHaveBeenCalledWith(
+    expect(mockGenerateTitleFn).toHaveBeenCalledWith(
       [
         {
           role: 'user',
@@ -58,14 +66,15 @@ describe('TitleGenerator', () => {
       ],
       mockConfig
     );
-    expect(mockProvider.parseResponse).toHaveBeenCalledWith('Raw Response');
+    expect(mockParseResponse).toHaveBeenCalledWith('Raw Response');
   });
 
   it('should handle quoted response', async () => {
-    mockProvider.parseResponse.mockReturnValue('"Quoted Title"');
-    mockProvider.generateTitle.mockResolvedValue('Raw Response');
+    mockGenerateTitleFn.mockResolvedValue('Raw Response');
+    mockParseResponse.mockReturnValue('"Quoted Title"');
 
     const titleGenerator = new TitleGenerator(
+      mockGenerateTitleFn,
       mockProvider,
       'en',
       mockConfig
@@ -77,14 +86,15 @@ describe('TitleGenerator', () => {
     );
 
     expect(result).toBe('Quoted Title');
-    expect(mockProvider.parseResponse).toHaveBeenCalledWith('Raw Response');
+    expect(mockParseResponse).toHaveBeenCalledWith('Raw Response');
   });
 
   it('should handle response with extra whitespace', async () => {
-    mockProvider.parseResponse.mockReturnValue('  Title With Spaces  ');
-    mockProvider.generateTitle.mockResolvedValue('Raw Response');
+    mockParseResponse.mockReturnValue('  Title With Spaces  ');
+    mockGenerateTitleFn.mockResolvedValue('Raw Response');
 
     const titleGenerator = new TitleGenerator(
+      mockGenerateTitleFn,
       mockProvider,
       'en',
       mockConfig
@@ -96,27 +106,34 @@ describe('TitleGenerator', () => {
     );
 
     expect(result).toBe('Title With Spaces');
-    expect(mockProvider.parseResponse).toHaveBeenCalledWith('Raw Response');
+    expect(mockParseResponse).toHaveBeenCalledWith('Raw Response');
   });
 
   it('should throw error for invalid model configuration', () => {
-    const invalidConfig = { ...mockConfig, model: undefined };
+    // Create a partial config without type assertion
+    const invalidConfig = {
+      ...mockConfig,
+      model: null
+    };
 
     expect(() => {
       new TitleGenerator(
+        mockGenerateTitleFn,
         mockProvider,
         'en',
-        invalidConfig as ModelConfig
+        // Use type assertion to unknown first
+        invalidConfig as unknown as ModelConfig
       );
     }).toThrow('Invalid model configuration');
   });
 
   it('should handle error during title generation', async () => {
     const mockError = new Error('Generation failed');
-    mockProvider.generateTitle.mockRejectedValue(mockError);
-    mockProvider.parseResponse.mockReturnValue('Should not be called');
+    mockGenerateTitleFn.mockRejectedValue(mockError);
+    mockParseResponse.mockReturnValue('Should not be called');
 
     const titleGenerator = new TitleGenerator(
+      mockGenerateTitleFn,
       mockProvider,
       'en',
       mockConfig
@@ -132,17 +149,18 @@ describe('TitleGenerator', () => {
     }).rejects.toThrow(mockError);
 
     expect(consoleSpy).toHaveBeenCalledWith('Title generation error:', mockError);
-    expect(mockProvider.parseResponse).not.toHaveBeenCalled();
+    expect(mockParseResponse).not.toHaveBeenCalled();
   });
 
   it('should handle provider parsing error', async () => {
     const mockError = new Error('Parsing failed');
-    mockProvider.parseResponse.mockImplementation(() => {
+    mockGenerateTitleFn.mockResolvedValue('Raw Response');
+    mockParseResponse.mockImplementation(() => {
       throw mockError;
     });
-    mockProvider.generateTitle.mockResolvedValue('Raw Response');
 
     const titleGenerator = new TitleGenerator(
+      mockGenerateTitleFn,
       mockProvider,
       'en',
       mockConfig
@@ -158,15 +176,16 @@ describe('TitleGenerator', () => {
     }).rejects.toThrow(mockError);
 
     expect(consoleSpy).toHaveBeenCalledWith('Title generation error:', mockError);
-    expect(mockProvider.parseResponse).toHaveBeenCalledWith('Raw Response');
+    expect(mockParseResponse).toHaveBeenCalledWith('Raw Response');
   });
 
   describe('Language handling', () => {
     it('should include language in generation prompt', async () => {
-      mockProvider.parseResponse.mockReturnValue('Title');
-      mockProvider.generateTitle.mockResolvedValue('Raw Response');
+      mockParseResponse.mockReturnValue('Title');
+      mockGenerateTitleFn.mockResolvedValue('Raw Response');
 
       const titleGenerator = new TitleGenerator(
+        mockGenerateTitleFn,
         mockProvider,
         'fr',
         mockConfig
@@ -177,7 +196,7 @@ describe('TitleGenerator', () => {
         'Salut'
       );
 
-      expect(mockProvider.generateTitle).toHaveBeenCalledWith(
+      expect(mockGenerateTitleFn).toHaveBeenCalledWith(
         [
           {
             role: 'user',
@@ -196,10 +215,11 @@ describe('TitleGenerator', () => {
         model: 'gpt-4'
       };
 
-      mockProvider.parseResponse.mockReturnValue('OpenAI Generated Title');
-      mockProvider.generateTitle.mockResolvedValue('Raw OpenAI Response');
+      mockParseResponse.mockReturnValue('OpenAI Generated Title');
+      mockGenerateTitleFn.mockResolvedValue('Raw OpenAI Response');
 
       const titleGenerator = new TitleGenerator(
+        mockGenerateTitleFn,
         mockProvider,
         'en',
         openAIConfig
@@ -211,7 +231,7 @@ describe('TitleGenerator', () => {
       );
 
       expect(result).toBe('OpenAI Generated Title');
-      expect(mockProvider.generateTitle).toHaveBeenCalledWith(
+      expect(mockGenerateTitleFn).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({
             role: 'user',
@@ -228,10 +248,11 @@ describe('TitleGenerator', () => {
         model: 'claude-3-7-sonnet-20250219'
       };
 
-      mockProvider.parseResponse.mockReturnValue('Anthropic Generated Title');
-      mockProvider.generateTitle.mockResolvedValue('Raw Anthropic Response');
+      mockParseResponse.mockReturnValue('Anthropic Generated Title');
+      mockGenerateTitleFn.mockResolvedValue('Raw Anthropic Response');
 
       const titleGenerator = new TitleGenerator(
+        mockGenerateTitleFn,
         mockProvider,
         'en',
         anthropicConfig
@@ -243,7 +264,7 @@ describe('TitleGenerator', () => {
       );
 
       expect(result).toBe('Anthropic Generated Title');
-      expect(mockProvider.generateTitle).toHaveBeenCalledWith(
+      expect(mockGenerateTitleFn).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({
             role: 'user',
