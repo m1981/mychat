@@ -405,6 +405,33 @@ const useSubmit = () => {
       });
       setChats(updatedChats);
 
+      // Add simulation mode check here
+      if (simMode === 'true') {
+        console.log('🎮 Starting simulation mode');
+        try {
+          await simulateStreamResponse((content) => {
+            if (!useStore.getState().generating) return;
+            const latestState = useStore.getState();
+            if (!latestState.chats) return;
+            
+            const updatedChats = updateMessageContent(
+              latestState.chats,
+              latestState.currentChatIndex,
+              content
+            );
+            if (!updatedChats || latestState.currentChatIndex < 0) return;
+            setChats(updatedChats);
+          });
+        } catch (error) {
+          console.error('❌ Simulation error:', error);
+          throw error;
+        } finally {
+          console.log('✨ Simulation complete');
+          setGenerating(false);
+        }
+        return;
+      }
+
       const { modelConfig } = updatedChats[currentState.currentChatIndex].config;
       
       console.log('📤 Preparing request for provider:', providerKey);
