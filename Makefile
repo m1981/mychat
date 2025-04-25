@@ -82,7 +82,7 @@ ensure-pnpm-dirs:
 	touch $(PNPM_DIRS)/.keep
 
 dev: ensure-pnpm-dirs ## Start development environment (flexible mode for rapid development)
-	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) PNPM_FROZEN_LOCKFILE=false VITE_SIM_MODE=true $(DOCKER_COMPOSE) up --build
+	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) PNPM_FROZEN_LOCKFILE=false VITE_SIM_MODE=true $(DOCKER_COMPOSE) up
 
 dev-strict: ## Start development environment (strict mode for CI/CD)
 	UID=$(UID) GID=$(GID) PNPM_FROZEN_LOCKFILE=true $(DOCKER_COMPOSE) up --build
