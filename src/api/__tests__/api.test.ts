@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { getChatCompletionStream, getChatCompletion } from '../api';
 import { MessageInterface, ModelConfig } from '@type/chat';
 import { TitleGenerator } from '@hooks/useSubmit';
+import { AIProvider } from '@type/provider';
 
 describe('getChatCompletionStream', () => {
   const baseMessages: MessageInterface[] = [
@@ -243,83 +244,96 @@ describe('getChatCompletion', () => {
 });
 
 describe('TitleGenerator', () => {
+  const mockProvider: AIProvider = {
+    parseResponse: vi.fn(),
+    parseStreamingResponse: vi.fn(),
+    formatRequest: vi.fn(),
+    generateTitle: vi.fn(),
+    id: 'mock-provider'
+  };
+
   const baseConfig: ModelConfig = {
-    model: 'claude-3-7-sonnet-20250219',
-    max_tokens: 4096,
-    temperature: 0,
+    model: 'gpt-4',
+    max_tokens: 1000,
+    temperature: 0.7,
+    top_p: 1,
     presence_penalty: 0,
     frequency_penalty: 0,
-    top_p: 1,
     enableThinking: false,
     thinkingConfig: {
       budget_tokens: 1000
     }
   };
 
-  it('should handle string response', async () => {
-    const stringResponse = async (messages: MessageInterface[], config: ModelConfig) => "  Test Title  ";
-    const generator = new TitleGenerator(stringResponse, 'en', baseConfig);
-    const title = await generator.generateChatTitle('Hello', 'Hi there');
-    expect(title).toBe('Test Title');
-  });
-
-  it('should handle object response', async () => {
-    const objectResponse = async (messages: MessageInterface[], config: ModelConfig) => ({ content: "  Test Title  " });
-    const generator = new TitleGenerator(objectResponse, 'en', baseConfig);
-    const title = await generator.generateChatTitle('Hello', 'Hi there');
-    expect(title).toBe('Test Title');
-  });
-
-  it('should handle quoted response', async () => {
-    const quotedResponse = async (messages: MessageInterface[], config: ModelConfig) => '"Test Title"';
-    const generator = new TitleGenerator(quotedResponse, 'en', baseConfig);
-    const title = await generator.generateChatTitle('Hello', 'Hi there');
-    expect(title).toBe('Test Title');
-  });
-
-  it('should handle error cases', async () => {
-    const invalidResponse = async (messages: MessageInterface[], config: ModelConfig) => ({} as any);
-    const generator = new TitleGenerator(invalidResponse, 'en', baseConfig);
-    
-    await expect(
-      generator.generateChatTitle('Hello', 'Hi there')
-    ).rejects.toThrow('Invalid response format from title generation');
-  });
-
-  it('should handle Anthropic response format', async () => {
-    const anthropicResponse = async () => ({
-      message: {
-        content: '  "Test Title"  '
-      }
-    });
-
-    const generator = new TitleGenerator(anthropicResponse, 'en', baseConfig);
-    const title = await generator.generateChatTitle('Hello', 'Hi there');
-    expect(title).toBe('Test Title');
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
   it('should handle direct content response', async () => {
-    const contentResponse = async () => ({
-      content: '  Test Title  '
-    });
+    mockProvider.generateTitle.mockResolvedValue('Test Title Response');
+    mockProvider.parseResponse.mockReturnValue('Test Title');
 
-    const generator = new TitleGenerator(contentResponse, 'en', baseConfig);
-    const title = await generator.generateChatTitle('Hello', 'Hi there');
-    expect(title).toBe('Test Title');
+    const titleGenerator = new TitleGenerator(
+      mockProvider,
+      'en',
+      baseConfig
+    );
+
+    const result = await titleGenerator.generateChatTitle(
+      'Hello',
+      'Hi there'
+    );
+
+    expect(result).toBe('Test Title');
+    expect(mockProvider.generateTitle).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'user',
+          content: expect.stringContaining('Hello')
+        })
+      ]),
+      baseConfig
+    );
   });
 
-  it('should log and throw on invalid response', async () => {
-    const consoleSpy = vi.spyOn(console, 'error');
-    // Cast the invalid response to any to bypass TypeScript checks
-    // since we're intentionally testing invalid input
-    const invalidResponse = async () => ({ unexpected: 'format' }) as any;
+  it('should handle Anthropic response format', async () => {
+    mockProvider.generateTitle.mockResolvedValue({ content: 'Anthropic Title' });
+    mockProvider.parseResponse.mockReturnValue('Anthropic Title');
 
-    const generator = new TitleGenerator(invalidResponse, 'en', baseConfig);
+    const titleGenerator = new TitleGenerator(
+      mockProvider,
+      'en',
+      { ...baseConfig, model: 'claude-3' }
+    );
+
+    const result = await titleGenerator.generateChatTitle(
+      'Hello',
+      'Hi there'
+    );
+
+    expect(result).toBe('Anthropic Title');
+    expect(mockProvider.generateTitle).toHaveBeenCalled();
+    expect(mockProvider.parseResponse).toHaveBeenCalledWith({ content: 'Anthropic Title' });
+  });
+
+  it('should handle error cases', async () => {
+    mockProvider.generateTitle.mockRejectedValue(new Error('API Error'));
+
+    const titleGenerator = new TitleGenerator(
+      mockProvider,
+      'en',
+      baseConfig
+    );
+
+    const consoleSpy = vi.spyOn(console, 'error');
 
     await expect(
-      generator.generateChatTitle('Hello', 'Hi there')
-    ).rejects.toThrow('Invalid response format from title generation');
+      titleGenerator.generateChatTitle('Hello', 'Hi there')
+    ).rejects.toThrow('API Error');
 
-    expect(consoleSpy).toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Title generation error:',
+      expect.any(Error)
+    );
   });
 });

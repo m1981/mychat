@@ -156,7 +156,7 @@ export class TitleGenerator {
     };
 
     try {
-      const response = await this.generateTitle([message], this.defaultConfig);
+      const response = await this.provider.generateTitle([message], this.defaultConfig);
       const parsedResponse = this.provider.parseResponse(response);
       const title = parsedResponse.trim();
       return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;

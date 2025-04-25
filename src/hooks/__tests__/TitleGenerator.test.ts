@@ -1,9 +1,12 @@
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TitleGenerator } from '../useSubmit';
 import { ModelConfig } from '@type/chat';
+import { AIProvider } from '@type/provider';
 
 describe('TitleGenerator', () => {
   let mockConfig: ModelConfig;
+  let mockProvider: AIProvider;
 
   beforeEach(() => {
     mockConfig = {
@@ -19,249 +22,236 @@ describe('TitleGenerator', () => {
       }
     };
 
-    // Clear all mocks before each test
+    mockProvider = {
+      parseResponse: vi.fn(),
+      parseStreamingResponse: vi.fn(),
+      formatRequest: vi.fn(),
+      generateTitle: vi.fn(),
+      id: 'mock-provider'
+    };
+
     vi.clearAllMocks();
   });
 
-  it('should handle array response with TextResponse format', async () => {
-    const mockGenerateTitle = vi.fn().mockResolvedValue([
-      {
-        type: 'text',
-        text: 'Zoloft: SSRI Medication for Depression'
-      }
-    ]);
+  it('should handle standard text response', async () => {
+    mockProvider.parseResponse.mockReturnValue('Generated Title');
+    mockProvider.generateTitle.mockResolvedValue('Raw Response');
 
     const titleGenerator = new TitleGenerator(
-      mockGenerateTitle,
+      mockProvider,
       'en',
       mockConfig
     );
 
-    const userMessage = 'What is Zoloft?';
-    const assistantMessage = 'Zoloft is an SSRI antidepressant medication used to treat depression and anxiety disorders.';
-
     const result = await titleGenerator.generateChatTitle(
-      userMessage,
-      assistantMessage
+      'What is TypeScript?',
+      'TypeScript is a programming language.'
     );
 
-    expect(result).toBe('Zoloft: SSRI Medication for Depression');
-    expect(mockGenerateTitle).toHaveBeenCalledWith(
+    expect(result).toBe('Generated Title');
+    expect(mockProvider.generateTitle).toHaveBeenCalledWith(
       [
         {
           role: 'user',
-          content: expect.stringContaining(userMessage)
+          content: expect.stringContaining('What is TypeScript?')
         }
       ],
       mockConfig
     );
+    expect(mockProvider.parseResponse).toHaveBeenCalledWith('Raw Response');
   });
 
-  it('should handle quoted text in array response', async () => {
-    const mockGenerateTitle = vi.fn().mockResolvedValue([
-      {
-        type: 'text',
-        text: '"Understanding Zoloft Treatment"'
-      }
-    ]);
+  it('should handle quoted response', async () => {
+    mockProvider.parseResponse.mockReturnValue('"Quoted Title"');
+    mockProvider.generateTitle.mockResolvedValue('Raw Response');
 
     const titleGenerator = new TitleGenerator(
-      mockGenerateTitle,
+      mockProvider,
       'en',
       mockConfig
     );
 
     const result = await titleGenerator.generateChatTitle(
-      'What is Zoloft?',
-      'Zoloft is an SSRI antidepressant medication.'
+      'Hello',
+      'Hi there'
     );
 
-    expect(result).toBe('Understanding Zoloft Treatment');
+    expect(result).toBe('Quoted Title');
+    expect(mockProvider.parseResponse).toHaveBeenCalledWith('Raw Response');
   });
 
-  it('should throw error for invalid array response format', async () => {
-    const mockGenerateTitle = vi.fn().mockResolvedValue([
-      {
-        invalidFormat: true,
-        content: 'Invalid Response'
-      }
-    ]);
+  it('should handle response with extra whitespace', async () => {
+    mockProvider.parseResponse.mockReturnValue('  Title With Spaces  ');
+    mockProvider.generateTitle.mockResolvedValue('Raw Response');
 
     const titleGenerator = new TitleGenerator(
-      mockGenerateTitle,
+      mockProvider,
       'en',
       mockConfig
     );
 
-    await expect(async () => {
-      await titleGenerator.generateChatTitle(
-        'What is Zoloft?',
-        'Zoloft is an SSRI antidepressant medication.'
-      );
-    }).rejects.toThrow('Invalid response format from title generation');
-  });
-
-  it('should handle empty array response', async () => {
-    const mockGenerateTitle = vi.fn().mockResolvedValue([]);
-
-    const titleGenerator = new TitleGenerator(
-      mockGenerateTitle,
-      'en',
-      mockConfig
+    const result = await titleGenerator.generateChatTitle(
+      'Hello',
+      'Hi there'
     );
 
-    await expect(async () => {
-      await titleGenerator.generateChatTitle(
-        'What is Zoloft?',
-        'Zoloft is an SSRI antidepressant medication.'
-      );
-    }).rejects.toThrow('Invalid response format from title generation');
+    expect(result).toBe('Title With Spaces');
+    expect(mockProvider.parseResponse).toHaveBeenCalledWith('Raw Response');
   });
 
   it('should throw error for invalid model configuration', () => {
-    const mockGenerateTitle = vi.fn();
-    // Create a partial config without type assertion
-    const invalidConfig: Partial<ModelConfig> = {
-      ...mockConfig,
-      model: undefined as unknown as string // explicitly cast to match the type
-    };
+    const invalidConfig = { ...mockConfig, model: undefined };
 
     expect(() => {
       new TitleGenerator(
-        mockGenerateTitle,
+        mockProvider,
         'en',
-        // Now cast the partial config
-        invalidConfig as unknown as ModelConfig
+        invalidConfig as ModelConfig
       );
     }).toThrow('Invalid model configuration');
   });
 
   it('should handle error during title generation', async () => {
-    const mockError = new Error('API Error');
-    const mockGenerateTitle = vi.fn().mockRejectedValue(mockError);
+    const mockError = new Error('Generation failed');
+    mockProvider.generateTitle.mockRejectedValue(mockError);
+    mockProvider.parseResponse.mockReturnValue('Should not be called');
 
     const titleGenerator = new TitleGenerator(
-      mockGenerateTitle,
+      mockProvider,
       'en',
       mockConfig
     );
+
+    const consoleSpy = vi.spyOn(console, 'error');
 
     await expect(async () => {
       await titleGenerator.generateChatTitle(
-        'What is Zoloft?',
-        'Zoloft is an SSRI antidepressant medication.'
+        'Hello',
+        'Hi there'
       );
     }).rejects.toThrow(mockError);
-  });
-
-  // Test console error logging
-  it('should log error when title generation fails', async () => {
-    const consoleSpy = vi.spyOn(console, 'error');
-    const mockError = new Error('API Error');
-    const mockGenerateTitle = vi.fn().mockRejectedValue(mockError);
-
-    const titleGenerator = new TitleGenerator(
-      mockGenerateTitle,
-      'en',
-      mockConfig
-    );
-
-    try {
-      await titleGenerator.generateChatTitle(
-        'What is Zoloft?',
-        'Zoloft is an SSRI antidepressant medication.'
-      );
-    } catch (error) {
-      // Expected to throw
-    }
 
     expect(consoleSpy).toHaveBeenCalledWith('Title generation error:', mockError);
-    consoleSpy.mockRestore();
+    expect(mockProvider.parseResponse).not.toHaveBeenCalled();
   });
-});
 
-describe('Provider-specific title generation', () => {
-  it('should handle OpenAI title generation', async () => {
-    const mockConfig: ModelConfig = {
-      model: 'gpt-4o',
-      max_tokens: 4096,
-      temperature: 0.7,
-      top_p: 1,
-      presence_penalty: 0,
-      frequency_penalty: 0,
-      enableThinking: false,
-      thinkingConfig: {
-        budget_tokens: 1000
-      }
-    };
-
-    const mockGenerateTitle = vi.fn().mockResolvedValue({
-      content: 'OpenAI Generated Title'
+  it('should handle provider parsing error', async () => {
+    const mockError = new Error('Parsing failed');
+    mockProvider.parseResponse.mockImplementation(() => {
+      throw mockError;
     });
+    mockProvider.generateTitle.mockResolvedValue('Raw Response');
 
     const titleGenerator = new TitleGenerator(
-      mockGenerateTitle,
+      mockProvider,
       'en',
       mockConfig
     );
 
-    const result = await titleGenerator.generateChatTitle(
-      'Test question',
-      'Test response'
-    );
+    const consoleSpy = vi.spyOn(console, 'error');
 
-    expect(result).toBe('OpenAI Generated Title');
-    expect(mockGenerateTitle).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({
-          role: 'user',
-          content: expect.stringContaining('Test question')
-        })
-      ]),
-      mockConfig
-    );
+    await expect(async () => {
+      await titleGenerator.generateChatTitle(
+        'Hello',
+        'Hi there'
+      );
+    }).rejects.toThrow(mockError);
+
+    expect(consoleSpy).toHaveBeenCalledWith('Title generation error:', mockError);
+    expect(mockProvider.parseResponse).toHaveBeenCalledWith('Raw Response');
   });
 
-  it('should handle Anthropic title generation', async () => {
-    const mockConfig: ModelConfig = {
-      model: 'claude-3-7-sonnet-20250219',
-      max_tokens: 4096,
-      temperature: 0,
-      top_p: 1,
-      presence_penalty: 0,
-      frequency_penalty: 0,
-      enableThinking: false,
-      thinkingConfig: {
-        budget_tokens: 1000
-      }
-    };
+  describe('Language handling', () => {
+    it('should include language in generation prompt', async () => {
+      mockProvider.parseResponse.mockReturnValue('Title');
+      mockProvider.generateTitle.mockResolvedValue('Raw Response');
 
-    const mockGenerateTitle = vi.fn().mockResolvedValue({
-      message: {
-        content: 'Anthropic Generated Title'
-      }
+      const titleGenerator = new TitleGenerator(
+        mockProvider,
+        'fr',
+        mockConfig
+      );
+
+      await titleGenerator.generateChatTitle(
+        'Bonjour',
+        'Salut'
+      );
+
+      expect(mockProvider.generateTitle).toHaveBeenCalledWith(
+        [
+          {
+            role: 'user',
+            content: expect.stringContaining('language: fr')
+          }
+        ],
+        mockConfig
+      );
+    });
+  });
+
+  describe('Provider-specific title generation', () => {
+    it('should handle OpenAI title generation', async () => {
+      const openAIConfig = {
+        ...mockConfig,
+        model: 'gpt-4'
+      };
+
+      mockProvider.parseResponse.mockReturnValue('OpenAI Generated Title');
+      mockProvider.generateTitle.mockResolvedValue('Raw OpenAI Response');
+
+      const titleGenerator = new TitleGenerator(
+        mockProvider,
+        'en',
+        openAIConfig
+      );
+
+      const result = await titleGenerator.generateChatTitle(
+        'Test question',
+        'Test response'
+      );
+
+      expect(result).toBe('OpenAI Generated Title');
+      expect(mockProvider.generateTitle).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            role: 'user',
+            content: expect.stringContaining('Test question')
+          })
+        ]),
+        openAIConfig
+      );
     });
 
-    const titleGenerator = new TitleGenerator(
-      mockGenerateTitle,
-      'en',
-      mockConfig
-    );
+    it('should handle Anthropic title generation', async () => {
+      const anthropicConfig = {
+        ...mockConfig,
+        model: 'claude-3-7-sonnet-20250219'
+      };
 
-    const result = await titleGenerator.generateChatTitle(
-      'Test question',
-      'Test response'
-    );
+      mockProvider.parseResponse.mockReturnValue('Anthropic Generated Title');
+      mockProvider.generateTitle.mockResolvedValue('Raw Anthropic Response');
 
-    expect(result).toBe('Anthropic Generated Title');
-    expect(mockGenerateTitle).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({
-          role: 'user',
-          content: expect.stringContaining('Test question')
-        })
-      ]),
-      mockConfig
-    );
+      const titleGenerator = new TitleGenerator(
+        mockProvider,
+        'en',
+        anthropicConfig
+      );
+
+      const result = await titleGenerator.generateChatTitle(
+        'Test question',
+        'Test response'
+      );
+
+      expect(result).toBe('Anthropic Generated Title');
+      expect(mockProvider.generateTitle).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            role: 'user',
+            content: expect.stringContaining('Test question')
+          })
+        ]),
+        anthropicConfig
+      );
+    });
   });
 });
