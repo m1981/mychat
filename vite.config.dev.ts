@@ -50,7 +50,6 @@ const devConfig: UserConfig = {
     port: 5173,
     strictPort: true,
     cors: true,
-    force: true,
     headers: {
       'Access-Control-Allow-Origin': '*'
     },
