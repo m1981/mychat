@@ -57,6 +57,13 @@ services:
           cpus: '1'
           memory: 1G
 
+  shell:
+    extends: app
+    profiles: ["shell"]
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
 volumes:
   node_modules:
     name: "mychat-node_modules"

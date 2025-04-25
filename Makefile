@@ -81,6 +81,9 @@ ensure-pnpm-dirs:
 	chmod 777 $(PNPM_DIRS)
 	touch $(PNPM_DIRS)/.keep
 
+shell: ensure-pnpm-dirs ## Start an interactive shell session in the app container
+	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE) run --rm shell
+
 dev: ensure-pnpm-dirs ## Start development environment (flexible mode for rapid development)
 	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) PNPM_FROZEN_LOCKFILE=false VITE_SIM_MODE=true $(DOCKER_COMPOSE) up
 
@@ -165,7 +168,7 @@ test-file: ensure-pnpm-dirs ## Run specific test file. Usage: make test-file f=p
 lint: ## Run linter and fix issues
 	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint
 
-type-check: ## Run type checking
+type: ## Run type checking
 	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) type-check
 
 type-watch: ## Run type checking
