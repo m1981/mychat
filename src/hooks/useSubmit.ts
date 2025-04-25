@@ -137,7 +137,7 @@ export class ChatStreamHandler {
 
 export class TitleGenerator {
   constructor(
-    private readonly generateTitle: (messages: MessageInterface[], config: ModelConfig) => Promise<string | ContentResponse | AnthropicResponse | TextResponse | TextResponse[]>,
+    private readonly provider: AIProvider,
     private readonly language: string,
     private readonly defaultConfig: ModelConfig
   ) {
@@ -150,10 +150,6 @@ export class TitleGenerator {
     userMessage: string,
     assistantMessage: string
   ): Promise<string> {
-    if (!this.defaultConfig || !this.defaultConfig.model) {
-      throw new Error('Invalid model configuration');
-    }
-
     const message: MessageInterface = {
       role: 'user',
       content: `Generate a title in less than 6 words for the following message (language: ${this.language}):\n"""\nUser: ${userMessage}\nAssistant: ${assistantMessage}\n"""`,
@@ -161,38 +157,9 @@ export class TitleGenerator {
 
     try {
       const response = await this.generateTitle([message], this.defaultConfig);
-
-      if (Array.isArray(response)) {
-        if (response.length > 0 && 'type' in response[0] && response[0].type === 'text') {
-          const title = response[0].text.trim();
-          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
-        }
-      }
-
-      if (typeof response === 'string') {
-        const title = response.trim();
-        return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
-      }
-
-      if (response && typeof response === 'object') {
-        if ('type' in response && response.type === 'text' && 'text' in response) {
-          const title = response.text.trim();
-          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
-        }
-
-        if ('content' in response) {
-          const title = response.content.trim();
-          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
-        }
-
-        if ('message' in response && typeof response.message === 'object' && 'content' in response.message) {
-          const title = (response as AnthropicResponse).message.content.trim();
-          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
-        }
-      }
-
-      console.error('Unexpected response format:', response);
-      throw new Error('Invalid response format from title generation');
+      const parsedResponse = this.provider.parseResponse(response);
+      const title = parsedResponse.trim();
+      return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
     } catch (error) {
       console.error('Title generation error:', error);
       throw error;
