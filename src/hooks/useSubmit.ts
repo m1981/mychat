@@ -133,7 +133,10 @@ export class ChatStreamHandler {
 
 export class TitleGenerator {
   constructor(
-    private readonly generateTitle: (messages: MessageInterface[], config: ModelConfig) => Promise<string | ContentResponse | AnthropicResponse | TextResponse | TextResponse[]>,
+    private readonly generateTitle: (
+      messages: MessageInterface[],
+      config: ModelConfig
+    ) => Promise<string | ContentResponse | AnthropicResponse | TextResponse | TextResponse[] | OpenAIResponse>,
     private readonly language: string,
     private readonly defaultConfig: ModelConfig
   ) {
@@ -157,20 +160,30 @@ export class TitleGenerator {
 
     try {
       const response = await this.generateTitle([message], this.defaultConfig);
+      console.log('Title generation raw response:', response);
 
+      // Handle array response
       if (Array.isArray(response)) {
-        if (response.length > 0 && 'type' in response[0] && response[0].type === 'text') {
-          const title = response[0].text.trim();
+        if (response.length === 0) {
+          throw new Error('Invalid response format from title generation');
+        }
+        const firstResponse = response[0];
+        if ('type' in firstResponse && firstResponse.type === 'text' && 'text' in firstResponse) {
+          const title = firstResponse.text.trim();
           return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
         }
       }
 
-      if (typeof response === 'string') {
-        const title = response.trim();
-        return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
-      }
-
+      // Handle OpenAI response format
       if (response && typeof response === 'object') {
+        if ('choices' in response && Array.isArray(response.choices) && response.choices.length > 0) {
+          const content = response.choices[0]?.message?.content;
+          if (content) {
+            const title = content.trim();
+            return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
+          }
+        }
+
         if ('type' in response && response.type === 'text' && 'text' in response) {
           const title = response.text.trim();
           return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
@@ -185,6 +198,12 @@ export class TitleGenerator {
           const title = (response as AnthropicResponse).message.content.trim();
           return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
         }
+      }
+
+      // Handle string response
+      if (typeof response === 'string') {
+        const title = response.trim();
+        return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
       }
 
       console.error('Unexpected response format:', response);
