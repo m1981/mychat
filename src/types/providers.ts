@@ -20,7 +20,16 @@ export const providers: Record<ProviderKey, AIProvider> = {
       frequency_penalty: config.frequency_penalty,
       stream: config.stream ?? false
     }),
-    parseResponse: (response) => response.choices[0].message.content,
+    parseResponse: (response) => {
+      if (!response) return '';
+      
+      try {
+        return response?.choices?.[0]?.message?.content || '';
+      } catch (error) {
+        console.error('Error parsing OpenAI response:', error);
+        return '';
+      }
+    },
     parseStreamingResponse: (response: any) => {
       try {
         return response.choices?.[0]?.delta?.content || '';
@@ -51,15 +60,30 @@ export const providers: Record<ProviderKey, AIProvider> = {
       }))
     }),
     parseResponse: (response) => {
-      // Handle non-streaming response
-      if (response.content && Array.isArray(response.content)) {
-        return response.content[0].text;
+      if (!response) return '';
+      
+      try {
+        // Handle Claude 3 array format
+        if (Array.isArray(response.content)) {
+          const textContent = response.content.find(c => c.type === 'text');
+          return textContent?.text || '';
+        }
+        
+        // Handle Claude 2 string format
+        if (response?.content && typeof response.content === 'string') {
+          return response.content;
+        }
+        
+        console.warn('Unexpected Anthropic response format:', response);
+        return '';
+      } catch (error) {
+        console.error('Error parsing Anthropic response:', error);
+        return '';
       }
-      return '';
     },
     parseStreamingResponse: (response: any) => {
       try {
-        if (response.type === 'content_block_delta') {
+        if (response.type === 'content_block_del' + 'ta') {
           return response.delta?.text || '';
         }
         return '';
