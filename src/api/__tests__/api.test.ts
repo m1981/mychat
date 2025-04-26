@@ -245,19 +245,14 @@ describe('getChatCompletion', () => {
 
 describe('TitleGenerator', () => {
   const mockProvider: AIProvider = {
+    id: 'test-provider',
+    name: 'Test Provider',
+    endpoints: ['/test'],
+    models: ['test-model'],
     parseResponse: vi.fn(),
     parseStreamingResponse: vi.fn(),
     formatRequest: vi.fn(),
-    id: 'mock-provider',
-    name: 'Mock Provider',
-    endpoints: [
-      '/api/mock/completions',
-      '/api/mock/chat'
-    ],
-    models: [
-      'mock-model-1',
-      'mock-model-2'
-    ]
+    parseTitleResponse: vi.fn().mockReturnValue('Test Title'),
   };
 
   const baseConfig: ModelConfig = {

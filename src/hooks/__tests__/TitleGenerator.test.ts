@@ -34,7 +34,8 @@ describe('TitleGenerator', () => {
       id: 'mock-provider',
       name: 'Mock Provider',
       endpoints: ['/api/mock/completions'],
-      models: ['mock-model-1', 'mock-model-2']
+      models: ['mock-model-1', 'mock-model-2'],
+      parseTitleResponse: vi.fn().mockReturnValue('Generated Title')
     };
 
     vi.clearAllMocks();

@@ -149,9 +149,13 @@ export class TitleGenerator {
     private readonly language: string,
     private readonly defaultConfig: ModelConfig
   ) {
-    if (!defaultConfig || !defaultConfig.model) {
-      throw new Error('Invalid model configuration');
+    if (!defaultConfig?.model || !this.validateModelForProvider(defaultConfig.model, provider)) {
+      throw new Error(`Invalid model configuration for provider ${provider.id}`);
     }
+  }
+
+  private validateModelForProvider(model: string, provider: AIProvider): boolean {
+    return provider.models.includes(model);
   }
 
   async generateChatTitle(
@@ -165,12 +169,11 @@ export class TitleGenerator {
 
     try {
       const response = await this.generateTitleFn([message], this.defaultConfig);
-      const parsedResponse = this.provider.parseResponse(response);
-      const title = parsedResponse.trim();
-      return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
+      // Use provider-specific title parsing
+      return this.provider.parseTitleResponse(response);
     } catch (error) {
       console.error('Title generation error:', error);
-      throw error;
+      return 'Untitled Chat';
     }
   }
 }
@@ -271,37 +274,48 @@ const useSubmit = () => {
         throw new Error('Invalid model configuration');
       }
 
-      const formattedRequest = provider.formatRequest(messages, {
+      // Ensure we're using the correct provider's model
+      const providerConfig = {
         ...config,
+        model: provider.models[0], // Use first available model as fallback
         stream: false
-      });
+      };
 
-      const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
+      const formattedRequest = provider.formatRequest(messages, providerConfig);
 
-      // Create a complete ModelConfig object with all required properties
+      // Create a complete ModelConfig object with provider-specific defaults
       const fullConfig: ModelConfig = {
-        model: configWithoutMessages.model || DEFAULT_MODEL_CONFIG.model,
-        max_tokens: configWithoutMessages.max_tokens || DEFAULT_MODEL_CONFIG.max_tokens,
-        temperature: configWithoutMessages.temperature || DEFAULT_MODEL_CONFIG.temperature,
-        presence_penalty: configWithoutMessages.presence_penalty || DEFAULT_MODEL_CONFIG.presence_penalty,
-        top_p: configWithoutMessages.top_p || DEFAULT_MODEL_CONFIG.top_p,
-        frequency_penalty: configWithoutMessages.frequency_penalty || DEFAULT_MODEL_CONFIG.frequency_penalty,
+        model: formattedRequest.model,
+        max_tokens: formattedRequest.max_tokens || DEFAULT_MODEL_CONFIG.max_tokens,
+        temperature: formattedRequest.temperature || DEFAULT_MODEL_CONFIG.temperature,
+        presence_penalty: formattedRequest.presence_penalty || DEFAULT_MODEL_CONFIG.presence_penalty,
+        top_p: formattedRequest.top_p || DEFAULT_MODEL_CONFIG.top_p,
+        frequency_penalty: formattedRequest.frequency_penalty || DEFAULT_MODEL_CONFIG.frequency_penalty,
         enableThinking: false,
         thinkingConfig: {
           budget_tokens: 0
         }
       };
 
-      return getChatCompletion(
-        providerKey,
-        formattedMessages,
-        fullConfig,
-        currentApiKey
-      );
+      try {
+        const response = await getChatCompletion(
+          provider.id,
+          formattedRequest.messages,
+          fullConfig,
+          currentApiKey
+        );
+        return response;
+      } catch (error) {
+        console.error(`Title generation failed for provider ${provider.id}:`, error);
+        throw error;
+      }
     },
     provider,
     i18n.language,
-    currentChat?.config.modelConfig || DEFAULT_MODEL_CONFIG
+    {
+      ...DEFAULT_MODEL_CONFIG,
+      model: provider.models[0] // Use the first available model for the selected provider
+    }
   );
 
   const stopGeneration = useCallback(() => {

@@ -21,6 +21,24 @@ export const providers: Record<ProviderKey, AIProvider> = {
       stream: config.stream ?? false
     }),
     parseResponse: (response) => response.choices[0].message.content,
+    parseTitleResponse: (response: any) => {
+      // Validate response structure
+      if (!response?.choices?.[0]?.message?.content) {
+        console.warn('OpenAI title response missing expected structure:', response);
+        return 'Untitled Chat';
+      }
+      
+      const title = response.choices[0].message.content.trim();
+      // Ensure title is not empty after trimming
+      if (!title) {
+        return 'Untitled Chat';
+      }
+      
+      // Remove surrounding quotes and limit length
+      return title
+        .replace(/^["'](.+)["']$/, '$1')
+        .slice(0, 100); // Prevent extremely long titles
+    },
     parseStreamingResponse: (response: any) => {
       try {
         return response.choices?.[0]?.delta?.content || '';
@@ -36,7 +54,7 @@ export const providers: Record<ProviderKey, AIProvider> = {
     endpoints: ProviderRegistry.getProvider('anthropic').endpoints,
     models: ProviderRegistry.getProvider('anthropic').models.map((m: ProviderModel) => m.id),
     formatRequest: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => ({
-     model: config.model,
+      model: config.model,
       max_tokens: config.max_tokens,
       temperature: config.temperature,
       top_p: config.top_p,
@@ -50,12 +68,29 @@ export const providers: Record<ProviderKey, AIProvider> = {
         content: m.content,
       }))
     }),
-    parseResponse: (response) => {
-      // Handle non-streaming response
+     parseResponse: (response) => {
       if (response.content && Array.isArray(response.content)) {
         return response.content[0].text;
       }
       return '';
+    },
+    parseTitleResponse: (response: any) => {
+      // Validate response structure
+      if (!response?.content?.[0]?.text) {
+        console.warn('Anthropic title response missing expected structure:', response);
+        return 'Untitled Chat';
+      }
+      
+      const title = response.content[0].text.trim();
+      // Ensure title is not empty after trimming
+      if (!title) {
+        return 'Untitled Chat';
+      }
+      
+      // Remove surrounding quotes and limit length
+      return title
+        .replace(/^["'](.+)["']$/, '$1')
+        .slice(0, 100); // Prevent extremely long titles
     },
     parseStreamingResponse: (response: any) => {
       try {
