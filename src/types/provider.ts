@@ -7,7 +7,7 @@ export interface RequestConfig extends ModelConfig {
     budget_tokens: number;
   };
 }
- 
+
 export interface FormattedRequest {
   messages: MessageInterface[];
   model: string;
@@ -30,6 +30,5 @@ export interface AIProvider {
   models: string[];
   formatRequest: (messages: MessageInterface[], config: RequestConfig) => FormattedRequest;
   parseResponse: (response: any) => string;
-  parseTitleResponse: (response: any) => string; // Add dedicated title parsing
   parseStreamingResponse: (chunk: any) => string;
 }

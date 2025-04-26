@@ -4,17 +4,10 @@ import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 import useStore from '@store/store';
 import { ChatInterface, MessageInterface, ModelConfig } from '@type/chat';
 import { providers } from '@type/providers';
-import { AIProvider } from '@type/provider';
 import { getChatCompletion } from '@src/api/api';
 import { checkStorageQuota } from '@utils/storage';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { getEnvVar } from '@utils/env';
-
-// Add this type definition at the top of the file
-type GenerateTitleFunction = (
-  messages: MessageInterface[],
-  config: ModelConfig
-) => Promise<string>;
 
 class SubmissionLock {
   private locked = false;
@@ -100,6 +93,7 @@ export class ChatStreamHandler {
           console.log('🏁 Stream ended. Done:', done, 'Aborted:', this.aborted);
           break;
         }
+
         const chunk = this.decoder.decode(value);
         const lines = chunk.split('\n').filter(line => line.trim() !== '');
 
@@ -138,66 +132,66 @@ export class ChatStreamHandler {
 }
 
 export class TitleGenerator {
-  private generateTitleFn: GenerateTitleFunction;
-  private provider: AIProvider;
-  private language: string;
-  private config: ModelConfig;
-
   constructor(
-    generateTitleFn: GenerateTitleFunction,
-    provider: AIProvider,
-    language: string,
-    config: ModelConfig
+    private readonly generateTitle: (messages: MessageInterface[], config: ModelConfig) => Promise<string | ContentResponse | AnthropicResponse | TextResponse | TextResponse[]>,
+    private readonly language: string,
+    private readonly defaultConfig: ModelConfig
   ) {
-    if (!this.validateConfig(config, provider)) {
-      throw new Error(`Invalid model configuration for provider ${provider.id}`);
+    if (!defaultConfig || !defaultConfig.model) {
+      throw new Error('Invalid model configuration');
     }
-    
-    this.generateTitleFn = generateTitleFn;
-    this.provider = provider;
-    this.language = language;
-    this.config = config;
-  }
-
-  private validateConfig(config: ModelConfig, provider: AIProvider): boolean {
-    // Check if model exists
-    if (!config?.model || !provider.models.includes(config.model)) {
-      return false;
-    }
-
-    // Validate parameter ranges
-    if (
-      config.temperature < 0 || 
-      config.temperature > 1 ||
-      config.top_p < 0 || 
-      config.top_p > 1 ||
-      config.presence_penalty < -2 || 
-      config.presence_penalty > 2 ||
-      config.frequency_penalty < -2 || 
-      config.frequency_penalty > 2 ||
-      config.max_tokens < 1
-    ) {
-      return false;
-    }
-
-    return true;
   }
 
   async generateChatTitle(
     userMessage: string,
     assistantMessage: string
   ): Promise<string> {
+    if (!this.defaultConfig || !this.defaultConfig.model) {
+      throw new Error('Invalid model configuration');
+    }
+
     const message: MessageInterface = {
       role: 'user',
       content: `Generate a title in less than 6 words for the following message (language: ${this.language}):\n"""\nUser: ${userMessage}\nAssistant: ${assistantMessage}\n"""`,
     };
 
     try {
-      const response = await this.generateTitleFn([message], this.config);
-      return this.provider.parseTitleResponse(response);
+      const response = await this.generateTitle([message], this.defaultConfig);
+
+      if (Array.isArray(response)) {
+        if (response.length > 0 && 'type' in response[0] && response[0].type === 'text') {
+          const title = response[0].text.trim();
+          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
+        }
+      }
+
+      if (typeof response === 'string') {
+        const title = response.trim();
+        return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
+      }
+
+      if (response && typeof response === 'object') {
+        if ('type' in response && response.type === 'text' && 'text' in response) {
+          const title = response.text.trim();
+          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
+        }
+
+        if ('content' in response) {
+          const title = response.content.trim();
+          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
+        }
+
+        if ('message' in response && typeof response.message === 'object' && 'content' in response.message) {
+          const title = (response as AnthropicResponse).message.content.trim();
+          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
+        }
+      }
+
+      console.error('Unexpected response format:', response);
+      throw new Error('Invalid response format from title generation');
     } catch (error) {
       console.error('Title generation error:', error);
-      return 'Untitled Chat';
+      throw error;
     }
   }
 }
@@ -253,12 +247,8 @@ const useSubmit = () => {
   const { i18n } = useTranslation('api');
   const store = useStore();
   const abortControllerRef = useRef<AbortController | null>(null);
-  const streamHandlerRef = useRef<ChatStreamHandler | null>(null);
   const submissionLock = useRef(new SubmissionLock());
   const cache = useRef(new ResponseCache());
-  
-  // Add simMode initialization at the top with other variables
-  const simMode = getEnvVar('VITE_SIM_MODE', 'false');
   
   const {
     currentChatIndex,
@@ -276,12 +266,14 @@ const useSubmit = () => {
   const provider = providers[providerKey];
   const currentApiKey = apiKeys[providerKey];
 
-  // Initialize streamHandler once with provider
+  // Move streamHandler initialization outside useEffect
+  const streamHandlerRef = useRef<ChatStreamHandler>(
+    new ChatStreamHandler(new TextDecoder(), provider)
+  );
+
+  // Update streamHandler when provider changes
   useEffect(() => {
-    if (!streamHandlerRef.current) {
-      console.log('🔧 Initializing ChatStreamHandler (once)');
-      streamHandlerRef.current = new ChatStreamHandler(new TextDecoder(), provider);
-    }
+    streamHandlerRef.current = new ChatStreamHandler(new TextDecoder(), provider);
     
     return () => {
       console.log('🧹 Cleaning up resources');
@@ -290,55 +282,42 @@ const useSubmit = () => {
         abortControllerRef.current = null;
       }
     };
-  }, [provider]); // Add provider as dependency
+  }, [provider]);
 
   const titleGenerator = new TitleGenerator(
-    async (messages: MessageInterface[], config: ModelConfig) => {
+    async (messages, config) => {
       if (!config || !config.model) {
         throw new Error('Invalid model configuration');
       }
 
-      // Ensure we're using the correct provider's model
-      const providerConfig = {
+      // Get the current provider and its default model
+      const currentProvider = providers[providerKey];
+      const modelConfig: ModelConfig = {
         ...config,
-        model: provider.models[0], // Use first available model as fallback
-        stream: false
+        model: currentProvider.models[0], // Use the first available model for the provider
       };
 
-      const formattedRequest = provider.formatRequest(messages, providerConfig);
+      const formattedRequest = currentProvider.formatRequest(messages, {
+        ...modelConfig,
+        stream: false // Add stream property here in the request formatting
+      });
 
-      // Create a complete ModelConfig object with provider-specific defaults
-      const fullConfig: ModelConfig = {
-        model: formattedRequest.model,
-        max_tokens: formattedRequest.max_tokens || DEFAULT_MODEL_CONFIG.max_tokens,
-        temperature: formattedRequest.temperature || DEFAULT_MODEL_CONFIG.temperature,
-        presence_penalty: formattedRequest.presence_penalty || DEFAULT_MODEL_CONFIG.presence_penalty,
-        top_p: formattedRequest.top_p || DEFAULT_MODEL_CONFIG.top_p,
-        frequency_penalty: formattedRequest.frequency_penalty || DEFAULT_MODEL_CONFIG.frequency_penalty,
-        enableThinking: false,
-        thinkingConfig: {
-          budget_tokens: 0
-        }
-      };
+      const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
 
-      try {
-        const response = await getChatCompletion(
-          provider.id,
-          formattedRequest.messages,
-          fullConfig,
-          currentApiKey
-        );
-        return response;
-      } catch (error) {
-        console.error(`Title generation failed for provider ${provider.id}:`, error);
-        throw error;
-      }
+      // Create a complete ModelConfig object with all required properties
+      const response = await getChatCompletion(
+        providerKey,
+        formattedMessages,
+        modelConfig,
+        currentApiKey
+      );
+
+      return response;
     },
-    provider,
     i18n.language,
     {
       ...DEFAULT_MODEL_CONFIG,
-      model: provider.models[0] // Use the first available model for the selected provider
+      model: provider.models[0], // Use the first available model for the provider
     }
   );
 
@@ -432,6 +411,12 @@ const useSubmit = () => {
       return;
     }
 
+    // Add validation for streamHandler
+    if (!streamHandlerRef.current) {
+      console.error('❌ StreamHandler not initialized');
+      return;
+    }
+
     setGenerating(true);
     setError(null);
     abortControllerRef.current = new AbortController();
@@ -448,33 +433,6 @@ const useSubmit = () => {
         content: '',
       });
       setChats(updatedChats);
-
-      // Add simulation mode check here
-      if (simMode === 'true') {
-        console.log('🎮 Starting simulation mode');
-        try {
-          await simulateStreamResponse((content) => {
-            if (!useStore.getState().generating) return;
-            const latestState = useStore.getState();
-            if (!latestState.chats) return;
-            
-            const updatedChats = updateMessageContent(
-              latestState.chats,
-              latestState.currentChatIndex,
-              content
-            );
-            if (!updatedChats || latestState.currentChatIndex < 0) return;
-            setChats(updatedChats);
-          });
-        } catch (error) {
-          console.error('❌ Simulation error:', error);
-          throw error;
-        } finally {
-          console.log('✨ Simulation complete');
-          setGenerating(false);
-        }
-        return;
-      }
 
       const { modelConfig } = updatedChats[currentState.currentChatIndex].config;
       
