@@ -10,8 +10,8 @@ import { checkStorageQuota } from '@utils/storage';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { getEnvVar } from '@utils/env';
 
-// Add this type definition
-type TitleGeneratorFunction = (
+// Add this type definition at the top of the file
+type GenerateTitleFunction = (
   messages: MessageInterface[],
   config: ModelConfig
 ) => Promise<string>;
@@ -143,19 +143,25 @@ export class ChatStreamHandler {
 }
 
 export class TitleGenerator {
+  private generateTitleFn: GenerateTitleFunction;
+  private provider: AIProvider;
+  private language: string;
+  private config: ModelConfig;
+
   constructor(
-    private readonly generateTitleFn: (messages: MessageInterface[], config: ModelConfig) => Promise<any>,
-    private readonly provider: AIProvider,
-    private readonly language: string,
-    private readonly defaultConfig: ModelConfig
+    generateTitleFn: GenerateTitleFunction,
+    provider: AIProvider,
+    language: string,
+    config: ModelConfig
   ) {
-    if (!defaultConfig?.model || !this.validateModelForProvider(defaultConfig.model, provider)) {
+    if (!config.model || !provider.models.includes(config.model)) {
       throw new Error(`Invalid model configuration for provider ${provider.id}`);
     }
-  }
-
-  private validateModelForProvider(model: string, provider: AIProvider): boolean {
-    return provider.models.includes(model);
+    
+    this.generateTitleFn = generateTitleFn;
+    this.provider = provider;
+    this.language = language;
+    this.config = config;
   }
 
   async generateChatTitle(
@@ -168,8 +174,7 @@ export class TitleGenerator {
     };
 
     try {
-      const response = await this.generateTitleFn([message], this.defaultConfig);
-      // Use provider-specific title parsing
+      const response = await this.generateTitleFn([message], this.config); // Changed from this.defaultConfig to this.config
       return this.provider.parseTitleResponse(response);
     } catch (error) {
       console.error('Title generation error:', error);
@@ -269,7 +274,7 @@ const useSubmit = () => {
   }, [provider]); // Add provider as dependency
 
   const titleGenerator = new TitleGenerator(
-    async (messages, config) => {
+    async (messages: MessageInterface[], config: ModelConfig) => {
       if (!config || !config.model) {
         throw new Error('Invalid model configuration');
       }

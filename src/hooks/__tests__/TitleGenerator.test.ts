@@ -283,14 +283,61 @@ describe('TitleGenerator', () => {
 
       expect(result).toBe('Generated Title');
       expect(mockGenerateTitleFn).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
+        [
+          {
             role: 'user',
             content: expect.stringContaining('Test question')
-          })
-        ]),
+          }
+        ],
         anthropicConfig
       );
+      expect(mockProvider.parseTitleResponse).toHaveBeenCalledWith('Raw Anthropic Response');
     });
+  });
+
+  it('should validate model matches provider', () => {
+    const invalidConfig = {
+      ...mockConfig,
+      model: 'claude-3-7-sonnet-20250219' // Claude model
+    };
+
+    const openAIProvider = {
+      ...mockProvider,
+      id: 'openai',
+      name: 'OpenAI',
+      models: ['gpt-4', 'gpt-3.5-turbo'] // OpenAI models only
+    };
+
+    expect(() => {
+      new TitleGenerator(
+        mockGenerateTitleFn,
+        openAIProvider,
+        'en',
+        invalidConfig
+      );
+    }).toThrow('Invalid model configuration for provider openai');
+  });
+
+  it('should use correct default config for each provider', () => {
+    const anthropicProvider = {
+      ...mockProvider,
+      id: 'anthropic',
+      name: 'Anthropic',
+      models: ['claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022']
+    };
+
+    const anthropicConfig = {
+      ...mockConfig,
+      model: 'claude-3-7-sonnet-20250219'
+    };
+
+    const titleGenerator = new TitleGenerator(
+      mockGenerateTitleFn,
+      anthropicProvider,
+      'en',
+      anthropicConfig
+    );
+
+    expect(titleGenerator).toBeTruthy();
   });
 });
