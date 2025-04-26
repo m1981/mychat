@@ -154,7 +154,7 @@ export class TitleGenerator {
     language: string,
     config: ModelConfig
   ) {
-    if (!config.model || !provider.models.includes(config.model)) {
+    if (!this.validateConfig(config, provider)) {
       throw new Error(`Invalid model configuration for provider ${provider.id}`);
     }
     
@@ -162,6 +162,30 @@ export class TitleGenerator {
     this.provider = provider;
     this.language = language;
     this.config = config;
+  }
+
+  private validateConfig(config: ModelConfig, provider: AIProvider): boolean {
+    // Check if model exists
+    if (!config?.model || !provider.models.includes(config.model)) {
+      return false;
+    }
+
+    // Validate parameter ranges
+    if (
+      config.temperature < 0 || 
+      config.temperature > 1 ||
+      config.top_p < 0 || 
+      config.top_p > 1 ||
+      config.presence_penalty < -2 || 
+      config.presence_penalty > 2 ||
+      config.frequency_penalty < -2 || 
+      config.frequency_penalty > 2 ||
+      config.max_tokens < 1
+    ) {
+      return false;
+    }
+
+    return true;
   }
 
   async generateChatTitle(
@@ -174,7 +198,7 @@ export class TitleGenerator {
     };
 
     try {
-      const response = await this.generateTitleFn([message], this.config); // Changed from this.defaultConfig to this.config
+      const response = await this.generateTitleFn([message], this.config);
       return this.provider.parseTitleResponse(response);
     } catch (error) {
       console.error('Title generation error:', error);

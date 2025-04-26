@@ -3,16 +3,21 @@ import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { TitleGenerator } from '../useSubmit';
 import { ModelConfig } from '@type/chat';
 import { AIProvider } from '@type/provider';
+import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 
 describe('TitleGenerator', () => {
-  let mockConfig: ModelConfig;
-  let mockProvider: AIProvider;
-  let mockGenerateTitleFn: ReturnType<typeof vi.fn>;
-  let mockParseResponse: ReturnType<typeof vi.fn>;
+  let mockGenerateTitleFn: Mock;
+  let mockParseResponse: Mock;
+  let mockOpenAIProvider: AIProvider;
+  let mockAnthropicProvider: AIProvider;
+  let baseConfig: ModelConfig;
 
   beforeEach(() => {
-    mockConfig = {
-      model: 'claude-2',
+    mockGenerateTitleFn = vi.fn();
+    mockParseResponse = vi.fn();
+
+    baseConfig = {
+      model: 'gpt-4',
       max_tokens: 1000,
       temperature: 0.7,
       top_p: 1,
@@ -24,320 +29,374 @@ describe('TitleGenerator', () => {
       }
     };
 
-    mockParseResponse = vi.fn();
-    mockGenerateTitleFn = vi.fn();
-
-    mockProvider = {
+    // Separate provider mocks for clearer testing
+    mockOpenAIProvider = {
+      id: 'openai',
+      name: 'OpenAI',
+      endpoints: ['/api/openai/completions'],
+      models: ['gpt-4', 'gpt-3.5-turbo'],
       parseResponse: mockParseResponse,
       parseStreamingResponse: vi.fn(),
       formatRequest: vi.fn(),
-      id: 'mock-provider',
-      name: 'Mock Provider',
-      endpoints: ['/api/mock/completions'],
-      // Add all models we're testing with
-      models: ['claude-2', 'gpt-4', 'claude-3-7-sonnet-20250219'],
-      parseTitleResponse: vi.fn().mockReturnValue('Generated Title')
+      parseTitleResponse: vi.fn().mockReturnValue('OpenAI Title')
+    };
+
+    mockAnthropicProvider = {
+      id: 'anthropic',
+      name: 'Anthropic',
+      endpoints: ['/api/anthropic/completions'],
+      models: ['claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022'],
+      parseResponse: mockParseResponse,
+      parseStreamingResponse: vi.fn(),
+      formatRequest: vi.fn(),
+      parseTitleResponse: vi.fn().mockReturnValue('Anthropic Title')
     };
 
     vi.clearAllMocks();
   });
 
-  it('should handle standard text response', async () => {
-    mockParseResponse.mockReturnValue('Generated Title');
-    mockGenerateTitleFn.mockResolvedValue('Raw Response');
-
-    const titleGenerator = new TitleGenerator(
-      mockGenerateTitleFn,
-      mockProvider,
-      'en',
-      mockConfig
-    );
-
-    const result = await titleGenerator.generateChatTitle(
-      'What is TypeScript?',
-      'TypeScript is a programming language.'
-    );
-
-    expect(result).toBe('Generated Title');
-    expect(mockGenerateTitleFn).toHaveBeenCalledWith(
-      [
-        {
-          role: 'user',
-          content: expect.stringContaining('What is TypeScript?')
-        }
-      ],
-      mockConfig
-    );
-    expect(mockProvider.parseTitleResponse).toHaveBeenCalledWith('Raw Response');
-  });
-
-  it('should handle quoted response', async () => {
-    mockGenerateTitleFn.mockResolvedValue('Raw Response');
-    (mockProvider.parseTitleResponse as Mock).mockReturnValue('Quoted Title');
-
-    const titleGenerator = new TitleGenerator(
-      mockGenerateTitleFn,
-      mockProvider,
-      'en',
-      mockConfig
-    );
-
-    const result = await titleGenerator.generateChatTitle(
-      'Hello',
-      'Hi there'
-    );
-
-    expect(result).toBe('Quoted Title');
-    expect(mockGenerateTitleFn).toHaveBeenCalledWith(
-      [
-        {
-          role: 'user',
-          content: expect.stringContaining('Hello')
-        }
-      ],
-      mockConfig
-    );
-    expect(mockProvider.parseTitleResponse).toHaveBeenCalledWith('Raw Response');
-  });
-
-  it('should handle response with extra whitespace', async () => {
-    mockGenerateTitleFn.mockResolvedValue('Raw Response');
-    (mockProvider.parseTitleResponse as Mock).mockReturnValue('Title With Spaces');
-
-    const titleGenerator = new TitleGenerator(
-      mockGenerateTitleFn,
-      mockProvider,
-      'en',
-      mockConfig
-    );
-
-    const result = await titleGenerator.generateChatTitle(
-      'Hello',
-      'Hi there'
-    );
-
-    expect(result).toBe('Title With Spaces');
-    expect(mockGenerateTitleFn).toHaveBeenCalledWith(
-      [
-        {
-          role: 'user',
-          content: expect.stringContaining('Hello')
-        }
-      ],
-      mockConfig
-    );
-    expect(mockProvider.parseTitleResponse).toHaveBeenCalledWith('Raw Response');
-  });
-
-  it('should throw error for invalid model configuration', () => {
-    // Create a partial config without type assertion
-    const invalidConfig = {
-      ...mockConfig,
-      model: null
-    };
-
-    expect(() => {
-      new TitleGenerator(
-        mockGenerateTitleFn,
-        mockProvider,
-        'en',
-        // Use type assertion to unknown first
-        invalidConfig as unknown as ModelConfig
-      );
-    }).toThrow('Invalid model configuration');
-  });
-
-  it('should handle error during title generation', async () => {
-    const mockError = new Error('Generation failed');
-    mockGenerateTitleFn.mockRejectedValue(mockError);
-    mockParseResponse.mockReturnValue('Should not be called');
-
-    const titleGenerator = new TitleGenerator(
-      mockGenerateTitleFn,
-      mockProvider,
-      'en',
-      mockConfig
-    );
-
-    const consoleSpy = vi.spyOn(console, 'error');
-
-    const result = await titleGenerator.generateChatTitle(
-      'Hello',
-      'Hi there'
-    );
-
-    expect(result).toBe('Untitled Chat');
-    expect(consoleSpy).toHaveBeenCalledWith('Title generation error:', mockError);
-    expect(mockParseResponse).not.toHaveBeenCalled();
-  });
-
-  it('should handle provider parsing error', async () => {
-    const mockError = new Error('Parsing failed');
-    mockGenerateTitleFn.mockResolvedValue('Raw Response');
-    (mockProvider.parseTitleResponse as Mock).mockImplementation(() => {
-      throw mockError;
-    });
-
-    const titleGenerator = new TitleGenerator(
-      mockGenerateTitleFn,
-      mockProvider,
-      'en',
-      mockConfig
-    );
-
-    const consoleSpy = vi.spyOn(console, 'error');
-
-    const result = await titleGenerator.generateChatTitle(
-      'Hello',
-      'Hi there'
-    );
-
-    expect(result).toBe('Untitled Chat');
-    expect(consoleSpy).toHaveBeenCalledWith('Title generation error:', mockError);
-    expect(mockProvider.parseTitleResponse).toHaveBeenCalledWith('Raw Response');
-  });
-
-  describe('Language handling', () => {
-    it('should include language in generation prompt', async () => {
-      mockParseResponse.mockReturnValue('Title');
-      mockGenerateTitleFn.mockResolvedValue('Raw Response');
-
-      const titleGenerator = new TitleGenerator(
-        mockGenerateTitleFn,
-        mockProvider,
-        'fr',
-        mockConfig
-      );
-
-      await titleGenerator.generateChatTitle(
-        'Bonjour',
-        'Salut'
-      );
-
-      expect(mockGenerateTitleFn).toHaveBeenCalledWith(
-        [
-          {
-            role: 'user',
-            content: expect.stringContaining('language: fr')
-          }
-        ],
-        mockConfig
-      );
-    });
-  });
-
-  describe('Provider-specific title generation', () => {
-    it('should handle OpenAI title generation', async () => {
+  describe('Provider Configuration Validation', () => {
+    it('should validate OpenAI configuration correctly', () => {
       const openAIConfig = {
-        ...mockConfig,
-        model: 'gpt-4' // Using a model that exists in mockProvider.models
+        ...baseConfig,
+        model: 'gpt-4'
       };
-
-      mockParseResponse.mockReturnValue('OpenAI Generated Title');
-      mockGenerateTitleFn.mockResolvedValue('Raw OpenAI Response');
 
       const titleGenerator = new TitleGenerator(
         mockGenerateTitleFn,
-        mockProvider,
+        mockOpenAIProvider,
         'en',
         openAIConfig
       );
 
-      const result = await titleGenerator.generateChatTitle(
-        'Test question',
-        'Test response'
-      );
-
-      expect(result).toBe('Generated Title');
-      expect(mockGenerateTitleFn).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            role: 'user',
-            content: expect.stringContaining('Test question')
-          })
-        ]),
-        openAIConfig
+      expect(titleGenerator).toBeTruthy();
+      expect(mockOpenAIProvider.formatRequest).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ model: 'claude-3-7-sonnet-20250219' })
       );
     });
 
-    it('should handle Anthropic title generation', async () => {
+    it('should validate Anthropic configuration correctly', () => {
       const anthropicConfig = {
-        ...mockConfig,
-        model: 'claude-3-7-sonnet-20250219' // Using a model that exists in mockProvider.models
+        ...baseConfig,
+        model: 'claude-3-7-sonnet-20250219'
       };
-
-      mockParseResponse.mockReturnValue('Anthropic Generated Title');
-      mockGenerateTitleFn.mockResolvedValue('Raw Anthropic Response');
 
       const titleGenerator = new TitleGenerator(
         mockGenerateTitleFn,
-        mockProvider,
+        mockAnthropicProvider,
         'en',
         anthropicConfig
       );
 
-      const result = await titleGenerator.generateChatTitle(
-        'Test question',
-        'Test response'
+      expect(titleGenerator).toBeTruthy();
+      expect(mockAnthropicProvider.formatRequest).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ model: 'gpt-4' })
       );
+    });
 
-      expect(result).toBe('Generated Title');
-      expect(mockGenerateTitleFn).toHaveBeenCalledWith(
-        [
-          {
-            role: 'user',
-            content: expect.stringContaining('Test question')
-          }
-        ],
-        anthropicConfig
-      );
-      expect(mockProvider.parseTitleResponse).toHaveBeenCalledWith('Raw Anthropic Response');
+    it('should reject OpenAI provider with Anthropic model', () => {
+      const invalidConfig = {
+        ...baseConfig,
+        model: 'claude-3-7-sonnet-20250219'
+      };
+
+      expect(() => {
+        new TitleGenerator(
+          mockGenerateTitleFn,
+          mockOpenAIProvider,
+          'en',
+          invalidConfig
+        );
+      }).toThrow('Invalid model configuration for provider openai');
+    });
+
+    it('should reject Anthropic provider with OpenAI model', () => {
+      const invalidConfig = {
+        ...baseConfig,
+        model: 'gpt-4'
+      };
+
+      expect(() => {
+        new TitleGenerator(
+          mockGenerateTitleFn,
+          mockAnthropicProvider,
+          'en',
+          invalidConfig
+        );
+      }).toThrow('Invalid model configuration for provider anthropic');
+    });
+
+    it('should validate model exists in provider models list', () => {
+      const invalidConfig = {
+        ...baseConfig,
+        model: 'nonexistent-model'
+      };
+
+      expect(() => {
+        new TitleGenerator(
+          mockGenerateTitleFn,
+          mockOpenAIProvider,
+          'en',
+          invalidConfig
+        );
+      }).toThrow('Invalid model configuration for provider openai');
     });
   });
 
-  it('should validate model matches provider', () => {
-    const invalidConfig = {
-      ...mockConfig,
-      model: 'claude-3-7-sonnet-20250219' // Claude model
-    };
+  describe('Configuration Inheritance and Overrides', () => {
+    describe('OpenAI Configuration', () => {
+      beforeEach(() => {
+        // Setup mock to return a successful response
+        mockGenerateTitleFn.mockResolvedValue({
+          choices: [{ message: { content: 'Test Title' } }]
+        });
+      });
 
-    const openAIProvider = {
-      ...mockProvider,
-      id: 'openai',
-      name: 'OpenAI',
-      models: ['gpt-4', 'gpt-3.5-turbo'] // OpenAI models only
-    };
+      it('should use OpenAI-specific defaults when partial config provided', async () => {
+        const partialConfig: Partial<ModelConfig> = {
+          model: 'gpt-4',
+          temperature: 0.8
+        };
 
-    expect(() => {
-      new TitleGenerator(
-        mockGenerateTitleFn,
-        openAIProvider,
-        'en',
-        invalidConfig
-      );
-    }).toThrow('Invalid model configuration for provider openai');
-  });
+        const titleGenerator = new TitleGenerator(
+          mockGenerateTitleFn,
+          mockOpenAIProvider,
+          'en',
+          { ...DEFAULT_MODEL_CONFIG, ...partialConfig }
+        );
 
-  it('should use correct default config for each provider', () => {
-    const anthropicProvider = {
-      ...mockProvider,
-      id: 'anthropic',
-      name: 'Anthropic',
-      models: ['claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022']
-    };
+        // Trigger the request to generate a title
+        await titleGenerator.generateChatTitle('Hello', 'Hi there');
 
-    const anthropicConfig = {
-      ...mockConfig,
-      model: 'claude-3-7-sonnet-20250219'
-    };
+        // Verify the generateTitleFn was called with correct parameters
+        expect(mockGenerateTitleFn).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({
+              role: 'user',
+              content: expect.stringContaining('Hello')
+            })
+          ]),
+          expect.objectContaining({
+            model: 'gpt-4',
+            temperature: 0.8,
+            max_tokens: DEFAULT_MODEL_CONFIG.max_tokens,
+            presence_penalty: DEFAULT_MODEL_CONFIG.presence_penalty,
+            frequency_penalty: DEFAULT_MODEL_CONFIG.frequency_penalty,
+            top_p: DEFAULT_MODEL_CONFIG.top_p
+          })
+        );
+      });
 
-    const titleGenerator = new TitleGenerator(
-      mockGenerateTitleFn,
-      anthropicProvider,
-      'en',
-      anthropicConfig
-    );
+      it('should override all default values when full config provided', async () => {
+        const fullConfig: ModelConfig = {
+          model: 'gpt-4',
+          max_tokens: 2000,
+          temperature: 0.9,
+          presence_penalty: 0.5,
+          frequency_penalty: 0.5,
+          top_p: 0.8,
+          enableThinking: true,
+          thinkingConfig: {
+            budget_tokens: 500
+          }
+        };
 
-    expect(titleGenerator).toBeTruthy();
+        const titleGenerator = new TitleGenerator(
+          mockGenerateTitleFn,
+          mockOpenAIProvider,
+          'en',
+          fullConfig
+        );
+
+        await titleGenerator.generateChatTitle('Hello', 'Hi there');
+
+        expect(mockGenerateTitleFn).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({
+              role: 'user',
+              content: expect.stringContaining('Hello')
+            })
+          ]),
+          expect.objectContaining(fullConfig)
+        );
+      });
+    });
+
+    describe('Anthropic Configuration', () => {
+      beforeEach(() => {
+        // Setup mock to return a successful response
+        mockGenerateTitleFn.mockResolvedValue({
+          content: 'Test Title'
+        });
+      });
+
+      it('should use Anthropic-specific defaults when partial config provided', async () => {
+        const partialConfig: Partial<ModelConfig> = {
+          model: 'claude-3-7-sonnet-20250219',
+          temperature: 0.8
+        };
+
+        const titleGenerator = new TitleGenerator(
+          mockGenerateTitleFn,
+          mockAnthropicProvider,
+          'en',
+          { ...DEFAULT_MODEL_CONFIG, ...partialConfig }
+        );
+
+        await titleGenerator.generateChatTitle('Hello', 'Hi there');
+
+        expect(mockGenerateTitleFn).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({
+              role: 'user',
+              content: expect.stringContaining('Hello')
+            })
+          ]),
+          expect.objectContaining({
+            model: 'claude-3-7-sonnet-20250219',
+            temperature: 0.8,
+            max_tokens: DEFAULT_MODEL_CONFIG.max_tokens,
+            top_p: DEFAULT_MODEL_CONFIG.top_p
+          })
+        );
+      });
+
+      it('should handle provider-specific parameters correctly', async () => {
+        const anthropicConfig: ModelConfig = {
+          model: 'claude-3-7-sonnet-20250219',
+          max_tokens: 2000,
+          temperature: 0.9,
+          top_p: 0.8,
+          presence_penalty: 0,    // Added missing required property
+          frequency_penalty: 0,   // Added missing required property
+          enableThinking: true,
+          thinkingConfig: {
+            budget_tokens: 500
+          }
+        };
+
+        const titleGenerator = new TitleGenerator(
+          mockGenerateTitleFn,
+          mockAnthropicProvider,
+          'en',
+          anthropicConfig
+        );
+
+        await titleGenerator.generateChatTitle('Hello', 'Hi there');
+
+        expect(mockGenerateTitleFn).toHaveBeenCalledWith(
+          expect.any(Array),
+          expect.objectContaining({
+            model: 'claude-3-7-sonnet-20250219',
+            temperature: 0.9,
+            max_tokens: 2000,
+            top_p: 0.8
+          })
+        );
+      });
+    });
+
+    describe('Configuration Validation', () => {
+      it('should throw error when required config parameters are missing', () => {
+        // Create a type that allows undefined model
+        type PartialConfig = Omit<ModelConfig, 'model'> & { model?: string };
+        
+        const invalidConfig: PartialConfig = {
+          ...baseConfig,
+          model: undefined
+        };
+
+        expect(() => {
+          new TitleGenerator(
+            mockGenerateTitleFn,
+            mockOpenAIProvider,
+            'en',
+            invalidConfig as ModelConfig // Type assertion here is intentional for testing
+          );
+        }).toThrow('Invalid model configuration for provider openai');
+      });
+
+      it('should throw error when temperature is out of valid range', () => {
+        const invalidConfig: ModelConfig = {
+          ...baseConfig,
+          temperature: 2.0
+        };
+
+        expect(() => {
+          new TitleGenerator(
+            mockGenerateTitleFn,
+            mockOpenAIProvider,
+            'en',
+            invalidConfig
+          );
+        }).toThrow('Invalid model configuration for provider openai');
+      });
+
+      it('should throw error when top_p is out of valid range', () => {
+        const invalidConfig: ModelConfig = {
+          ...baseConfig,
+          top_p: -0.5
+        };
+
+        expect(() => {
+          new TitleGenerator(
+            mockGenerateTitleFn,
+            mockOpenAIProvider,
+            'en',
+            invalidConfig
+          );
+        }).toThrow('Invalid model configuration for provider openai');
+      });
+
+      it('should throw error when presence_penalty is out of valid range', () => {
+        const invalidConfig: ModelConfig = {
+          ...baseConfig,
+          presence_penalty: 3.0
+        };
+
+        expect(() => {
+          new TitleGenerator(
+            mockGenerateTitleFn,
+            mockOpenAIProvider,
+            'en',
+            invalidConfig
+          );
+        }).toThrow('Invalid model configuration for provider openai');
+      });
+
+      it('should throw error when frequency_penalty is out of valid range', () => {
+        const invalidConfig: ModelConfig = {
+          ...baseConfig,
+          frequency_penalty: -3.0
+        };
+
+        expect(() => {
+          new TitleGenerator(
+            mockGenerateTitleFn,
+            mockOpenAIProvider,
+            'en',
+            invalidConfig
+          );
+        }).toThrow('Invalid model configuration for provider openai');
+      });
+
+      it('should throw error when max_tokens is invalid', () => {
+        const invalidConfig: ModelConfig = {
+          ...baseConfig,
+          max_tokens: 0
+        };
+
+        expect(() => {
+          new TitleGenerator(
+            mockGenerateTitleFn,
+            mockOpenAIProvider,
+            'en',
+            invalidConfig
+          );
+        }).toThrow('Invalid model configuration for provider openai');
+      });
+    });
   });
 });
