@@ -60,6 +60,14 @@ interface TextResponse {
   text: string;
 }
 
+interface OpenAIResponse {
+  choices: Array<{
+    message: {
+      content: string;
+    };
+  }>;
+}
+
 export class ChatStreamHandler {
   private aborted = false;
 
