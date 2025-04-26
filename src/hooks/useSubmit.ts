@@ -100,12 +100,8 @@ export class ChatStreamHandler {
           console.log('🏁 Stream ended. Done:', done, 'Aborted:', this.aborted);
           break;
         }
-
         const chunk = this.decoder.decode(value);
-        console.log(`📦 Processing chunk of length: ${chunk.length}`);
-        
         const lines = chunk.split('\n').filter(line => line.trim() !== '');
-        console.log(`📦 Processing ${lines.length} lines from chunk`);
 
         for (const line of lines) {
           if (this.aborted) break;
@@ -121,7 +117,6 @@ export class ChatStreamHandler {
               const result = JSON.parse(data);
               const content = this.provider.parseStreamingResponse(result);
               if (content) {
-                console.log('📝 Content received:', content.slice(0, 50) + '...');
                 onContent(content);
               }
             } catch (e) {
