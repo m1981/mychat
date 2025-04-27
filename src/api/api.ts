@@ -13,8 +13,13 @@ export const getChatCompletion = async (
   if (!provider) {
     throw new Error(`Invalid provider: ${providerKey}`);
   }
-  
+  if (!provider.formatRequest) {
+    throw new Error(`Provider ${providerKey} missing formatRequest implementation`);
+  }
+
   const formattedRequest = provider.formatRequest(messages, { ...config, stream: false });
+
+  // Only include the essential config properties
   const requestConfig = {
     model: formattedRequest.model,
     max_tokens: formattedRequest.max_tokens,
