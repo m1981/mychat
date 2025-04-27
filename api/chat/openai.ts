@@ -66,8 +66,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         model: chatConfig.model || 'gpt-3.5-turbo',
         stream: false,
       } as OpenAI.ChatCompletionCreateParamsNonStreaming);
-      
-      res.status(200).json(response);
+
+      // Transform the response to match expected format
+      res.status(200).json({
+        content: response.choices[0]?.message?.content || ''
+      });
     }
   } catch (error: any) {
     console.error('OpenAI API Error:', error);
