@@ -39,13 +39,7 @@ export const getChatCompletion = async (
   if (!response.ok) throw new Error(await response.text());
 
   const data = await response.json();
-  
-  // Add proper response format handling
-  if (providerKey === 'openai' && data.choices?.[0]?.message?.content) {
-    return data.choices[0].message.content;
-  }
-  
-  return data.content || data;
+  return provider.parseResponse(data);
 };
 
 export const getChatCompletionStream = async (
