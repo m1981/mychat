@@ -20,7 +20,16 @@ export const providers: Record<ProviderKey, AIProvider> = {
       frequency_penalty: config.frequency_penalty,
       stream: config.stream ?? false
     }),
-    parseResponse: (response) => response.choices[0].message.content,
+    parseResponse: (response) => {
+      if (response.choices?.[0]?.message?.content) {
+        return response.choices[0].message.content;
+      }
+      // Handle direct content response (used in tests)
+      if (response.content) {
+        return response.content;
+      }
+      throw new Error('Invalid response format from OpenAI');
+    },
     parseStreamingResponse: (response: any) => {
       try {
         return response.choices?.[0]?.delta?.content || '';

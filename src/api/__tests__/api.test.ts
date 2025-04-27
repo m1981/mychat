@@ -146,7 +146,56 @@ describe('getChatCompletion', () => {
     }
   };
 
-  it('should format request correctly for OpenAI provider', async () => {
+  it('should format request correctly for OpenAI provider and handle OpenAI response format', async () => {
+    global.fetch = vi.fn().mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          choices: [{
+            message: {
+              content: 'Test response'
+            }
+          }]
+        })
+      })
+    );
+
+    const result = await getChatCompletion(
+      'openai',
+      baseMessages,
+      baseConfig,
+      'test-key',
+      { 'Custom-Header': 'test' }
+    );
+
+    expect(result).toBe('Test response');
+
+    const expectedBody = JSON.stringify({
+      messages: baseMessages,
+      config: {
+        model: 'gpt-4o',
+        max_tokens: 4096,
+        temperature: 0.7,
+        top_p: 1,
+        stream: false
+      },
+      apiKey: 'test-key'
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/chat/openai',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Custom-Header': 'test'
+        },
+        body: expectedBody
+      }
+    );
+  });
+
+  it('should format request correctly for OpenAI provider and handle direct content response', async () => {
     global.fetch = vi.fn().mockImplementationOnce(() =>
       Promise.resolve({
         ok: true,
@@ -154,13 +203,15 @@ describe('getChatCompletion', () => {
       })
     );
 
-    await getChatCompletion(
+    const result = await getChatCompletion(
       'openai',
       baseMessages,
       baseConfig,
       'test-key',
       { 'Custom-Header': 'test' }
     );
+
+    expect(result).toBe('Test response');
 
     const expectedBody = JSON.stringify({
       messages: baseMessages,
