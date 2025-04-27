@@ -4,6 +4,7 @@ import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 import useStore from '@store/store';
 import { ChatInterface, MessageInterface, ModelConfig } from '@type/chat';
 import { providers } from '@type/providers';
+import { RequestConfig } from '@type/provider';
 import { getChatCompletion } from '@src/api/api';
 import { checkStorageQuota } from '@utils/storage';
 import { useRef, useEffect, useState, useCallback } from 'react';
@@ -321,11 +322,16 @@ const useSubmit = () => {
       const currentProvider = providers[providerKey];
       const modelConfig: ModelConfig = {
         ...config,
-        model: config.model, // Use the passed model instead of overriding
+        model: config.model // Use the passed model instead of overriding
+      };
+
+      // Create request config with stream property
+      const requestConfig: RequestConfig = {
+        ...modelConfig,
         stream: false // Title generation should not stream
       };
 
-      const formattedRequest = currentProvider.formatRequest(messages, modelConfig);
+      const formattedRequest = currentProvider.formatRequest(messages, requestConfig);
       const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
 
       try {
@@ -349,7 +355,7 @@ const useSubmit = () => {
     i18n.language,
     {
       ...DEFAULT_MODEL_CONFIG,
-      model: provider.models[0], // Use the first available model for the provider
+      model: provider.models[0] // Use the first available model for the provider
     }
   );
 
