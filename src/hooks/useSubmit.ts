@@ -321,25 +321,30 @@ const useSubmit = () => {
       const currentProvider = providers[providerKey];
       const modelConfig: ModelConfig = {
         ...config,
-        model: currentProvider.models[0], // Use the first available model for the provider
+        model: config.model, // Use the passed model instead of overriding
+        stream: false // Title generation should not stream
       };
 
-      const formattedRequest = currentProvider.formatRequest(messages, {
-        ...modelConfig,
-        stream: false // Add stream property here in the request formatting
-      });
-
+      const formattedRequest = currentProvider.formatRequest(messages, modelConfig);
       const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
 
-      // Create a complete ModelConfig object with all required properties
-      const response = await getChatCompletion(
-        providerKey,
-        formattedMessages,
-        modelConfig,
-        currentApiKey
-      );
+      try {
+        const response = await getChatCompletion(
+          providerKey,
+          formattedMessages,
+          modelConfig,
+          currentApiKey
+        );
 
-      return response;
+        if (!response) {
+          throw new Error('No response received from title generation');
+        }
+
+        return response;
+      } catch (error) {
+        console.error('Error in title generation:', error);
+        throw error;
+      }
     },
     i18n.language,
     {

@@ -130,12 +130,12 @@ export const ModelSelector = ({
       <div
         className={`${
           dropDown ? '' : 'hidden'
-        } absolute z-10 bg-white rounded-lg shadow-xl...`}
+        } absolute z-10 bg-white dark:bg-gray-800 rounded-lg shadow-xl...`}
       >
         <ul className='text-sm text-gray-700 dark:text-gray-200 p-0 m-0'>
           {providerConfig.models.map((m: ProviderModel) => (
             <li
-              className='px-4 py-2 hover:bg-gray-700 dark:hover:bg-gray-200 cursor-pointer'
+              className='px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer'
               onClick={() => {
                 setModelConfig({
                   ...modelConfig,
