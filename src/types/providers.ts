@@ -24,7 +24,7 @@ export const providers: Record<ProviderKey, AIProvider> = {
       if (response.choices?.[0]?.message?.content) {
         return response.choices[0].message.content;
       }
-      // Handle direct content response (used in tests)
+      // Handle direct content response ( used in tests )
       if (response.content) {
         return response.content;
       }
