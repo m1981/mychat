@@ -7,12 +7,12 @@ import { ChatInterface, MessageInterface, ModelConfig } from '@type/chat';
 import { providers } from '@type/providers';
 import { RequestConfig } from '@type/provider';
 import { getChatCompletion } from '@src/api/api';
-import { ChatStreamHandler } from '../handlers/ChatStreamHandler';
-import { ChatSubmissionService } from '../services/SubmissionService';
-import { TitleGenerator } from '../services/TitleGenerator';
-import { SimulationService } from '../services/SimulationService';
-import { StorageService, StorageQuotaError } from '../services/StorageService';
-import { SubmissionLock } from '../services/SubmissionLock';
+import { ChatStreamHandler } from '@src/handlers/ChatStreamHandler';
+import { ChatSubmissionService } from '@src/services/SubmissionService';
+import { TitleGenerator } from '@src/services/TitleGenerator';
+import { StorageService, StorageQuotaError } from '@src/services/StorageService';
+import { SubmissionLock } from '@src/services/SubmissionLock';
+import { TitleGenerationService } from '@src/services/TitleGenerationService';
 
 // Constants at the top
 const STORAGE_CONFIG = {
@@ -20,19 +20,18 @@ const STORAGE_CONFIG = {
   warningThreshold: 0.85 // 85%
 } as const;
 
+interface Services {
+  abortController: React.MutableRefObject<AbortController | null>;
+  submission: SubmissionLock;
+  storage: StorageService;
+  titleGeneration: TitleGenerationService;
+}
+
 const useSubmit = () => {
   const { i18n } = useTranslation();
   const store = useStore();
   
-  // Group service initializations
-  const services = {
-    abortController: useRef<AbortController | null>(null),
-    submission: useRef(new SubmissionLock()).current,
-    storage: useRef(new StorageService(STORAGE_CONFIG)).current,
-    simulation: useRef(new SimulationService()).current,
-  };
-
-  // Type-safe store access
+  // Store access
   const {
     currentChatIndex,
     chats,
@@ -56,25 +55,17 @@ const useSubmit = () => {
     }
   };
 
+  // Create refs for services that need to persist
+  const submissionLockRef = useRef(new SubmissionLock());
+  const storageServiceRef = useRef(new StorageService(STORAGE_CONFIG));
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   // Initialize stream handler with provider
   const streamHandlerRef = useRef<ChatStreamHandler>(
     new ChatStreamHandler(new TextDecoder(), providerSetup.provider)
   );
 
-  // Stream handler effect
-  useEffect(() => {
-    streamHandlerRef.current = new ChatStreamHandler(new TextDecoder(), providerSetup.provider);
-    
-    return () => {
-      console.log('🧹 Cleaning up resources');
-      if (services.abortController.current) {
-        services.abortController.current.abort();
-        services.abortController.current = null;
-      }
-    };
-  }, [providerSetup.provider]);
-
-  // Title generator configuration and initialization
+  // Title generator configuration
   const titleGeneratorConfig = {
     generateTitle: async (messages: MessageInterface[], config: ModelConfig) => {
       if (!config?.model) {
@@ -120,11 +111,33 @@ const useSubmit = () => {
     }
   } as const;
 
-  const titleGenerator = new TitleGenerator(
-    titleGeneratorConfig.generateTitle,
-    titleGeneratorConfig.language,
-    titleGeneratorConfig.defaultConfig
-  );
+  // Group services for easier access
+  const services: Services = {
+    abortController: abortControllerRef,
+    submission: submissionLockRef.current,
+    storage: storageServiceRef.current,
+    titleGeneration: useRef(new TitleGenerationService(
+      new TitleGenerator(
+        titleGeneratorConfig.generateTitle,
+        i18n.language,
+        titleGeneratorConfig.defaultConfig
+      ),
+      setChats
+    )).current
+  };
+
+  // Stream handler effect
+  useEffect(() => {
+    streamHandlerRef.current = new ChatStreamHandler(new TextDecoder(), providerSetup.provider);
+    
+    return () => {
+      console.log('🧹 Cleaning up resources');
+      if (services.abortController.current) {
+        services.abortController.current.abort();
+        services.abortController.current = null;
+      }
+    };
+  }, [providerSetup.provider]);
 
   // Chat state management utilities
   const chatUtils = {
@@ -187,86 +200,6 @@ const useSubmit = () => {
     }
   };
 
-  // Simulation handling
-  const simulationHandlers = {
-    handleSimulatedSubmission: async (state: ReturnType<typeof utils.getStoreState>) => {
-      console.log('🔧 Running in simulation mode');
-      try {
-        services.abortController.current = new AbortController();
-
-        // Now state.chats is guaranteed to be defined
-        const updatedChats = chatUtils.appendAssistantMessage(
-          state.chats,
-          state.currentChatIndex
-        );
-        setChats(updatedChats);
-
-        await services.simulation.simulateStreamResponse(
-          'This is a simulated response for testing purposes.',
-          (content) => {
-            const latestState = utils.getStoreState(); // Now guaranteed to have chats
-            const updatedChats = chatUtils.updateMessageContent(
-              latestState.chats,
-              state.currentChatIndex,
-              content
-            );
-            setChats(updatedChats);
-          }
-        );
-      } catch (error) {
-        console.error('Simulation error:', error);
-        setError(utils.createErrorMessage(error));
-      } finally {
-        setGenerating(false);
-        services.abortController.current = null;
-        services.submission.unlock();
-      }
-    },
-
-    isSimulationMode: (): boolean => 
-      import.meta.env.DEV && import.meta.env.VITE_SIM_MODE === 'true',
-
-    handleWordByWordSimulation: async (
-      onContent: (content: string) => void
-    ): Promise<void> => {
-      const testMessage = "This is a simulated response. It will stream word by word to test the UI rendering. ";
-      const words = testMessage.split(' ');
-      
-      try {
-        for (const word of words) {
-          // Check if generation should stop
-          if (!useStore.getState().generating) {
-            console.log('🛑 Simulation stopped - generating flag is false');
-            return;
-          }
-
-          if (services.abortController.current?.signal.aborted) {
-            console.log('🛑 Simulation stopped - abort signal received');
-            return;
-          }
-
-          onContent(word + ' ');
-          await new Promise<void>((resolve, reject) => {
-            const timeoutId = setTimeout(resolve, 200);
-            
-            // Clean up timeout if aborted
-            services.abortController.current?.signal.addEventListener('abort', () => {
-              clearTimeout(timeoutId);
-              reject(new Error('Aborted'));
-            }, { once: true });
-          });
-        }
-      } catch (error: unknown) {
-        if (error instanceof Error && error.message === 'Aborted') {
-          console.log('🛑 Simulation aborted cleanly');
-          return;
-        }
-        console.error('❌ Simulation error:', error);
-        throw error;
-      }
-    }
-  };
-
   const stopGeneration = useCallback(() => {
     console.log('🛑 Stop generation requested');
     setGenerating(false);
@@ -285,16 +218,11 @@ const useSubmit = () => {
     }
 
     try {
-      const state = utils.getStoreState(); // Now guaranteed to have chats
+      const state = utils.getStoreState();
       await services.storage.checkQuota();
       
       setGenerating(true);
       setError(null);
-
-      if (simulationHandlers.isSimulationMode()) {
-        await simulationHandlers.handleSimulatedSubmission(state);
-        return;
-      }
 
       console.log('🚀 Starting submission');
       services.abortController.current = new AbortController();
@@ -316,7 +244,7 @@ const useSubmit = () => {
           providerSetup.provider,
           providerSetup.apiKey,
           (content) => {
-            const latestState = utils.getStoreState(); // Now guaranteed to have chats
+            const latestState = utils.getStoreState();
             const updatedChats = chatUtils.updateMessageContent(
               latestState.chats,
               state.currentChatIndex,
@@ -361,49 +289,18 @@ const useSubmit = () => {
   };
 
   const handleTitleGeneration = async () => {
-    console.log('Title generation config:', {
-      providerKey: providerSetup.providerKey,
-      provider: providerSetup.provider,
-      modelConfig: providerSetup.currentChat?.config.modelConfig,
-      defaultConfig: DEFAULT_MODEL_CONFIG
-    });
-    
     try {
       const currentState = utils.getStoreState();
       if (!currentState.chats || currentState.currentChatIndex < 0) {
         throw new Error('No active chat found');
       }
 
-      const currentMessages = currentState.chats[currentState.currentChatIndex].messages;
-      
-      // Get the last user and assistant messages
-      const lastUserMessage = currentMessages
-        .slice()
-        .reverse()
-        .find(msg => msg.role === 'user')?.content || '';
-      
-      const lastAssistantMessage = currentMessages
-        .slice()
-        .reverse()
-        .find(msg => msg.role === 'assistant')?.content || '';
-
-      const title = await titleGenerator.generateChatTitle(lastUserMessage, lastAssistantMessage);
-      console.log('Title generated:', title);
-
-      // Update the chat title
-      const updatedChats = [...currentState.chats];
-      updatedChats[currentState.currentChatIndex] = {
-        ...updatedChats[currentState.currentChatIndex],
-        title,
-        titleSet: true
-      };
-      setChats(updatedChats);
+      await services.titleGeneration.generateAndUpdateTitle(
+        currentState.chats[currentState.currentChatIndex].messages,
+        currentState.currentChatIndex
+      );
     } catch (error) {
-      console.error('Title generation failed:', {
-        error,
-        state: useStore.getState()
-      });
-      // Re-throw the error as it was in the original implementation
+      console.error('Title generation failed:', error);
       throw error;
     }
   };

@@ -85,7 +85,7 @@ shell: ensure-pnpm-dirs ## Start an interactive shell session in the app contain
 	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE) run --rm shell
 
 dev: ensure-pnpm-dirs ## Start development environment (flexible mode for rapid development)
-	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) PNPM_FROZEN_LOCKFILE=false VITE_SIM_MODE=true $(DOCKER_COMPOSE) up
+	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE) up
 
 dev-strict: ## Start development environment (strict mode for CI/CD)
 	UID=$(UID) GID=$(GID) PNPM_FROZEN_LOCKFILE=true $(DOCKER_COMPOSE) up --build
