@@ -1,3 +1,4 @@
+import { useRef, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
@@ -6,278 +7,32 @@ import { ChatInterface, MessageInterface, ModelConfig } from '@type/chat';
 import { providers } from '@type/providers';
 import { RequestConfig } from '@type/provider';
 import { getChatCompletion } from '@src/api/api';
-import { checkStorageQuota } from '@utils/storage';
-import { useRef, useEffect, useState, useCallback } from 'react';
-import { getEnvVar } from '@utils/env';
+import { ChatStreamHandler } from '../handlers/ChatStreamHandler';
+import { ChatSubmissionService } from '../services/SubmissionService';
+import { TitleGenerator } from '../services/TitleGenerator';
+import { SimulationService } from '../services/SimulationService';
+import { StorageService, StorageQuotaError } from '../services/StorageService';
+import { SubmissionLock } from '../services/SubmissionLock';
 
-class SubmissionLock {
-  private locked = false;
-  
-  isLocked(): boolean {
-    return this.locked;
-  }
-  
-  async acquire(): Promise<boolean> {
-    if (this.locked) return false;
-    this.locked = true;
-    return true;
-  }
-  
-  release(): void {
-    this.locked = false;
-  }
-}
-
-class ResponseCache {
-  private cache = new Map<string, Promise<Response>>();
-  
-  async getOrCreate(
-    key: string,
-    factory: () => Promise<Response>
-  ): Promise<Response> {
-    if (!this.cache.has(key)) {
-      this.cache.set(key, factory());
-    }
-    return this.cache.get(key)!;
-  }
-  
-  clear(): void {
-    this.cache.clear();
-  }
-}
-
-interface AnthropicResponse {
-  message: {
-    content: string;
-  };
-}
-
-interface ContentResponse {
-  content: string;
-}
-
-interface TextResponse {
-  type: 'text';
-  text: string;
-}
-
-interface OpenAIResponse {
-  choices: Array<{
-    message: {
-      content: string;
-    };
-  }>;
-}
-
-export class ChatStreamHandler {
-  private aborted = false;
-
-  constructor(
-    private readonly decoder = new TextDecoder(),
-    private readonly provider: typeof providers[keyof typeof providers]
-  ) {
-    console.log('🔧 ChatStreamHandler initialized with provider:', provider.id);
-  }
-
-  async processStream(
-    reader: ReadableStreamDefaultReader<Uint8Array>,
-    onContent: (content: string) => void,
-    signal?: AbortSignal
-  ): Promise<void> {
-    console.log('📡 Starting stream processing');
-    
-    if (signal) {
-      signal.addEventListener('abort', () => {
-        console.log('🛑 Abort signal received');
-        this.aborted = true;
-        reader.cancel().catch(console.error);
-      }, { once: true });
-    }
-
-    try {
-      while (!this.aborted) {
-        const { done, value } = await reader.read();
-        
-        if (done) {
-          console.log('🏁 Stream ended. Done:', done, 'Aborted:', this.aborted);
-          break;
-        }
-
-        const chunk = this.decoder.decode(value);
-        const lines = chunk.split('\n').filter(line => line.trim() !== '');
-
-        for (const line of lines) {
-          if (this.aborted) break;
-          
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') {
-              console.log('✅ Received [DONE] signal');
-              continue;
-            }
-
-            try {
-              const result = JSON.parse(data);
-              const content = this.provider.parseStreamingResponse(result);
-              if (content) {
-                onContent(content);
-              }
-            } catch (e) {
-              console.error('❌ Failed to parse chunk:', e);
-            }
-          }
-        }
-      }
-    } finally {
-      console.log('🧹 Cleaning up stream resources');
-      try {
-        await reader.cancel();
-        console.log('✅ Reader cancelled successfully');
-      } catch (e) {
-        console.error('❌ Error cancelling reader:', e);
-      }
-    }
-  }
-}
-
-export class TitleGenerator {
-  constructor(
-    private readonly generateTitle: (
-      messages: MessageInterface[],
-      config: ModelConfig
-    ) => Promise<string | ContentResponse | AnthropicResponse | TextResponse | TextResponse[] | OpenAIResponse>,
-    private readonly language: string,
-    private readonly defaultConfig: ModelConfig
-  ) {
-    if (!defaultConfig || !defaultConfig.model) {
-      throw new Error('Invalid model configuration');
-    }
-  }
-
-  async generateChatTitle(
-    userMessage: string,
-    assistantMessage: string
-  ): Promise<string> {
-    if (!this.defaultConfig || !this.defaultConfig.model) {
-      throw new Error('Invalid model configuration');
-    }
-
-    const message: MessageInterface = {
-      role: 'user',
-      content: `Generate a title in less than 6 words for the following message (language: ${this.language}):\n"""\nUser: ${userMessage}\nAssistant: ${assistantMessage}\n"""`,
-    };
-
-    try {
-      const response = await this.generateTitle([message], this.defaultConfig);
-      console.log('Title generation raw response:', response);
-
-      // Handle array response
-      if (Array.isArray(response)) {
-        if (response.length === 0) {
-          throw new Error('Invalid response format from title generation');
-        }
-        const firstResponse = response[0];
-        if ('type' in firstResponse && firstResponse.type === 'text' && 'text' in firstResponse) {
-          const title = firstResponse.text.trim();
-          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
-        }
-      }
-
-      // Handle OpenAI response format
-      if (response && typeof response === 'object') {
-        if ('choices' in response && Array.isArray(response.choices) && response.choices.length > 0) {
-          const content = response.choices[0]?.message?.content;
-          if (content) {
-            const title = content.trim();
-            return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
-          }
-        }
-
-        if ('type' in response && response.type === 'text' && 'text' in response) {
-          const title = response.text.trim();
-          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
-        }
-
-        if ('content' in response) {
-          const title = response.content.trim();
-          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
-        }
-
-        if ('message' in response && typeof response.message === 'object' && 'content' in response.message) {
-          const title = (response as AnthropicResponse).message.content.trim();
-          return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
-        }
-      }
-
-      // Handle string response
-      if (typeof response === 'string') {
-        const title = response.trim();
-        return title.startsWith('"') && title.endsWith('"') ? title.slice(1, -1).trim() : title;
-      }
-
-      console.error('Unexpected response format:', response);
-      throw new Error('Invalid response format from title generation');
-    } catch (error) {
-      console.error('Title generation error:', error);
-      throw error;
-    }
-  }
-}
-
-interface SubmissionService {
-  submit(messages: MessageInterface[], config: ModelConfig): Promise<void>;
-  abort(): void;
-}
-
-class ChatSubmissionService implements SubmissionService {
-  constructor(
-    private provider: typeof providers[keyof typeof providers],
-    private apiKey: string,
-    private onContent: (content: string) => void,
-    private streamHandler: ChatStreamHandler
-  ) {}
-
-  async submit(messages: MessageInterface[], config: ModelConfig): Promise<void> {
-    const formattedRequest = this.provider.formatRequest(messages, {
-      ...config,
-      stream: true
-    });
-
-    const response = await fetch(`/api/chat/${this.provider.id}`, {  // Changed from key to id
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'text/event-stream',
-      },
-      body: JSON.stringify({
-        messages: formattedRequest.messages,
-        config: formattedRequest,
-        apiKey: this.apiKey,
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error('Response body is null');
-
-    await this.streamHandler.processStream(reader, this.onContent);
-  }
-
-  abort(): void {
-    // Implement abort logic
-  }
-}
+// Constants at the top
+const STORAGE_CONFIG = {
+  maxStorageSize: 10 * 1024 * 1024, // 10MB
+  warningThreshold: 0.85 // 85%
+} as const;
 
 const useSubmit = () => {
-  const { i18n } = useTranslation('api');
+  const { i18n } = useTranslation();
   const store = useStore();
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const submissionLock = useRef(new SubmissionLock());
-  const cache = useRef(new ResponseCache());
   
+  // Group service initializations
+  const services = {
+    abortController: useRef<AbortController | null>(null),
+    submission: useRef(new SubmissionLock()).current,
+    storage: useRef(new StorageService(STORAGE_CONFIG)).current,
+    simulation: useRef(new SimulationService()).current,
+  };
+
+  // Type-safe store access
   const {
     currentChatIndex,
     chats,
@@ -289,46 +44,52 @@ const useSubmit = () => {
     setChats,
   } = store;
 
-  const currentChat = chats?.[currentChatIndex];
-  const providerKey = currentChat?.config.provider || DEFAULT_PROVIDER;
-  const provider = providers[providerKey];
-  const currentApiKey = apiKeys[providerKey];
+  // Group provider-related logic
+  const providerSetup = {
+    currentChat: chats?.[currentChatIndex],
+    providerKey: chats?.[currentChatIndex]?.config.provider || DEFAULT_PROVIDER,
+    get provider() {
+      return providers[this.providerKey];
+    },
+    get apiKey() {
+      return apiKeys[this.providerKey];
+    }
+  };
 
-  // Move streamHandler initialization outside useEffect
+  // Initialize stream handler with provider
   const streamHandlerRef = useRef<ChatStreamHandler>(
-    new ChatStreamHandler(new TextDecoder(), provider)
+    new ChatStreamHandler(new TextDecoder(), providerSetup.provider)
   );
 
-  // Update streamHandler when provider changes
+  // Stream handler effect
   useEffect(() => {
-    streamHandlerRef.current = new ChatStreamHandler(new TextDecoder(), provider);
+    streamHandlerRef.current = new ChatStreamHandler(new TextDecoder(), providerSetup.provider);
     
     return () => {
       console.log('🧹 Cleaning up resources');
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
+      if (services.abortController.current) {
+        services.abortController.current.abort();
+        services.abortController.current = null;
       }
     };
-  }, [provider]);
+  }, [providerSetup.provider]);
 
-  const titleGenerator = new TitleGenerator(
-    async (messages, config) => {
-      if (!config || !config.model) {
+  // Title generator configuration and initialization
+  const titleGeneratorConfig = {
+    generateTitle: async (messages: MessageInterface[], config: ModelConfig) => {
+      if (!config?.model) {
         throw new Error('Invalid model configuration');
       }
 
-      // Get the current provider and its default model
-      const currentProvider = providers[providerKey];
+      const currentProvider = providers[providerSetup.providerKey];
       const modelConfig: ModelConfig = {
         ...config,
-        model: config.model // Use the passed model instead of overriding
+        model: config.model
       };
 
-      // Create request config with stream property
       const requestConfig: RequestConfig = {
         ...modelConfig,
-        stream: false // Title generation should not stream
+        stream: false
       };
 
       const formattedRequest = currentProvider.formatRequest(messages, requestConfig);
@@ -336,10 +97,10 @@ const useSubmit = () => {
 
       try {
         const response = await getChatCompletion(
-          providerKey,
+          providerSetup.providerKey,
           formattedMessages,
           modelConfig,
-          currentApiKey
+          providerSetup.apiKey
         );
 
         if (!response) {
@@ -352,185 +113,235 @@ const useSubmit = () => {
         throw error;
       }
     },
-    i18n.language,
-    {
+    language: i18n.language,
+    defaultConfig: {
       ...DEFAULT_MODEL_CONFIG,
-      model: provider.models[0] // Use the first available model for the provider
+      model: providerSetup.provider.models[0]
     }
+  } as const;
+
+  const titleGenerator = new TitleGenerator(
+    titleGeneratorConfig.generateTitle,
+    titleGeneratorConfig.language,
+    titleGeneratorConfig.defaultConfig
   );
 
-  const stopGeneration = useCallback(() => {
-    console.log('🛑 Stop generation requested');
-    setGenerating(false);
-    
-    if (abortControllerRef.current) {
-      console.log('⚡ Aborting current request');
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-  }, [setGenerating]);
+  // Chat state management utilities
+  const chatUtils = {
+    clone: (chats: ChatInterface[]): ChatInterface[] => 
+      JSON.parse(JSON.stringify(chats)),
 
-  const simulateStreamResponse = async (
-    onContent: (content: string) => void
-  ): Promise<void> => {
-    const testMessage = "This is a simulated response. It will stream word by word to test the UI rendering.";
-    const words = testMessage.split(' ');
-    
-    try {
-      for (const word of words) {
-        // Check if generation should stop
-        if (!useStore.getState().generating) {
-          console.log('🛑 Simulation stopped - generating flag is false');
-          return;
-        }
+    appendAssistantMessage: (
+      chats: ChatInterface[],
+      chatIndex: number,
+      content: string = ''
+    ): ChatInterface[] => {
+      const updatedChats = chatUtils.clone(chats);
+      const messages = updatedChats[chatIndex].messages;
+      messages.push({
+        role: 'assistant',
+        content
+      });
+      return updatedChats;
+    },
 
-        if (abortControllerRef.current?.signal.aborted) {
-          console.log('🛑 Simulation stopped - abort signal received');
-          return;
-        }
-
-        onContent(word + ' ');
-        await new Promise((resolve, reject) => {
-          const timeoutId = setTimeout(resolve, 200);
-          
-          // Clean up timeout if aborted
-          abortControllerRef.current?.signal.addEventListener('abort', () => {
-            clearTimeout(timeoutId);
-            reject(new Error('Aborted'));
-          }, { once: true });
-        });
+    updateMessageContent: (
+      chats: ChatInterface[],
+      chatIndex: number,
+      content: string
+    ): ChatInterface[] => {
+      const updatedChats = chatUtils.clone(chats);
+      const messages = updatedChats[chatIndex].messages;
+      const lastMessage = messages[messages.length - 1];
+      
+      if (lastMessage?.role === 'assistant') {
+        lastMessage.content += content;
       }
-    } catch (error: unknown) {
-      if (error instanceof Error && error.message === 'Aborted') {
-        console.log('🛑 Simulation aborted cleanly');
-      } else {
+      
+      return updatedChats;
+    }
+  };
+
+  // Error and state management utilities
+  const utils = {
+    createErrorMessage: (error: unknown): string => {
+      if (error instanceof StorageQuotaError) {
+        return 'Not enough storage space. Please clear some chats.';
+      }
+      if (error instanceof Error) {
+        return error.message;
+      }
+      return 'An unknown error occurred';
+    },
+
+    getStoreState: () => {
+      const state = useStore.getState();
+      if (!state.chats || state.currentChatIndex < 0) {
+        throw new Error('Invalid store state: chats array or currentChatIndex is invalid');
+      }
+      return state as { 
+        chats: NonNullable<typeof state.chats>,
+        currentChatIndex: number,
+        [key: string]: any 
+      };
+    }
+  };
+
+  // Simulation handling
+  const simulationHandlers = {
+    handleSimulatedSubmission: async (state: ReturnType<typeof utils.getStoreState>) => {
+      console.log('🔧 Running in simulation mode');
+      try {
+        services.abortController.current = new AbortController();
+
+        // Now state.chats is guaranteed to be defined
+        const updatedChats = chatUtils.appendAssistantMessage(
+          state.chats,
+          state.currentChatIndex
+        );
+        setChats(updatedChats);
+
+        await services.simulation.simulateStreamResponse(
+          'This is a simulated response for testing purposes.',
+          (content) => {
+            const latestState = utils.getStoreState(); // Now guaranteed to have chats
+            const updatedChats = chatUtils.updateMessageContent(
+              latestState.chats,
+              state.currentChatIndex,
+              content
+            );
+            setChats(updatedChats);
+          }
+        );
+      } catch (error) {
+        console.error('Simulation error:', error);
+        setError(utils.createErrorMessage(error));
+      } finally {
+        setGenerating(false);
+        services.abortController.current = null;
+        services.submission.unlock();
+      }
+    },
+
+    isSimulationMode: (): boolean => 
+      import.meta.env.DEV && import.meta.env.VITE_SIM_MODE === 'true',
+
+    handleWordByWordSimulation: async (
+      onContent: (content: string) => void
+    ): Promise<void> => {
+      const testMessage = "This is a simulated response. It will stream word by word to test the UI rendering. ";
+      const words = testMessage.split(' ');
+      
+      try {
+        for (const word of words) {
+          // Check if generation should stop
+          if (!useStore.getState().generating) {
+            console.log('🛑 Simulation stopped - generating flag is false');
+            return;
+          }
+
+          if (services.abortController.current?.signal.aborted) {
+            console.log('🛑 Simulation stopped - abort signal received');
+            return;
+          }
+
+          onContent(word + ' ');
+          await new Promise<void>((resolve, reject) => {
+            const timeoutId = setTimeout(resolve, 200);
+            
+            // Clean up timeout if aborted
+            services.abortController.current?.signal.addEventListener('abort', () => {
+              clearTimeout(timeoutId);
+              reject(new Error('Aborted'));
+            }, { once: true });
+          });
+        }
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message === 'Aborted') {
+          console.log('🛑 Simulation aborted cleanly');
+          return;
+        }
         console.error('❌ Simulation error:', error);
         throw error;
       }
     }
   };
 
-  // Pure function to prepare chat update
-  function prepareChatUpdate(chats: ChatInterface[], currentIndex: number): ChatInterface[] {
-    const updatedChats = JSON.parse(JSON.stringify(chats));
-    const currentMessages = updatedChats[currentIndex].messages;
+  const stopGeneration = useCallback(() => {
+    console.log('🛑 Stop generation requested');
+    setGenerating(false);
     
-    currentMessages.push({
-      role: 'assistant',
-      content: '',
-    });
-    
-    return updatedChats;
-  }
-
-  // Pure function to update message content
-  function updateMessageContent(
-    chats: ChatInterface[],
-    currentIndex: number,
-    content: string
-  ): ChatInterface[] {
-    const updatedChats = JSON.parse(JSON.stringify(chats));
-    const messages = updatedChats[currentIndex].messages;
-    const lastMessage = messages[messages.length - 1];
-    
-    if (lastMessage?.role === 'assistant') {
-      lastMessage.content += content;
+    if (services.abortController.current) {
+      console.log('⚡ Aborting current request');
+      services.abortController.current.abort();
+      services.abortController.current = null;
     }
-    
-    return updatedChats;
-  }
+  }, [setGenerating]);
 
   const handleSubmit = async () => {
-    console.log('🚀 Starting submission');
-    
-    const currentState = useStore.getState();
-    if (currentState.generating || !currentState.chats) {
-      console.log('⚠️ Submission blocked - already generating or no chats');
+    if (!services.submission.lock()) {
+      console.warn('Submission already in progress');
       return;
     }
-
-    // Add validation for streamHandler
-    if (!streamHandlerRef.current) {
-      console.error('❌ StreamHandler not initialized');
-      return;
-    }
-
-    setGenerating(true);
-    setError(null);
-    abortControllerRef.current = new AbortController();
 
     try {
-      await checkStorageQuota();
+      const state = utils.getStoreState(); // Now guaranteed to have chats
+      await services.storage.checkQuota();
       
-      const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(currentState.chats));
-      const currentMessages = updatedChats[currentState.currentChatIndex].messages;
+      setGenerating(true);
+      setError(null);
 
-      // Add empty assistant message
-      currentMessages.push({
-        role: 'assistant',
-        content: '',
-      });
-      setChats(updatedChats);
-
-      const { modelConfig } = updatedChats[currentState.currentChatIndex].config;
-      
-      console.log('📤 Preparing request for provider:', providerKey);
-      const formattedRequest = provider.formatRequest(currentMessages, {
-        ...modelConfig,
-        stream: true
-      });
-
-      const { messages: formattedMessages, ...configWithoutMessages } = formattedRequest;
-
-      const response = await fetch(`/api/chat/${providerKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream',
-        },
-        body: JSON.stringify({
-          messages: formattedMessages,
-          config: configWithoutMessages,
-          apiKey: currentApiKey,
-        }),
-        signal: abortControllerRef.current.signal,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `HTTP error! status: ${response.status}`);
+      if (simulationHandlers.isSimulationMode()) {
+        await simulationHandlers.handleSimulatedSubmission(state);
+        return;
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('Response body is null');
+      console.log('🚀 Starting submission');
+      services.abortController.current = new AbortController();
 
-      console.log('📡 Starting stream processing');
-      await streamHandlerRef.current?.processStream(
-        reader,
-        (content) => {
-          const latestState = useStore.getState();
-          if (!latestState.chats) return;
-          
-          const updatedChats = JSON.parse(JSON.stringify(latestState.chats));
-          const messages = updatedChats[currentState.currentChatIndex].messages;
-          const lastMessage = messages[messages.length - 1];
-          
-          if (lastMessage?.role === 'assistant') {
-            lastMessage.content += content;
+      try {
+        // Initialize chat with empty assistant message
+        const updatedChats = chatUtils.clone(state.chats);
+        const currentMessages = updatedChats[state.currentChatIndex].messages;
+        currentMessages.push({
+          role: 'assistant',
+          content: '',
+        });
+        setChats(updatedChats);
+
+        const { modelConfig } = updatedChats[state.currentChatIndex].config;
+        
+        // Create submission service
+        const submissionService = new ChatSubmissionService(
+          providerSetup.provider,
+          providerSetup.apiKey,
+          (content) => {
+            const latestState = utils.getStoreState(); // Now guaranteed to have chats
+            const updatedChats = chatUtils.updateMessageContent(
+              latestState.chats,
+              state.currentChatIndex,
+              content
+            );
             setChats(updatedChats);
-          }
-        },
-        abortControllerRef.current.signal
-      );
+          },
+          streamHandlerRef.current
+        );
 
-      await handleTitleGeneration();
+        // Submit request
+        await submissionService.submit(currentMessages, modelConfig);
+        await handleTitleGeneration();
+
+      } catch (error) {
+        console.error('❌ Submit error:', error);
+        setError(utils.createErrorMessage(error));
+      } finally {
+        setGenerating(false);
+        services.abortController.current = null;
+        services.submission.unlock();
+      }
     } catch (error) {
-      console.error('❌ Submit error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      setError(errorMessage);
-    } finally {
-      setGenerating(false);
-      abortControllerRef.current = null;
+      setError(utils.createErrorMessage(error));
+      services.submission.unlock();
     }
   };
 
@@ -539,7 +350,7 @@ const useSubmit = () => {
       return;
     }
 
-    const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(chats));
+    const updatedChats = chatUtils.clone(chats);
     const currentMessages = updatedChats[currentChatIndex].messages;
     if (currentMessages[currentMessages.length - 1]?.role === 'assistant') {
       currentMessages.pop();
@@ -551,14 +362,14 @@ const useSubmit = () => {
 
   const handleTitleGeneration = async () => {
     console.log('Title generation config:', {
-      providerKey,
-      provider: providers[providerKey],
-      modelConfig: currentChat?.config.modelConfig,
+      providerKey: providerSetup.providerKey,
+      provider: providerSetup.provider,
+      modelConfig: providerSetup.currentChat?.config.modelConfig,
       defaultConfig: DEFAULT_MODEL_CONFIG
     });
     
     try {
-      const currentState = useStore.getState();
+      const currentState = utils.getStoreState();
       if (!currentState.chats || currentState.currentChatIndex < 0) {
         throw new Error('No active chat found');
       }
