@@ -97,7 +97,7 @@ const ChatContent: React.FC = () => {
     if (layoutWidth === 'wide') {
       return hideSideMenu ? 'w-[55%]' : 'w-[55%]';
     }
-    return hideSideMenu ? 'w-[45%]' : 'w-[45%]';
+    return hideSideMenu ? 'w-[40%]' : 'w-[40%]';
   };
 
   // Effects
