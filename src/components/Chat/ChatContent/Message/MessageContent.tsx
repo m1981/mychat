@@ -261,8 +261,8 @@ const EditView: React.FC<EditViewProps> = ({
       resetTextAreaHeight();
     } else {
       updatedMessages[messageIndex].content = _content;
-      // Remove this line unless you want to delete subsequent messages
-      // updatedChats[currentChatIndex].messages = updatedMessages.slice(0, messageIndex + 1);
+      // Remove all messages after the edited message
+      updatedChats[currentChatIndex].messages = updatedMessages.slice(0, messageIndex + 1);
       setIsEdit(false);
     }
     setChats(updatedChats);
