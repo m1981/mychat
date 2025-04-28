@@ -38,9 +38,11 @@ const devConfig: UserConfig = {
     hmr: {
       timeout: 1000,
       protocol: 'ws',
-      host: '0.0.0.0',
+      host: 'localhost',
       port: 5173,
-      clientPort: 5173
+      clientPort: 5173,
+      overlay: true,
+      path: 'hmr'
     },
     watch: {
       usePolling: true,
@@ -53,7 +55,6 @@ const devConfig: UserConfig = {
     headers: {
       'Access-Control-Allow-Origin': '*'
     },
-    middlewareMode: false,
     fs: {
       strict: false,
       allow: ['/app']
