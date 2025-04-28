@@ -33,7 +33,7 @@ const Message = React.memo(
     const layoutWidth = useStore((state) => state.layoutWidth);
     const currentChatIndex = useStore((state) => state.currentChatIndex);
     const setChats = useStore((state) => state.setChats);
-    const messageRef = useRef<HTMLDivElement>(null);
+    const messageRef = useRef<HTMLDivElement | null>(null);
     const [showBottomActions, setShowBottomActions] = useState(false);
 
     const handleDelete = () => {
@@ -112,59 +112,66 @@ const Message = React.memo(
         }`}
       >
         <div
-          className={`text-base gap-4 md:gap-6 m-auto p-4 md:py-6 flex transition-all ease-in-out ${getWidthClass()}`}
+          className={`text-base gap-4 md:gap-6 m-auto p-4 md:py-6 flex transition-all ease-in-out 
+              max-w-[1400px] min-w-[300px] ${getWidthClass()}`}
         >
-          <Avatar role={role} />
-          <div className='w-[calc(100%-50px)]'>
-            <div className="flex justify-between items-center">
-              <RoleSelector
-                role={role}
-                messageIndex={messageIndex}
-                isComposer={isComposer}
-              />
-              {!isEdit && !isComposer && (
-                <MessageActionButtons
-                  isDelete={isDelete}
+          <div className="flex-shrink-0 w-[30px]">
+            <div className="sticky top-0">
+              <Avatar role={role} />
+            </div>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <div className="flex flex-col gap-4">
+              <div className="flex justify-between items-center">
+                <RoleSelector
                   role={role}
                   messageIndex={messageIndex}
-                  setIsEdit={handleEdit}
-                  setIsDelete={setIsDelete}
-                  handleRefresh={handleRefresh}
-                  handleMoveUp={() => handleMove('up')}
-                  handleMoveDown={() => handleMove('down')}
-                  handleDelete={handleDelete}
-                  handleCopy={handleCopy}
+                  isComposer={isComposer}
                 />
+                {!isEdit && !isComposer && (
+                  <MessageActionButtons
+                    isDelete={isDelete}
+                    role={role}
+                    messageIndex={messageIndex}
+                    setIsEdit={handleEdit}
+                    setIsDelete={setIsDelete}
+                    handleRefresh={handleRefresh}
+                    handleMoveUp={() => handleMove('up')}
+                    handleMoveDown={() => handleMove('down')}
+                    handleDelete={handleDelete}
+                    handleCopy={handleCopy}
+                  />
+                )}
+              </div>
+              <SelectionCopyProvider>
+                <MessageContent
+                  role={role}
+                  content={content}
+                  messageIndex={messageIndex}
+                  isComposer={isComposer}
+                  isEdit={isEdit}
+                  setIsEdit={setIsEdit}
+                  isEditing={isEditing}
+                  setIsEditing={setIsEditing}
+                />
+              </SelectionCopyProvider>
+              {!isEdit && !isComposer && showBottomActions && (
+                <div className="mt-4 flex justify-end">
+                  <MessageActionButtons
+                    isDelete={isDelete}
+                    role={role}
+                    messageIndex={messageIndex}
+                    setIsEdit={handleEdit}
+                    setIsDelete={setIsDelete}
+                    handleRefresh={handleRefresh}
+                    handleMoveUp={() => handleMove('up')}
+                    handleMoveDown={() => handleMove('down')}
+                    handleDelete={handleDelete}
+                    handleCopy={handleCopy}
+                  />
+                </div>
               )}
             </div>
-            <SelectionCopyProvider>
-              <MessageContent
-                role={role}
-                content={content}
-                messageIndex={messageIndex}
-                isComposer={isComposer}
-                isEdit={isEdit}
-                setIsEdit={setIsEdit}
-                isEditing={isEditing}
-                setIsEditing={setIsEditing}
-              />
-            </SelectionCopyProvider>
-            {!isEdit && !isComposer && showBottomActions && (
-              <div className="mt-4 flex justify-end">
-                <MessageActionButtons
-                  isDelete={isDelete}
-                  role={role}
-                  messageIndex={messageIndex}
-                  setIsEdit={handleEdit}
-                  setIsDelete={setIsDelete}
-                  handleRefresh={handleRefresh}
-                  handleMoveUp={() => handleMove('up')}
-                  handleMoveDown={() => handleMove('down')}
-                  handleDelete={handleDelete}
-                  handleCopy={handleCopy}
-                />
-              </div>
-            )}
           </div>
         </div>
       </div>
