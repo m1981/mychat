@@ -3,5 +3,5 @@ dist
 bin
 .pmpm-cache
 .pnpm-store
-
+docs
 
