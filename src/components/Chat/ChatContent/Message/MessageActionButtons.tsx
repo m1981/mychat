@@ -27,7 +27,7 @@ interface ActionButtonProps {
 
 const RefreshButton: React.FC<ActionButtonProps> = ({ onClick }) => (
   <button
-    className="invisible group-hover:visible px-3 py-1 text-sm 
+    className="invisible group-hover:visible px-2 py-1 text-xs
     bg-gray-700 hover:bg-gray-800 text-gray-200 hover:text-white 
     rounded-md transition-colors duration-200"
     onClick={onClick}
