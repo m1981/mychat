@@ -23,6 +23,20 @@ export class TitleGenerator {
     }
   }
 
+  private cleanupTitle(title: string): string {
+    return title
+      .trim()
+      // Remove quotes at start and end
+      .replace(/^["'`]|["'`]$/g, '')
+      // Remove any remaining quotes
+      .replace(/["'`]/g, '')
+      // Remove any special characters at the start or end
+      .replace(/^[^\w\s]|[^\w\s]$/g, '')
+      // Remove multiple spaces
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   async generateChatTitle(
     userMessage: string,
     assistantMessage: string
@@ -40,25 +54,29 @@ export class TitleGenerator {
       const response = await this.generateTitle([message], this.defaultConfig);
       console.log('Title generation raw response:', response);
 
+      let title: string;
+
       // Handle different response types
       if (typeof response === 'string') {
-        return response.trim();
+        title = response;
       }
-
       // Handle structured response
-      if ('content' in response && response.content) {
-        return response.content.trim();
+      else if ('content' in response && response.content) {
+        title = response.content;
       }
-
       // Handle OpenAI-style response
-      if ('choices' in response && Array.isArray(response.choices)) {
+      else if ('choices' in response && Array.isArray(response.choices)) {
         const content = response.choices[0]?.message?.content;
-        if (content) {
-          return content.trim();
+        if (!content) {
+          throw new Error('Invalid response format from title generation');
         }
+        title = content;
+      }
+      else {
+        throw new Error('Invalid response format from title generation');
       }
 
-      throw new Error('Invalid response format from title generation');
+      return this.cleanupTitle(title);
     } catch (error) {
       console.error('Title generation failed:', error);
       throw error;
