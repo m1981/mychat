@@ -18,52 +18,28 @@ const filterChatsByTitle = (
   chats: ChatInterface[] | undefined,
   filterText: string,
   currentChatIndex: number
-): ChatInterface[] => {
-  console.log('[filterChatsByTitle] Input:', {
-    totalChats: chats?.length,
-    filterText,
-    currentChatIndex
-  });
-
-  if (!chats) {
-    console.log('[filterChatsByTitle] No chats available');
-    return [];
-  }
-
-  if (!filterText.trim()) {
-    console.log('[filterChatsByTitle] No filter text, returning all chats');
-    return chats;
-  }
+): { chat: ChatInterface; originalIndex: number }[] => {
+  if (!chats) return [];
+  if (!filterText.trim()) return chats.map((chat, idx) => ({ chat, originalIndex: idx }));
 
   const _filterLowerCase = filterText.toLowerCase();
-  const filteredChats = chats.filter((chat) => {
-    const titleMatch = chat.title.toLowerCase().includes(_filterLowerCase);
-    const contentMatch = chat.messages?.some(msg => 
-      msg.content?.toLowerCase().includes(_filterLowerCase)
-    );
-    
-    return titleMatch || contentMatch;
-  });
-
-  console.log('[filterChatsByTitle] Filtered results:', {
-    filterText: _filterLowerCase,
-    matchedChats: filteredChats.map(c => ({
-      title: c.title,
-      hasContentMatch: c.messages?.some(msg => 
+  return chats
+    .map((chat, index) => ({ chat, originalIndex: index }))
+    .filter(({ chat }) => {
+      const titleMatch = chat.title.toLowerCase().includes(_filterLowerCase);
+      const contentMatch = chat.messages?.some(msg => 
         msg.content?.toLowerCase().includes(_filterLowerCase)
-      )
-    })),
-    totalMatches: filteredChats.length
-  });
-
-  return filteredChats;
+      );
+      return titleMatch || contentMatch;
+    });
 };
 
 // Define local interfaces that don't conflict with imports
 interface ChatHistoryItem {
   title: string;
-  index: number;
+  index: number;  // This will be the filtered index
   id: string;
+  originalIndex: number;  // Add this to store the original index
 }
 
 interface ChatHistoryFolderMap {
@@ -76,7 +52,11 @@ interface ChatHistoryListProps {
 }
 
 const ChatHistoryList = ({ searchFilter, onSearchChange }: ChatHistoryListProps) => {
-  console.log('[ChatHistoryList] Received searchFilter:', searchFilter);
+  console.log('[ChatHistoryList] Rendering with:', {
+    searchFilter,
+    currentChatIndex: useStore.getState().currentChatIndex,
+    totalChats: useStore.getState().chats?.length
+  });
 
   const currentChatIndex = useStore((state) => state.currentChatIndex);
   const setChats = useStore((state) => state.setChats);
@@ -116,10 +96,10 @@ const ChatHistoryList = ({ searchFilter, onSearchChange }: ChatHistoryListProps)
         throw new Error('No chats available');
       }
 
-      // First, filter the chats
-      const filteredChats = filterChatsByTitle(chats, filterRef.current, currentChatIndex);
+      // First, filter the chats with original indices
+      const filteredChatsWithIndices = filterChatsByTitle(chats, filterRef.current, currentChatIndex);
 
-      // Initialize folders only if they exist
+      // Initialize folders
       if (folders) {
         (Object.values(folders) as Folder[])
           .sort((a, b) => a.order - b.order)
@@ -127,23 +107,26 @@ const ChatHistoryList = ({ searchFilter, onSearchChange }: ChatHistoryListProps)
       }
 
       // Organize filtered chats into folders
-      filteredChats.forEach((chat: ChatInterface, index: number) => {
+      filteredChatsWithIndices.forEach(({ chat, originalIndex }, filteredIndex) => {
+        const item = {
+          title: chat.title,
+          index: originalIndex, // Use the original index here
+          id: chat.id,
+          originalIndex: originalIndex
+        };
+
         if (!chat.folder || !folders || !folders[chat.folder]) {
-          _noFolders.push({ title: chat.title, index: index, id: chat.id });
+          _noFolders.push(item);
         } else {
           if (!_folders[chat.folder]) _folders[chat.folder] = [];
-          _folders[chat.folder].push({
-            title: chat.title,
-            index: index,
-            id: chat.id,
-          });
+          _folders[chat.folder].push(item);
         }
       });
 
       setChatFolders(_folders);
       setNoChatFolders(_noFolders);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred while updating folders');
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }

@@ -93,14 +93,29 @@ const ChatHistory = React.memo(
       if (inputRef && inputRef.current) inputRef.current.focus();
     }, [isEdit]);
 
+    // Add debug logging for chat selection
+    const handleChatClick = () => {
+      if (!generating) {
+        console.log('[ChatHistory] Selecting chat:', {
+          title,
+          originalIndex: chatIndex,
+          currentStoreState: {
+            currentIndex: useStore.getState().currentChatIndex,
+            totalChats: useStore.getState().chats?.length,
+            chatTitle: useStore.getState().chats?.[chatIndex]?.title,
+          }
+        });
+        
+        setCurrentChatIndex(chatIndex);
+      }
+    };
+
     return (
       <a
         className={`${ChatHistoryClass.base} ${
           active ? ChatHistoryClass.active : ChatHistoryClass.normal
         } ${generating ? 'cursor-not-allowed opacity-40' : 'cursor-pointer opacity-100'}`}
-        onClick={() => {
-          if (!generating) setCurrentChatIndex(chatIndex);
-        }}
+        onClick={handleChatClick}
         draggable
         onDragStart={handleDragStart}
       >
