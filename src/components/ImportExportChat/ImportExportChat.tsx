@@ -6,17 +6,17 @@ import { v4 as uuidv4 } from 'uuid';
 import PopupModal from '@components/PopupModal';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 import ExportIcon from '@icon/ExportIcon';
+import { ProviderRegistry } from '@config/providers/provider.registry';
 import useStore from '@store/store';
-import { ChatInterface, FolderCollection } from '@type/chat';
-import { Export, ExportV1 } from '@type/export';
+import { ChatInterface, FolderCollection, ProviderKey } from '@type/chat';
+import { Export } from '@type/export';
 import { getToday } from '@utils/date';
 import downloadFile from '@utils/downloadFile';
-import {
-  isLegacyImport,
-  validateAndFixChats,
-  validateExportV1,
-} from '@utils/import';
 
+interface ImportAlert {
+  message: string;
+  success: boolean;
+}
 
 const ImportExportChat = () => {
   const { t } = useTranslation();
@@ -26,9 +26,7 @@ const ImportExportChat = () => {
     <>
       <a
         className='flex py-2 px-2 items-center gap-3 rounded-md hover:bg-gray-500/10 transition-colors duration-200 text-gray-800 dark:text-gray-100 cursor-pointer text-sm'
-        onClick={() => {
-          setIsModalOpen(true);
-        }}
+        onClick={() => setIsModalOpen(true)}
       >
         <ExportIcon className='w-4 h-4' />
         {t('import')} / {t('export')}
@@ -51,138 +49,246 @@ const ImportExportChat = () => {
 
 const ImportChat = () => {
   const { t } = useTranslation();
-  const setChats = useStore.getState().setChats;
-  const setFolders = useStore.getState().setFolders;
   const inputRef = useRef<HTMLInputElement>(null);
-  const [alert, setAlert] = useState<{
-    message: string;
-    success: boolean;
-  } | null>(null);
+  const [alert, setAlert] = useState<ImportAlert | null>(null);
+  
+  // Use hooks properly instead of getState()
+  const setChats = useStore((state) => state.setChats);
+  const setFolders = useStore((state) => state.setFolders);
 
-  const handleFileUpload = () => {
-    if (!inputRef || !inputRef.current) return;
-    const file = inputRef.current.files?.[0];
-
-    if (!file) {
-      setAlert({
-        message: 'Please select a file to import',
-        success: false,
-      });
-      return;
+  const validateMessage = (msg: any, chatId: string, index: number) => {
+    if (!msg) {
+      throw new Error(`Chat ${chatId}: Message at index ${index} is null or undefined`);
+    }
+    
+    if (typeof msg !== 'object') {
+      throw new Error(`Chat ${chatId}: Message at index ${index} is not an object`);
     }
 
-    if (file.size > 100 * 1024 * 1024) { // 100MB limit
-      setAlert({
-        message: 'File size too large. Maximum size is 100MB',
-        success: false,
-      });
-      return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = (event) => {
+    // Handle empty content - set to empty string if undefined/null
+    if (msg.content === undefined || msg.content === null) {
+      msg.content = '';
+    } else if (typeof msg.content !== 'string') {
+      // If content exists but isn't a string, try to convert it
       try {
-        const data = event.target?.result as string;
-        if (!data) throw new Error('Failed to read file');
+        msg.content = String(msg.content);
+      } catch (e) {
+        throw new Error(`Chat ${chatId}: Message at index ${index} has invalid 'content' that cannot be converted to string`);
+      }
+    }
 
-        const parsedData = JSON.parse(data);
+    if (!msg.role) {
+      throw new Error(`Chat ${chatId}: Message at index ${index} is missing 'role' field`);
+    }
 
-        if (isLegacyImport(parsedData)) {
-          if (validateAndFixChats(parsedData)) {
-            handleLegacyImport(parsedData);
-            setAlert({
-              message: 'Successfully imported! Note: Some settings may have been adjusted to match current constraints.',
-              success: true,
-            });
-          } else {
-            setAlert({
-              message: 'Invalid chat data format. Please check the file content.',
-              success: false,
-            });
+    if (typeof msg.role !== 'string') {
+      throw new Error(`Chat ${chatId}: Message at index ${index} has invalid 'role' type (expected string)`);
+    }
+
+    // Validate role is one of the expected values
+    const validRoles = ['user', 'assistant', 'system'];
+    if (!validRoles.includes(msg.role)) {
+      throw new Error(`Chat ${chatId}: Message at index ${index} has invalid role '${msg.role}'. Must be one of: ${validRoles.join(', ')}`);
+    }
+
+    return true;
+  };
+
+  const validateModelConfig = (provider: ProviderKey, modelConfig: any, chatId: string) => {
+    // Get provider capabilities
+    const capabilities = ProviderRegistry.getProviderCapabilities(provider);
+    
+    // Basic required fields for all providers
+    const baseRequiredFields = [
+      'model', 'max_tokens', 'temperature', 'presence_penalty',
+      'top_p', 'frequency_penalty'
+    ];
+
+    // Check base required fields
+    baseRequiredFields.forEach(field => {
+      if (!(field in modelConfig)) {
+        throw new Error(`Chat ${chatId}: modelConfig is missing required field '${field}'`);
+      }
+    });
+
+    // Validate numeric fields
+    const numericFields = ['max_tokens', 'temperature', 'presence_penalty', 'top_p', 'frequency_penalty'];
+    numericFields.forEach(field => {
+      if (typeof modelConfig[field] !== 'number') {
+        throw new Error(`Chat ${chatId}: modelConfig.${field} must be a number`);
+      }
+    });
+
+    // Handle thinking capability based on provider
+    if (capabilities.supportsThinking) {
+      if (!('enableThinking' in modelConfig)) {
+        modelConfig.enableThinking = false; // Default value
+      }
+      if (typeof modelConfig.enableThinking !== 'boolean') {
+        modelConfig.enableThinking = Boolean(modelConfig.enableThinking);
+      }
+      
+      // Add thinkingConfig if missing
+      if (modelConfig.enableThinking && (!modelConfig.thinkingConfig || !modelConfig.thinkingConfig.budget_tokens)) {
+        modelConfig.thinkingConfig = {
+          budget_tokens: 1000 // Default value
+        };
+      }
+    } else {
+      // For providers that don't support thinking, ensure these fields are not present
+      delete modelConfig.enableThinking;
+      delete modelConfig.thinkingConfig;
+    }
+
+    // Validate and potentially update the model ID
+    const validModel = ProviderRegistry.validateModelForProvider(provider, modelConfig.model);
+    if (!validModel) {
+      modelConfig.model = ProviderRegistry.getDefaultModelForProvider(provider);
+      console.warn(`Model "${modelConfig.model}" not found for provider "${provider}". Using default model "${modelConfig.model}"`);
+    }
+
+    return modelConfig;
+  };
+
+  const validateChat = (chat: any, index: number) => {
+    if (!chat.id) {
+      throw new Error(`Chat at index ${index}: Missing required field 'id'`);
+    }
+
+    if (!chat.title) {
+      throw new Error(`Chat ${chat.id}: Missing required field 'title'`);
+    }
+
+    if (!Array.isArray(chat.messages)) {
+      throw new Error(`Chat ${chat.id}: 'messages' must be an array`);
+    }
+
+    // Validate messages
+    chat.messages.forEach((msg: any, msgIndex: number) => {
+      validateMessage(msg, chat.id, msgIndex);
+    });
+
+    if (!chat.config) {
+      throw new Error(`Chat ${chat.id}: Missing required field 'config'`);
+    }
+
+    if (!chat.config.provider) {
+      throw new Error(`Chat ${chat.id}: Missing required field 'config.provider'`);
+    }
+
+    const provider = chat.config.provider as ProviderKey;
+    if (provider !== 'anthropic' && provider !== 'openai') {
+      throw new Error(`Chat ${chat.id}: Invalid provider '${provider}'. Must be 'anthropic' or 'openai'`);
+    }
+
+    const modelConfig = chat.config.modelConfig;
+    if (!modelConfig) {
+      throw new Error(`Chat ${chat.id}: Missing required field 'config.modelConfig'`);
+    }
+
+    // Validate and update modelConfig based on provider capabilities
+    chat.config.modelConfig = validateModelConfig(provider, modelConfig, chat.id);
+
+    return true;
+  };
+
+  const validateFolder = (folder: any, id: string) => {
+    if (!folder.id) {
+      throw new Error(`Folder ${id}: Missing required field 'id'`);
+    }
+
+    if (!folder.name) {
+      throw new Error(`Folder ${id}: Missing required field 'name'`);
+    }
+
+    if (typeof folder.expanded !== 'boolean') {
+      throw new Error(`Folder ${id}: 'expanded' must be a boolean`);
+    }
+
+    if (typeof folder.order !== 'number') {
+      throw new Error(`Folder ${id}: 'order' must be a number`);
+    }
+
+    return true;
+  };
+
+  const handleFileUpload = async () => {
+    if (!inputRef.current?.files?.length) {
+      setAlert({ message: t('Please select a file to import'), success: false });
+      return;
+    }
+
+    const file = inputRef.current.files[0];
+    if (file.size > 100 * 1024 * 1024) {
+      setAlert({ message: t('File size too large. Maximum size is 100MB'), success: false });
+      return;
+    }
+
+    try {
+      const fileContent = await file.text();
+      let importData;
+      
+      try {
+        importData = JSON.parse(fileContent);
+      } catch (e) {
+        throw new Error('Failed to parse JSON file. Please ensure the file contains valid JSON.');
+      }
+
+      // Handle both single chat array and full export format
+      let processedChats: ChatInterface[];
+      let processedFolders: FolderCollection = {};
+
+      if (Array.isArray(importData)) {
+        // Single chat or array of chats format
+        processedChats = importData.map((chat, index) => {
+          validateChat(chat, index);
+          return chat as ChatInterface;
+        });
+      } else {
+        // Full export format
+        if (importData.version !== 1) {
+          throw new Error(`Unsupported import version: ${importData.version}. Expected version 1.`);
+        }
+
+        if (!Array.isArray(importData.chats)) {
+          throw new Error("Invalid format: 'chats' must be an array");
+        }
+
+        processedChats = importData.chats.map((chat, index) => {
+          validateChat(chat, index);
+          return chat as ChatInterface;
+        });
+
+        // Validate folders if present
+        if (importData.folders) {
+          if (typeof importData.folders !== 'object' || importData.folders === null) {
+            throw new Error("Invalid format: 'folders' must be an object");
           }
-        } else if (validateExportV1(parsedData)) {
-          handleV1Import(parsedData);
-          setAlert({
-            message: 'Successfully imported! Note: Some settings may have been adjusted to match current constraints.',
-            success: true,
-          });
-        } else {
-          setAlert({
-            message: 'Invalid file format. Please use a valid export file.',
-            success: false,
+
+          Object.entries(importData.folders).forEach(([id, folder]: [string, any]) => {
+            validateFolder(folder, id);
+            processedFolders[id] = folder;
           });
         }
-      } catch (error: unknown) {
-        console.error('Import error:', error);
-        setAlert({
-          message: `Import failed: ${(error as Error).message || 'Unknown error'}`,
-          success: false,
-        });
       }
-    };
 
-    reader.onerror = () => {
+      // Update store
+      setFolders(processedFolders);
+      setChats(processedChats);
+
       setAlert({
-        message: 'Failed to read file',
-        success: false,
+        message: t('Successfully imported!'),
+        success: true
       });
-    };
-
-    reader.readAsText(file);
+    } catch (error: unknown) {
+      console.error('Import error:', error);
+      setAlert({
+        message: `${t('Import failed')}: ${(error as Error).message}`,
+        success: false
+      });
+    }
   };
 
-
-  const handleLegacyImport = (parsedData: ChatInterface[]) => {
-    // Convert legacy configs if needed
-    parsedData.forEach(chat => {
-      if (!chat.config || !chat.config.provider || !chat.config.modelConfig) {
-        const oldConfig = chat.config?.modelConfig;
-        chat.config = {
-          provider: 'openai',
-          modelConfig: {
-            model: oldConfig?.model || DEFAULT_MODEL_CONFIG.model,
-            max_tokens: oldConfig?.max_tokens || DEFAULT_MODEL_CONFIG.max_tokens,
-            temperature: oldConfig?.temperature || DEFAULT_MODEL_CONFIG.temperature,
-            presence_penalty: oldConfig?.presence_penalty || DEFAULT_MODEL_CONFIG.presence_penalty,
-            top_p: oldConfig?.top_p || DEFAULT_MODEL_CONFIG.top_p,
-            frequency_penalty: oldConfig?.frequency_penalty || DEFAULT_MODEL_CONFIG.frequency_penalty,
-            // Add the missing properties
-            enableThinking: DEFAULT_MODEL_CONFIG.enableThinking,
-            thinkingConfig: {
-              budget_tokens: DEFAULT_MODEL_CONFIG.thinkingConfig.budget_tokens
-            }
-          }
-        };
-      } else {
-        // Ensure existing configs also have the new properties
-        chat.config.modelConfig = {
-          ...chat.config.modelConfig,
-          enableThinking: chat.config.modelConfig.enableThinking ?? DEFAULT_MODEL_CONFIG.enableThinking,
-          thinkingConfig: {
-            budget_tokens: chat.config.modelConfig.thinkingConfig?.budget_tokens ?? DEFAULT_MODEL_CONFIG.thinkingConfig.budget_tokens
-          }
-        };
-      }
-    });
-
-    // Import folders logic
-    const { folderNameToIdMap, newFolders } = createFoldersFromLegacy(parsedData);
-
-    // Update folder references in chats
-    parsedData.forEach((chat) => {
-      if (chat.folder) {
-        chat.folder = folderNameToIdMap[chat.folder];
-      }
-    });
-
-    // Merge folders and chats
-    mergeFoldersAndChats(newFolders, parsedData);
-  };
-
-  const handleV1Import = (parsedData: ExportV1) => {
-    mergeFoldersAndChats(parsedData.folders, parsedData.chats);
-  };
   return (
     <>
       <label className='mb-2 block text-sm font-medium text-gray-900 dark:text-gray-300'>
@@ -193,6 +299,7 @@ const ImportChat = () => {
           className='flex-1 cursor-pointer rounded-md border border-gray-300 bg-gray-50 text-sm text-gray-800 file:cursor-pointer file:border-0 file:bg-gray-100 file:p-2 file:text-gray-700 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:file:bg-gray-700 dark:file:text-gray-200'
           type='file'
           ref={inputRef}
+          accept=".json"
         />
         <button
           className='btn btn-primary btn-small'
@@ -218,8 +325,9 @@ const ImportChat = () => {
 
 const ExportChat = () => {
   const { t } = useTranslation();
-  const chats = useStore.getState().chats;
-  const folders = useStore.getState().folders;
+  // Use hooks properly here too
+  const chats = useStore((state) => state.chats);
+  const folders = useStore((state) => state.folders);
 
   return (
     <div className='mt-6'>
@@ -241,60 +349,6 @@ const ExportChat = () => {
       </button>
     </div>
   );
-};
-
-const createFoldersFromLegacy = (chats: ChatInterface[]) => {
-  const folderNameToIdMap: Record<string, string> = {};
-  const parsedFolders: string[] = [];
-
-  chats.forEach((chat) => {
-    if (chat.folder && !parsedFolders.includes(chat.folder)) {
-      parsedFolders.push(chat.folder);
-      folderNameToIdMap[chat.folder] = uuidv4();
-    }
-  });
-
-  const newFolders: FolderCollection = parsedFolders.reduce(
-    (acc, curr, index) => {
-      const id = folderNameToIdMap[curr];
-      return {
-        ...acc,
-        [id]: {
-          id,
-          name: curr,
-          expanded: false,
-          order: index,
-        },
-      };
-    },
-    {}
-  );
-
-  return { folderNameToIdMap, newFolders };
-};
-
-const mergeFoldersAndChats = (
-  newFolders: FolderCollection,
-  newChats: ChatInterface[]
-) => {
-  const setFolders = useStore.getState().setFolders;
-  const setChats = useStore.getState().setChats;
-
-  // Update folder orders
-  const currentFolders = useStore.getState().folders;
-  const offset = Object.keys(newFolders).length;
-  Object.values(currentFolders).forEach((f) => (f.order += offset));
-
-  // Merge folders
-  setFolders({ ...newFolders, ...currentFolders });
-
-  // Merge chats
-  const currentChats = useStore.getState().chats;
-  if (currentChats) {
-    setChats([...newChats, ...currentChats]);
-  } else {
-    setChats(newChats);
-  }
 };
 
 export default ImportExportChat;

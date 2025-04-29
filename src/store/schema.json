@@ -1,0 +1,142 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "ChatAI Export Schema",
+  "required": ["version", "chats", "folders"],
+  "properties": {
+    "version": {
+      "type": "number",
+      "enum": [1],
+      "description": "Export format version"
+    },
+    "chats": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "messages", "config"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the chat"
+          },
+          "title": {
+            "type": "string",
+            "description": "Chat title"
+          },
+          "folder": {
+            "type": "string",
+            "description": "Optional folder ID this chat belongs to"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["content", "role"],
+              "properties": {
+                "content": {
+                  "type": "string",
+                  "description": "Message content"
+                },
+                "role": {
+                  "type": "string",
+                  "description": "Message sender role"
+                }
+              }
+            }
+          },
+          "config": {
+            "type": "object",
+            "required": ["provider", "modelConfig"],
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": ["anthropic", "openai"],
+                "description": "AI provider identifier"
+              },
+              "modelConfig": {
+                "type": "object",
+                "required": [
+                  "model",
+                  "max_tokens",
+                  "temperature",
+                  "presence_penalty",
+                  "top_p",
+                  "frequency_penalty",
+                  "enableThinking",
+                  "thinkingConfig"
+                ],
+                "properties": {
+                  "model": {
+                    "type": "string",
+                    "description": "Model identifier"
+                  },
+                  "max_tokens": {
+                    "type": "number",
+                    "description": "Maximum tokens for completion"
+                  },
+                  "temperature": {
+                    "type": "number",
+                    "description": "Temperature parameter for generation"
+                  },
+                  "presence_penalty": {
+                    "type": "number",
+                    "description": "Presence penalty parameter"
+                  },
+                  "top_p": {
+                    "type": "number",
+                    "description": "Top P parameter"
+                  },
+                  "frequency_penalty": {
+                    "type": "number",
+                    "description": "Frequency penalty parameter"
+                  },
+                  "enableThinking": {
+                    "type": "boolean",
+                    "description": "Whether thinking capability is enabled"
+                  },
+                  "thinkingConfig": {
+                    "type": "object",
+                    "required": ["budget_tokens"],
+                    "properties": {
+                      "budget_tokens": {
+                        "type": "number",
+                        "description": "Token budget for thinking"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "folders": {
+      "type": "object",
+      "patternProperties": {
+        "^.*$": {
+          "type": "object",
+          "required": ["id", "name", "expanded", "order"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique folder identifier"
+            },
+            "name": {
+              "type": "string",
+              "description": "Folder name"
+            },
+            "expanded": {
+              "type": "boolean",
+              "description": "Whether the folder is expanded in UI"
+            },
+            "order": {
+              "type": "number",
+              "description": "Folder display order"
+            }
+          }
+        }
+      }
+    }
+  }
+}
