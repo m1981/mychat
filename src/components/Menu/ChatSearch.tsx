@@ -4,13 +4,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import SearchBar from '@components/SearchBar';
 import useStore from '@store/store';
 
-const ChatSearch = ({
-  filter,
-  setFilter,
-}: {
+interface ChatSearchProps {
   filter: string;
   setFilter: React.Dispatch<React.SetStateAction<string>>;
-}) => {
+}
+
+const ChatSearch: React.FC<ChatSearchProps> = ({ filter, setFilter }) => {
   const [_filter, _setFilter] = useState<string>(filter);
   const generating = useStore((state) => state.generating);
 
@@ -19,14 +18,14 @@ const ChatSearch = ({
   };
 
   const debouncedUpdateFilter = useRef(
-    debounce((f) => {
+    debounce((f: string) => {
       setFilter(f);
     }, 500)
   ).current;
 
   useEffect(() => {
     debouncedUpdateFilter(_filter);
-  }, [_filter]);
+  }, [_filter, debouncedUpdateFilter]);
 
   return (
     <SearchBar

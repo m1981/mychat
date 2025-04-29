@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import CrossIcon2 from '@icon/CrossIcon2';
 import DownArrow from '@icon/DownArrow';
@@ -10,24 +10,17 @@ import ChatHistoryList from './ChatHistoryList';
 import MenuOptions from './MenuOptions';
 import NewChat from './NewChat';
 import NewFolder from './NewFolder';
+import ChatSearch from './ChatSearch';
 
-
-const Menu = () => {
+const Menu: React.FC = () => {
+  const [searchFilter, setSearchFilter] = useState('');
   const hideSideMenu = useStore((state) => state.hideSideMenu);
   const setHideSideMenu = useStore((state) => state.setHideSideMenu);
 
-  const windowWidthRef = useRef<number>(window.innerWidth);
-
-  useEffect(() => {
-    if (window.innerWidth < 768) setHideSideMenu(true);
-    window.addEventListener('resize', () => {
-      if (
-        windowWidthRef.current !== window.innerWidth &&
-        window.innerWidth < 768
-      )
-        setHideSideMenu(true);
-    });
-  }, []);
+  const handleSearchFilterChange = (newFilter: string) => {
+    console.log('[Menu] Setting new search filter:', newFilter);
+    setSearchFilter(newFilter);
+  };
 
   return (
     <>
@@ -44,7 +37,14 @@ const Menu = () => {
                 <NewChat />
                 <NewFolder />
               </div>
-              <ChatHistoryList />
+              <ChatSearch 
+                filter={searchFilter}
+                setFilter={handleSearchFilterChange}
+              />
+              <ChatHistoryList 
+                searchFilter={searchFilter}
+                onSearchChange={handleSearchFilterChange}
+              />
               <MenuOptions />
             </nav>
           </div>

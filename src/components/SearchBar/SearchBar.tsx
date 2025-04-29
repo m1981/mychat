@@ -14,6 +14,19 @@ const SearchBar = ({
 }) => {
   const { t } = useTranslation();
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('[SearchBar] Input value changed:', e.target.value);
+    console.log('[SearchBar] Current disabled state:', disabled);
+    console.log('[SearchBar] handleChange prop type:', typeof handleChange);
+    
+    handleChange(e);
+    
+    // Log after handler execution
+    console.log('[SearchBar] Handler executed');
+  };
+
+  console.log('[SearchBar] Rendering with value:', value);
+
   return (
     <div className={className}>
       <input
@@ -22,9 +35,7 @@ const SearchBar = ({
         className='text-gray-800 dark:text-white p-3 text-sm bg-transparent disabled:opacity-40  disabled:cursor-not-allowed transition-opacity m-0 w-full h-full focus:outline-none rounded border border-white/20'
         placeholder={t('search') as string}
         value={value}
-        onChange={(e) => {
-          handleChange(e);
-        }}
+        onChange={handleInputChange}
       />
     </div>
   );
