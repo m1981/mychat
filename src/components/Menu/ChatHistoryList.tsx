@@ -264,13 +264,15 @@ const ChatHistoryList = ({ searchFilter, onSearchChange }: ChatHistoryListProps)
                   ref={provided.innerRef}
                   className="flex flex-col gap-1"
                 >
-                  {Object.keys(chatFolders).map((folderId, index) => (
-                    <ChatFolder
-                      key={folderId}
-                      folderChats={chatFolders[folderId]}
-                      folderId={folderId}
-                    />
-                  ))}
+                  {Object.entries(chatFolders)
+                    .filter(([_, chats]) => chats.length > 0) // Only show folders with matching chats
+                    .map(([folderId, chats], index) => (
+                      <ChatFolder
+                        key={folderId}
+                        folderChats={chats}
+                        folderId={folderId}
+                      />
+                    ))}
                   {provided.placeholder}
                 </div>
               )}
@@ -279,7 +281,8 @@ const ChatHistoryList = ({ searchFilter, onSearchChange }: ChatHistoryListProps)
           {noChatFolders.map(({ title, index, id }) => (
             <ChatHistory title={title} key={`${title}-${id}`} chatIndex={index} />
           ))}
-          {!isLoading && noChatFolders.length === 0 && Object.keys(chatFolders).length === 0 && (
+          {!isLoading && noChatFolders.length === 0 && 
+           Object.values(chatFolders).every(chats => chats.length === 0) && (
             <div className="text-center py-4 text-gray-500 dark:text-gray-400">
               No chats found
             </div>
