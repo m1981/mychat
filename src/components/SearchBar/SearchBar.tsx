@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import CrossIcon from '@icon/CrossIcon';
 
 const SearchBar = ({
   value,
@@ -16,27 +17,47 @@ const SearchBar = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('[SearchBar] Input value changed:', e.target.value);
-    console.log('[SearchBar] Current disabled state:', disabled);
-    console.log('[SearchBar] handleChange prop type:', typeof handleChange);
-    
     handleChange(e);
-    
-    // Log after handler execution
-    console.log('[SearchBar] Handler executed');
   };
 
-  console.log('[SearchBar] Rendering with value:', value);
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      console.log('[SearchBar] ESC pressed, clearing search');
+      const syntheticEvent = {
+        target: { value: '' }
+      } as React.ChangeEvent<HTMLInputElement>;
+      handleChange(syntheticEvent);
+    }
+  }, [handleChange]);
+
+  const handleClearClick = useCallback(() => {
+    console.log('[SearchBar] Clear button clicked');
+    const syntheticEvent = {
+      target: { value: '' }
+    } as React.ChangeEvent<HTMLInputElement>;
+    handleChange(syntheticEvent);
+  }, [handleChange]);
 
   return (
-    <div className={className}>
+    <div className={`relative ${className}`}>
       <input
         disabled={disabled}
         type='text'
-        className='text-gray-800 dark:text-white p-3 text-sm bg-transparent disabled:opacity-40  disabled:cursor-not-allowed transition-opacity m-0 w-full h-full focus:outline-none rounded border border-white/20'
+        className='text-gray-800 dark:text-white p-3 text-sm bg-white dark:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity m-0 w-full h-full focus:outline-none rounded border border-gray-300 dark:border-white/20'
         placeholder={t('search') as string}
         value={value}
         onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
       />
+      {value && !disabled && (
+        <button
+          className='absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-gray-800 dark:bg-white rounded-full'
+          onClick={handleClearClick}
+          aria-label="Clear search"
+        >
+          <CrossIcon className='w-4 h-4 text-white dark:text-gray-800' />
+        </button>
+      )}
     </div>
   );
 };
