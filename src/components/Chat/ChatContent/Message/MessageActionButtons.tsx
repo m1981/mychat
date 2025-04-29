@@ -4,18 +4,21 @@ import CancelIcon from '@icon/CancelIcon';
 import CopyIcon from '@icon/CopyIcon';
 import DeleteIcon from '@icon/DeleteIcon';
 import EditIcon2 from '@icon/EditIcon2';
+import RefreshIcon from '@icon/RefreshIcon';
 import TickIcon from '@icon/TickIcon';
 import useStore from '@store/store';
 
 interface MessageButtonProps {
   onClick: (event: MouseEvent<HTMLButtonElement>) => void;
   icon: React.ReactNode;
+  title?: string;
 }
 
-const MessageButton: React.FC<MessageButtonProps> = ({ onClick, icon }) => (
+const MessageButton: React.FC<MessageButtonProps> = ({ onClick, icon, title }) => (
   <button
     className="invisible group-hover:visible p-1 hover:text-white"
     onClick={onClick}
+    title={title}
   >
     {icon}
   </button>
@@ -26,14 +29,11 @@ interface ActionButtonProps {
 }
 
 const RefreshButton: React.FC<ActionButtonProps> = ({ onClick }) => (
-  <button
-    className="invisible group-hover:visible px-2 py-1 text-xs
-    bg-gray-700 hover:bg-gray-800 text-gray-200 hover:text-white 
-    rounded-md transition-colors duration-200"
+  <MessageButton 
+    icon={<RefreshIcon />} 
     onClick={onClick}
-  >
-    Try again
-  </button>
+    title="Try again"
+  />
 );
 
 interface ToggleButtonProps {
@@ -41,11 +41,19 @@ interface ToggleButtonProps {
 }
 
 const EditButton: React.FC<ToggleButtonProps> = ({ setIsActive }) => (
-  <MessageButton icon={<EditIcon2 />} onClick={() => setIsActive(true)} />
+  <MessageButton 
+    icon={<EditIcon2 />} 
+    onClick={() => setIsActive(true)}
+    title="Edit message"
+  />
 );
 
 const DeleteButton: React.FC<ToggleButtonProps> = ({ setIsActive }) => (
-  <MessageButton icon={<DeleteIcon />} onClick={() => setIsActive(true)} />
+  <MessageButton 
+    icon={<DeleteIcon />} 
+    onClick={() => setIsActive(true)}
+    title="Delete message"
+  />
 );
 
 interface CopyButtonProps {
@@ -55,14 +63,19 @@ interface CopyButtonProps {
 const CopyButton: React.FC<CopyButtonProps> = ({ handleCopy }) => {
   const [isCopied, setIsCopied] = useState(false);
   
-  // Remove unused event parameter
   const onClick = () => {
     handleCopy();
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 3000);
   };
 
-  return <MessageButton icon={isCopied ? <TickIcon /> : <CopyIcon />} onClick={onClick} />;
+  return (
+    <MessageButton 
+      icon={isCopied ? <TickIcon /> : <CopyIcon />} 
+      onClick={onClick}
+      title={isCopied ? "Copied!" : "Copy message"}
+    />
+  );
 };
 
 interface MessageActionButtonsProps {
@@ -104,8 +117,16 @@ const MessageActionButtons: React.FC<MessageActionButtonsProps> = ({
     <div className="flex justify-end w-full mt-2 group">
       {isDelete ? (
         <>
-          <MessageButton icon={<CancelIcon />} onClick={() => setIsDelete(false)} />
-          <MessageButton icon={<TickIcon />} onClick={handleDelete} />
+          <MessageButton 
+            icon={<CancelIcon />} 
+            onClick={() => setIsDelete(false)} 
+            tooltip="Cancel deletion"
+          />
+          <MessageButton 
+            icon={<TickIcon />} 
+            onClick={handleDelete} 
+            tooltip="Confirm deletion"
+          />
         </>
       ) : (
         <>
