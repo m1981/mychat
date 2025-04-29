@@ -4,7 +4,7 @@ import CrossIcon2 from '@icon/CrossIcon2';
 import DownArrow from '@icon/DownArrow';
 import MenuIcon from '@icon/MenuIcon';
 import useStore from '@store/store';
-
+import { debug } from '@utils/debug';
 
 import ChatHistoryList from './ChatHistoryList';
 import MenuOptions from './MenuOptions';
@@ -13,12 +13,12 @@ import NewFolder from './NewFolder';
 import ChatSearch from './ChatSearch';
 
 const Menu: React.FC = () => {
-  const [searchFilter, setSearchFilter] = useState('');
+  const [searchFilter, setSearchFilter] = useState<string>('');
   const hideSideMenu = useStore((state) => state.hideSideMenu);
   const setHideSideMenu = useStore((state) => state.setHideSideMenu);
 
   const handleSearchFilterChange = (newFilter: string) => {
-    console.log('[Menu] Setting new search filter:', newFilter);
+    debug.log('ui', '[Menu] Setting new search filter:', newFilter);
     setSearchFilter(newFilter);
   };
 
@@ -39,7 +39,7 @@ const Menu: React.FC = () => {
               </div>
               <ChatSearch 
                 filter={searchFilter}
-                setFilter={handleSearchFilterChange}
+                setFilter={setSearchFilter}
               />
               <ChatHistoryList 
                 searchFilter={searchFilter}

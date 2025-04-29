@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
 import { shallow } from 'zustand/shallow';
+import { debug } from '@utils/debug';
 
 import useStore from '@store/store';
 import {
@@ -52,7 +53,7 @@ interface ChatHistoryListProps {
 }
 
 const ChatHistoryList = ({ searchFilter, onSearchChange }: ChatHistoryListProps) => {
-  console.log('[ChatHistoryList] Rendering with:', {
+  debug.log('ui', '[ChatHistoryList] Rendering with:', {
     searchFilter,
     currentChatIndex: useStore.getState().currentChatIndex,
     totalChats: useStore.getState().chats?.length

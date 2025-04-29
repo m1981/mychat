@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import CrossIcon from '@icon/CrossIcon';
+import { debug } from '@utils/debug';
 
 const SearchBar = ({
   value,
@@ -16,13 +17,13 @@ const SearchBar = ({
   const { t } = useTranslation();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('[SearchBar] Input value changed:', e.target.value);
+    debug.log('ui', '[SearchBar] Input value changed:', e.target.value);
     handleChange(e);
   };
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Escape') {
-      console.log('[SearchBar] ESC pressed, clearing search');
+      debug.log('ui', '[SearchBar] ESC pressed, clearing search');
       const syntheticEvent = {
         target: { value: '' }
       } as React.ChangeEvent<HTMLInputElement>;
@@ -31,7 +32,7 @@ const SearchBar = ({
   }, [handleChange]);
 
   const handleClearClick = useCallback(() => {
-    console.log('[SearchBar] Clear button clicked');
+    debug.log('ui', '[SearchBar] Clear button clicked');
     const syntheticEvent = {
       target: { value: '' }
     } as React.ChangeEvent<HTMLInputElement>;

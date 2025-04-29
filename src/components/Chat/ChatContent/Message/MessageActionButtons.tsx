@@ -119,13 +119,13 @@ const MessageActionButtons: React.FC<MessageActionButtonsProps> = ({
         <>
           <MessageButton 
             icon={<CancelIcon />} 
-            onClick={() => setIsDelete(false)} 
-            tooltip="Cancel deletion"
+            onClick={() => setIsDelete(false)}
+            title="Cancel deletion"
           />
           <MessageButton 
             icon={<TickIcon />} 
-            onClick={handleDelete} 
-            tooltip="Confirm deletion"
+            onClick={handleDelete}
+            title="Confirm deletion"
           />
         </>
       ) : (

@@ -52,7 +52,6 @@ const ImportChat = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [alert, setAlert] = useState<ImportAlert | null>(null);
   
-  // Use hooks properly instead of getState()
   const setChats = useStore((state) => state.setChats);
   const setFolders = useStore((state) => state.setFolders);
 
@@ -226,7 +225,7 @@ const ImportChat = () => {
 
     try {
       const fileContent = await file.text();
-      let importData;
+      let importData: any;
       
       try {
         importData = JSON.parse(fileContent);
@@ -240,7 +239,7 @@ const ImportChat = () => {
 
       if (Array.isArray(importData)) {
         // Single chat or array of chats format
-        processedChats = importData.map((chat, index) => {
+        processedChats = importData.map((chat: any, index: number) => {
           validateChat(chat, index);
           return chat as ChatInterface;
         });
@@ -254,7 +253,7 @@ const ImportChat = () => {
           throw new Error("Invalid format: 'chats' must be an array");
         }
 
-        processedChats = importData.chats.map((chat, index) => {
+        processedChats = importData.chats.map((chat: any, index: number) => {
           validateChat(chat, index);
           return chat as ChatInterface;
         });

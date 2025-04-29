@@ -1,5 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
+import { debug } from '@utils/debug';
 
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
 import CancelIcon from '@icon/CancelIcon';
@@ -96,7 +97,7 @@ const ChatHistory = React.memo(
     // Add debug logging for chat selection
     const handleChatClick = () => {
       if (!generating) {
-        console.log('[ChatHistory] Selecting chat:', {
+        debug.log('ui', '[ChatHistory] Selecting chat:', {
           title,
           originalIndex: chatIndex,
           currentStoreState: {
