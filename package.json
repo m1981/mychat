@@ -48,6 +48,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.38.0",
     "@dqbd/tiktoken": "^1.0.2",
+    "@sentry/react": "^9.15.0",
     "@types/react-beautiful-dnd": "^13.1.8",
     "depcheck": "^1.4.7",
     "highlight.js": "^11.11.1",

@@ -1,6 +1,8 @@
 
 import React, { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
+import * as Sentry from '@sentry/react';
+import { BrowserTracing } from "@sentry/browser";
 
 import Chat from '@components/Chat';
 import Menu from '@components/Menu';
@@ -12,6 +14,22 @@ import { Theme } from '@type/theme';
 
 import i18n from './i18n';
 
+// Initialize Sentry with better production configuration
+Sentry.init({
+  dsn: "https://b246997c418bfddd2af1194a62c39fe1@o4506736184721408.ingest.us.sentry.io/4509238037446656",
+  environment: process.env.NODE_ENV,
+  enabled: process.env.NODE_ENV === 'production',
+  tracesSampleRate: 0.1,
+  sendDefaultPii: true,
+  beforeSend(event) {
+    // Clean up any sensitive data if needed
+    if (event.request?.headers) {
+      delete event.request.headers['Authorization'];
+    }
+    return event;
+  }
+});
+
 function App() {
   const initialiseNewChat = useInitialiseNewChat();
   const setChats = useStore((state) => state.setChats);
@@ -19,15 +37,28 @@ function App() {
   const setApiKey = useStore((state) => state.setApiKey);
   const setCurrentChatIndex = useStore((state) => state.setCurrentChatIndex);
 
+  const handleErrorClick = () => {
+    try {
+      throw new Error("This is your first error!");
+    } catch (error) {
+      Sentry.captureException(error);
+      throw error; // Re-throw to trigger the ErrorBoundary
+    }
+  };
+
   useEffect(() => {
+    try {
     document.documentElement.lang = i18n.language;
     i18n.on('languageChanged', (lng) => {
       document.documentElement.lang = lng;
     });
+    } catch (error) {
+      Sentry.captureException(error);
+    }
   }, []);
 
   useEffect(() => {
-
+    try {
     const oldChats = localStorage.getItem('chats');
     const apiKey = localStorage.getItem('apiKey');
     const theme = localStorage.getItem('theme');
@@ -54,12 +85,12 @@ function App() {
           initialiseNewChat();
         }
       } catch (e: unknown) {
-        console.log(e);
+          Sentry.captureException(e);
+          console.error('Failed to parse chats:', e);
         initialiseNewChat();
       }
       localStorage.removeItem('chats');
     } else {
-      // existing local storage
       const chats = useStore.getState().chats;
       const currentChatIndex = useStore.getState().currentChatIndex;
       if (!chats || chats.length === 0) {
@@ -72,16 +103,54 @@ function App() {
         setCurrentChatIndex(0);
       }
     }
+    } catch (error) {
+      Sentry.captureException(error);
+    }
   }, []);
 
   return (
-    <div className='overflow-hidden w-full h-full relative'>
-      <Menu />
-      <Chat />
-      <Toaster />
-      {process.env.NODE_ENV === 'development' && <Debug />}
-    </div>
+    <Sentry.ErrorBoundary 
+      fallback={<ErrorFallback />}
+      onError={(error) => {
+        Sentry.captureException(error);
+        console.error("Error caught by boundary:", error);
+      }}
+    >
+      <div className='overflow-hidden w-full h-full relative'>
+        <Menu />
+        <Chat />
+        <Toaster />
+        {process.env.NODE_ENV === 'development' && (
+          <>
+            <Debug />
+            <button 
+              className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded"
+              onClick={handleErrorClick}
+            >
+              Break the world
+            </button>
+          </>
+        )}
+      </div>
+    </Sentry.ErrorBoundary>
   );
 }
+
+// Error Fallback Component
+const ErrorFallback = () => {
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="text-center p-6 bg-gray-100 rounded-lg">
+        <h2 className="text-xl font-bold mb-4">Oops! Something went wrong</h2>
+        <button
+          className="bg-blue-500 text-white px-4 py-2 rounded"
+          onClick={() => window.location.reload()}
+        >
+          Refresh Page
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export default App;

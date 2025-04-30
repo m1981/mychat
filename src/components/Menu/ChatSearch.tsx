@@ -1,8 +1,8 @@
 import { debounce } from 'lodash';
 import React, { useEffect, useRef, useState } from 'react';
-
 import SearchBar from '@components/SearchBar';
 import useStore from '@store/store';
+import { debug } from '@utils/debug';
 
 interface ChatSearchProps {
   filter: string;
@@ -14,12 +14,14 @@ const ChatSearch: React.FC<ChatSearchProps> = ({ filter, setFilter }) => {
   const generating = useStore((state) => state.generating);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    debug.log('ui', '[ChatSearch] Input changed:', e.target.value);
     _setFilter(e.target.value);
   };
 
   const debouncedUpdateFilter = useRef(
-    debounce((f: string) => {
-      setFilter(f);
+    debounce((value: string) => {
+      debug.log('ui', '[ChatSearch] Debounced update:', value);
+      setFilter(value);
     }, 500)
   ).current;
 

@@ -28,6 +28,7 @@ export const getChatCompletion = async (
     stream: false
   };
 
+  try {
   const response = await fetch(`/api/chat/${provider.id}`, {
     method: 'POST',
     headers: {
@@ -45,6 +46,15 @@ export const getChatCompletion = async (
 
   const data = await response.json();
   return provider.parseResponse(data);
+  } catch (error) {
+    Sentry.withScope((scope) => {
+      scope.setExtra('messages', messages);
+      scope.setExtra('config', config);
+      scope.setTag('endpoint', 'chat-completions');
+      Sentry.captureException(error);
+    });
+    throw error;
+  }
 };
 
 export const getChatCompletionStream = async (
