@@ -58,6 +58,15 @@ const devConfig: UserConfig = {
     fs: {
       strict: false,
       allow: ['/app']
+    },
+    // Add proxy configuration to forward API requests to Next.js server
+    proxy: {
+      '/api': {
+        target: 'http://api:3000', // Use the service name from docker-compose
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+      }
     }
   },
   optimizeDeps: {
@@ -75,6 +84,7 @@ export default defineConfig(({ command, mode }) => {
     console.log('🚀 Running development config with mode:', mode);
     console.log('📁 Current working directory:', process.cwd());
     console.log('📦 Node modules exists:', fs.existsSync('/app/node_modules'));
+    console.log('🔄 API requests will be proxied to: http://localhost:3000');
     return { ...baseConfig, ...devConfig };
   }
   throw new Error('This config is for development only');
