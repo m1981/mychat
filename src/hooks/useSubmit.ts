@@ -252,7 +252,8 @@ const useSubmit = () => {
             );
             setChats(updatedChats);
           },
-          streamHandlerRef.current
+          streamHandlerRef.current,
+          services.abortController.current
         );
 
         // Submit request

@@ -2,7 +2,6 @@
 import React, { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import * as Sentry from '@sentry/react';
-import { BrowserTracing } from "@sentry/browser";
 
 import Chat from '@components/Chat';
 import Menu from '@components/Menu';

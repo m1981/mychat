@@ -14,7 +14,8 @@ export class ChatSubmissionService implements SubmissionService {
     private provider: Provider,
     private apiKey: string,
     private onContent: (content: string) => void,
-    private streamHandler: ChatStreamHandler
+    private streamHandler: ChatStreamHandler,
+    private abortController?: AbortController
   ) {}
 
   async submit(messages: MessageInterface[], config: ModelConfig): Promise<void> {
@@ -33,7 +34,8 @@ export class ChatSubmissionService implements SubmissionService {
         messages: formattedRequest.messages,
         config: formattedRequest,
         apiKey: this.apiKey,
-      })
+      }),
+      signal: this.abortController?.signal
     });
 
     if (!response.ok) {

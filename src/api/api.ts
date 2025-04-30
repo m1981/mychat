@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react';
 import { ModelConfig, MessageInterface } from '@type/chat';
 import { ProviderKey } from '@type/chat';
 import { providers } from '@type/providers';
@@ -47,7 +48,7 @@ export const getChatCompletion = async (
   const data = await response.json();
   return provider.parseResponse(data);
   } catch (error) {
-    Sentry.withScope((scope) => {
+    Sentry.withScope((scope: Sentry.Scope) => {
       scope.setExtra('messages', messages);
       scope.setExtra('config', config);
       scope.setTag('endpoint', 'chat-completions');
