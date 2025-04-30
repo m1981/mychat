@@ -16,18 +16,14 @@ interface SSEOptions {
 }
 
 function createEventSource(url: string, attempt: number = 0): EventSource {
-  console.log(`🔍 Creating EventSource, attempt ${attempt}`);
   return new EventSource(url);
 }
 
 export function useSSE(url: string, options: SSEOptions) {
-  console.log('🔍 Hook called with:', { url, options });
-
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
 
   const cleanup = () => {
-    console.log('🔍 Cleanup running');
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
     }
@@ -46,11 +42,8 @@ export function useSSE(url: string, options: SSEOptions) {
   };
 
   useEffect(() => {
-    console.log('🔍 Effect running');
-
     const eventSource = new EventSource(url);
     eventSourceRef.current = eventSource;
-    console.log('🔍 EventSource created');
 
     // Add event listeners
     eventSource.addEventListener('message', options.onMessage);
@@ -66,7 +59,6 @@ export function useSSE(url: string, options: SSEOptions) {
 
   return {
     close: () => {
-      console.log('🔍 Manual close called');
       cleanup();
     }
   };
