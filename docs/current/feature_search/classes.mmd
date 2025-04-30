@@ -1,0 +1,41 @@
+classDiagram
+    class SearchBar {
+        +string value
+        +ChangeEventHandler~HTMLInputElement~ handleChange
+        +string? className
+        +boolean? disabled
+        +render()
+    }
+
+    class ChatSearch {
+        -string _filter
+        -Function _setFilter
+        -Function debouncedUpdateFilter
+        +string filter
+        +Dispatch~SetStateAction~string~~ setFilter
+        -handleChange(e: ChangeEvent)
+        +render()
+    }
+
+    class ChatHistoryList {
+        -string searchFilter
+        -filterChats(chats: Chat[]): Chat[]
+        +render()
+    }
+
+    class ChatHistory {
+        +string title
+        +number chatIndex
+        -boolean isDelete
+        -boolean isEdit
+        -string _title
+        -RefObject~HTMLInputElement~ inputRef
+        +render()
+    }
+
+    SearchBar <-- ChatSearch : renders
+    ChatHistoryList --> ChatHistory : renders
+    ChatSearch ..> ChatHistoryList : provides filter
+
+    note for ChatSearch "Handles debounced search input"
+    note for ChatHistoryList "Applies filter to visible chats"
