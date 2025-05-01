@@ -35,6 +35,8 @@ const Message = React.memo(
     const setChats = useStore((state) => state.setChats);
     const messageRef = useRef<HTMLDivElement | null>(null);
     const [showBottomActions, setShowBottomActions] = useState(false);
+    // Add a ref to track if refresh is in progress
+    const refreshInProgressRef = useRef(false);
 
     const handleDelete = () => {
       const updatedChats: ChatInterface[] = JSON.parse(
@@ -65,14 +67,49 @@ const Message = React.memo(
       setChats(updatedChats);
     };
 
-    const handleRefresh = () => {
-      const updatedChats: ChatInterface[] = JSON.parse(
-        JSON.stringify(useStore.getState().chats)
-      );
-      const updatedMessages = updatedChats[currentChatIndex].messages;
-      updatedMessages.splice(updatedMessages.length - 1, 1);
-      setChats(updatedChats);
-      handleSubmit();
+    const handleRefresh = async () => {
+      console.log('🔄 handleRefresh called');
+      
+      // Prevent multiple refreshes
+      if (refreshInProgressRef.current || useStore.getState().generating) {
+        console.log('⚠️ Refresh already in progress or generating, ignoring');
+        return;
+      }
+      
+      refreshInProgressRef.current = true;
+      
+      try {
+        // Get current state to avoid race conditions
+        const currentState = useStore.getState();
+        const updatedChats: ChatInterface[] = JSON.parse(
+          JSON.stringify(currentState.chats)
+        );
+        
+        // Remove the last assistant message
+        const updatedMessages = updatedChats[currentChatIndex].messages;
+        if (updatedMessages[updatedMessages.length - 1]?.role === 'assistant') {
+          updatedMessages.pop();
+        }
+        
+        // Update state and wait for it to complete
+        await new Promise<void>(resolve => {
+          console.log('📝 Updating chats before refresh');
+          setChats(updatedChats);
+          // Use a timeout to ensure state is updated
+          setTimeout(resolve, 100);
+        });
+        
+        console.log('📤 Calling handleSubmit from refresh');
+        // Now submit with updated state
+        handleSubmit();
+      } catch (error) {
+        console.error('❌ Error during refresh:', error);
+      } finally {
+        // Reset the flag after a delay to prevent rapid re-clicks
+        setTimeout(() => {
+          refreshInProgressRef.current = false;
+        }, 500);
+      }
     };
 
     const handleCopy = () => {
