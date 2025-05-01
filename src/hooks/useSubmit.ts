@@ -59,15 +59,37 @@ const useSubmit = () => {
   const submissionLockRef = useRef(new SubmissionLock());
   const storageServiceRef = useRef(new StorageService(STORAGE_CONFIG));
   
-  // Single source of truth for request state
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const isRequestActiveRef = useRef<boolean>(false);
-
+  // Single request state with clear ownership
+  const requestState = useRef({
+    controller: null as AbortController | null,
+    isActive: false
+  });
+  
+  // Cleanup function that's called in exactly ONE place
+  const cleanupRequest = useCallback((reason: string) => {
+    console.log(`🧹 Cleaning up request: ${reason}`);
+    
+    if (requestState.current.controller) {
+      requestState.current.controller.abort(reason);
+      requestState.current.controller = null;
+    }
+    
+    requestState.current.isActive = false;
+    setGenerating(false);
+  }, [setGenerating]);
+  
+  // Only ONE effect for component lifecycle
+  useEffect(() => {
+    return () => {
+      cleanupRequest('Component unmounted');
+    };
+  }, [cleanupRequest]);
+  
   // Add a helper function to track state changes
   const logRequestState = (location: string) => {
     console.log(`🔍 REQUEST STATE [${location}]`, {
-      isActive: isRequestActiveRef.current,
-      hasController: !!abortControllerRef.current,
+      isActive: requestState.current.isActive,
+      hasController: !!requestState.current.controller,
       generating
     });
   };
@@ -125,7 +147,7 @@ const useSubmit = () => {
 
   // Group services for easier access
   const services: Services = {
-    abortController: abortControllerRef,
+    abortController: requestState,
     submission: submissionLockRef.current,
     storage: storageServiceRef.current,
     titleGeneration: useRef(new TitleGenerationService(
@@ -152,25 +174,6 @@ const useSubmit = () => {
       logRequestState('stream handler cleanup');
     };
   }, [providerSetup.provider, generating]);
-
-  // Separate effect for component unmount cleanup
-  useEffect(() => {
-    console.log('🔄 Setting up component unmount cleanup effect');
-    
-    return () => {
-      console.log('🧹 Component UNMOUNT cleanup triggered');
-      console.log('🧹 isRequestActive:', isRequestActiveRef.current);
-      console.log('🧹 abortController exists:', !!services.abortController.current);
-      
-      if (services.abortController.current) {
-        console.log('🧹 Aborting controller in component unmount');
-        services.abortController.current.abort('Component unmounted');
-        services.abortController.current = null;
-        isRequestActiveRef.current = false;
-        console.log('🧹 Reset request state in component unmount');
-      }
-    };
-  }, []); // Empty dependency array means this only runs on mount/unmount
 
   // Chat state management utilities
   const chatUtils = {
@@ -234,99 +237,24 @@ const useSubmit = () => {
   };
 
   const stopGeneration = useCallback(() => {
-    console.log('⏹️ stopGeneration called');
-    logRequestState('stopGeneration start');
-    
-    if (services.abortController.current) {
-      console.log('⚡ Aborting current request');
-      services.abortController.current.abort('User stopped generation');
-      console.log('⚡ Abort signal sent');
-    } else {
-      console.log('⚠️ No active request to abort');
-    }
-    
-    // Always set generating to false to update UI
-    setGenerating(false);
-    logRequestState('stopGeneration after setting generating false');
-    console.log('⏹️ Generation state set to false');
-  }, [setGenerating, generating]);
+    cleanupRequest('User stopped generation');
+  }, [cleanupRequest]);
 
   const handleSubmit = useCallback(async () => {
-    console.log('🚀 handleSubmit called');
-    logRequestState('handleSubmit start');
-    
-    if (!services.submission.lock()) {
-      console.warn('⚠️ Submission already in progress');
-      return;
+    // Clean up any existing request first
+    if (requestState.current.isActive) {
+      cleanupRequest('New request started');
     }
     
-    console.log('🔒 Submission lock acquired');
-    
-    // Cancel any existing request first
-    if (services.abortController.current) {
-      console.log('🛑 Aborting existing request');
-      services.abortController.current.abort('New request started');
-    }
-    
-    // Create new controller and update state
-    services.abortController.current = new AbortController();
-    isRequestActiveRef.current = true;
-    console.log('🎮 Created new AbortController', services.abortController.current);
-    logRequestState('after controller creation');
+    // Set up new request
+    const controller = new AbortController();
+    requestState.current.controller = controller;
+    requestState.current.isActive = true;
     
     try {
-      console.log('📊 Checking storage quota');
-      await services.storage.checkQuota();
-      logRequestState('after quota check');
-      
-      console.log('🔄 Setting generating state');
       setGenerating(true);
-      setError(null);
-      logRequestState('after setting generating state');
-      
-      // Get current state
-      const currentState = utils.getStoreState();
-      console.log('📝 Current state retrieved', { 
-        chatIndex: currentState.currentChatIndex,
-        chatCount: currentState.chats.length
-      });
-      
-      // Initialize chat with empty assistant message
-      const updatedChats = chatUtils.clone(currentState.chats);
-      const currentChat = updatedChats[currentState.currentChatIndex];
-      const currentMessages = currentChat.messages;
-      
-      console.log('💬 Current messages before adding assistant message', 
-        currentMessages.map(m => ({ role: m.role, contentLength: m.content.length }))
-      );
-      
-      currentMessages.push({
-        role: 'assistant',
-        content: '',
-      });
-      
-      console.log('💬 Updated messages after adding assistant message', 
-        currentMessages.map(m => ({ role: m.role, contentLength: m.content.length }))
-      );
-      
-      setChats(updatedChats);
-      
-      // Get model configuration from the chat
-      console.log('⚙️ Chat config', currentChat.config);
-      console.log('⚙️ Model config from chat', currentChat.config.modelConfig);
-      console.log('⚙️ Default model config', DEFAULT_MODEL_CONFIG);
-      
-      const modelConfig: ModelConfig = {
-        ...DEFAULT_MODEL_CONFIG,
-        ...currentChat.config.modelConfig // Use modelConfig from chat config
-      };
-      
-      console.log('⚙️ Final model config', modelConfig);
       
       // Create submission service with the controller
-      console.log('🔧 Creating submission service');
-      logRequestState('before creating submission service');
-      
       const submissionService = new ChatSubmissionService(
         providerSetup.provider,
         providerSetup.apiKey,
@@ -342,7 +270,7 @@ const useSubmit = () => {
           setChats(updatedChats);
         },
         streamHandlerRef.current,
-        services.abortController.current
+        controller
       );
       
       console.log('📤 Submitting request');
@@ -382,11 +310,11 @@ const useSubmit = () => {
       setGenerating(false);
       
       // Only reset request state if this wasn't an abort
-      if (services.abortController.current && 
-          services.abortController.current.signal.reason !== 'User stopped generation') {
+      if (requestState.current.isActive && 
+          !controller.signal.aborted) {
         console.log('🧹 Resetting request state - normal completion');
-        isRequestActiveRef.current = false;
-        services.abortController.current = null;
+        requestState.current.isActive = false;
+        requestState.current.controller = null;
       } else {
         console.log('🧹 Not resetting request state - was aborted by user');
       }
@@ -445,14 +373,14 @@ const useSubmit = () => {
     
     return () => {
       console.log('🧹 Cleanup effect triggered');
-      console.log('🧹 isRequestActive:', isRequestActiveRef.current);
-      console.log('🧹 abortController exists:', !!services.abortController.current);
+      console.log('🧹 isRequestActive:', requestState.current.isActive);
+      console.log('🧹 abortController exists:', !!requestState.current.controller);
       
-      if (services.abortController.current) {
+      if (requestState.current.controller) {
         console.log('🧹 Aborting controller in cleanup');
-        services.abortController.current.abort('Component unmounted');
-        services.abortController.current = null;
-        isRequestActiveRef.current = false;
+        requestState.current.controller.abort('Component unmounted');
+        requestState.current.controller = null;
+        requestState.current.isActive = false;
         console.log('🧹 Reset request state in cleanup');
       }
     };
