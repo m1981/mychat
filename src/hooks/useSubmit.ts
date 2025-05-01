@@ -58,7 +58,10 @@ const useSubmit = () => {
   // Create refs for services that need to persist
   const submissionLockRef = useRef(new SubmissionLock());
   const storageServiceRef = useRef(new StorageService(STORAGE_CONFIG));
+  
+  // Single source of truth for request state
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isRequestActiveRef = useRef<boolean>(false);
 
   // Initialize stream handler with provider
   const streamHandlerRef = useRef<ChatStreamHandler>(
@@ -133,8 +136,9 @@ const useSubmit = () => {
     return () => {
       console.log('🧹 Cleaning up resources');
       if (services.abortController.current) {
-        services.abortController.current.abort();
+        services.abortController.current.abort('Component unmounted');
         services.abortController.current = null;
+        isRequestActiveRef.current = false;
       }
     };
   }, [providerSetup.provider]);
@@ -200,40 +204,54 @@ const useSubmit = () => {
     }
   };
 
-  // Single source of truth for request state
-  const requestStateRef = useRef({
-    controller: null as AbortController | null,
-    isActive: false
-  });
-
   const stopGeneration = useCallback(() => {
-    if (requestStateRef.current.isActive && requestStateRef.current.controller) {
+    if (isRequestActiveRef.current && services.abortController.current) {
       console.log('⚡ Aborting current request');
-      requestStateRef.current.controller.abort();
+      services.abortController.current.abort('User stopped generation');
       // Don't null the controller here - do it in the finally block of the request
     }
     setGenerating(false);
   }, [setGenerating]);
 
   const handleSubmit = useCallback(async () => {
-    if (!services.submission.lock()) return;
+    if (!services.submission.lock()) {
+      console.warn('Submission already in progress');
+      return;
+    }
     
     // Cancel any existing request first
-    if (requestStateRef.current.isActive && requestStateRef.current.controller) {
-      requestStateRef.current.controller.abort('New request started');
+    if (isRequestActiveRef.current && services.abortController.current) {
+      services.abortController.current.abort('New request started');
     }
     
     // Create new controller and update state
-    const controller = new AbortController();
-    requestStateRef.current = {
-      controller,
-      isActive: true
-    };
+    services.abortController.current = new AbortController();
+    isRequestActiveRef.current = true;
     
     try {
+      await services.storage.checkQuota();
       setGenerating(true);
       setError(null);
       
+      // Get current state
+      const currentState = utils.getStoreState();
+      
+      // Initialize chat with empty assistant message
+      const updatedChats = chatUtils.clone(currentState.chats);
+      const currentChat = updatedChats[currentState.currentChatIndex];
+      const currentMessages = currentChat.messages;
+      currentMessages.push({
+        role: 'assistant',
+        content: '',
+      });
+      setChats(updatedChats);
+      
+      // Get model configuration from the chat
+      const modelConfig: ModelConfig = {
+        ...DEFAULT_MODEL_CONFIG,
+        ...currentChat.config.modelConfig // Use modelConfig from chat config
+      };
+
       // Create submission service with the controller
       const submissionService = new ChatSubmissionService(
         providerSetup.provider,
@@ -242,20 +260,25 @@ const useSubmit = () => {
           const latestState = utils.getStoreState();
           const updatedChats = chatUtils.updateMessageContent(
             latestState.chats,
-            state.currentChatIndex,
+            latestState.currentChatIndex,
             content
           );
           setChats(updatedChats);
         },
         streamHandlerRef.current,
-        controller // Pass the controller from our ref
+        services.abortController.current
       );
+
+      // Use type assertion to add stream property
+      await submissionService.submit(currentMessages, {
+        ...modelConfig,
+        stream: true
+      } as ModelConfig);
+      await handleTitleGeneration();
       
-      await submissionService.submit(currentMessages, modelConfig);
-      
-    } catch (error) {
+    } catch (error: unknown) {
       // Specifically handle abort errors
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         console.log('Request was aborted:', error.message);
       } else {
         console.error('❌ Submit error:', error);
@@ -264,12 +287,12 @@ const useSubmit = () => {
     } finally {
       // Clean up regardless of success or failure
       setGenerating(false);
-      requestStateRef.current.isActive = false;
+      isRequestActiveRef.current = false;
       services.submission.unlock();
     }
-  }, []);
+  }, [setGenerating, setError, setChats, providerSetup.provider, providerSetup.apiKey]);
 
-  const regenerateMessage = async () => {
+  const regenerateMessage = useCallback(async () => {
     if (generating || !chats) {
       return;
     }
@@ -282,7 +305,7 @@ const useSubmit = () => {
 
     setChats(updatedChats);
     await handleSubmit();
-  };
+  }, [generating, chats, currentChatIndex, setChats, handleSubmit]);
 
   const handleTitleGeneration = async () => {
     try {
@@ -304,12 +327,10 @@ const useSubmit = () => {
   // Component cleanup
   useEffect(() => {
     return () => {
-      if (requestStateRef.current.controller) {
-        requestStateRef.current.controller.abort('Component unmounted');
-        requestStateRef.current = {
-          controller: null,
-          isActive: false
-        };
+      if (services.abortController.current) {
+        services.abortController.current.abort('Component unmounted');
+        services.abortController.current = null;
+        isRequestActiveRef.current = false;
       }
     };
   }, []);
