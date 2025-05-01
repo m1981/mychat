@@ -62,22 +62,10 @@ const devConfig: UserConfig = {
     // Add proxy configuration to forward API requests to Next.js server
     proxy: {
       '/api': {
-        target: 'http://localhost:3000', // Change this if your API is in a different container
+        target: 'http://api:3000', // Use the service name from docker-compose
         changeOrigin: true,
         secure: false,
         ws: true,
-        // Add logging to debug proxy issues
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
-            console.log('proxy error', err);
-          });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('Sending Request to the Target:', req.method, req.url);
-          });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
-          });
-        },
       }
     }
   },

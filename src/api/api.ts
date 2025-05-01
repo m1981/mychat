@@ -64,9 +64,6 @@ export const getChatCompletion = async (
   }
 };
 
-// Add a flag to use the mock API
-const USE_MOCK_API = true; // Set to false to use real API
-
 export const getChatCompletionStream = async (
   providerKey: ProviderKey,
   messages: MessageInterface[],
@@ -76,10 +73,10 @@ export const getChatCompletionStream = async (
   const provider = providers[providerKey];
   const formattedRequest = provider.formatRequest(messages, { ...config, stream: true });
 
-  // Use mock API if enabled
-  const endpoint = USE_MOCK_API 
-    ? `/api/chat/mock?provider=${providerKey}&delay=200&messages=50`
-    : `/api/chat/${providerKey}`;
+  // Determine API endpoint - use mock if in development mode and mock is enabled
+  const endpoint = ENV.MOCK_API.ENABLED 
+    ? `/api/chat/mock?provider=${provider.id}&delay=${ENV.MOCK_API.DELAY_MS}&messages=${ENV.MOCK_API.MESSAGES}`
+    : `/api/chat/${provider.id}`;
 
   return {
     url: endpoint,
