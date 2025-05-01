@@ -30,28 +30,23 @@ interface Services {
 // Add a global submission manager outside of the hook
 const globalSubmissionManager = {
   isSubmitting: false,
-  abortController: null as AbortController | null,
   
   startSubmission() {
     console.log('🌎 Global submission started');
     this.isSubmitting = true;
-    this.abortController = new AbortController();
-    return this.abortController;
+    // No longer creating an abort controller here
+    return true;
   },
   
   endSubmission() {
     console.log('🌎 Global submission ended');
     this.isSubmitting = false;
-    this.abortController = null;
   },
   
   abort(reason: string) {
     console.log(`🌎 Global submission aborted: ${reason}`);
-    if (this.abortController) {
-      this.abortController.abort(reason);
-    }
     this.isSubmitting = false;
-    this.abortController = null;
+    // No longer aborting here - Zustand will handle it
   }
 };
 
@@ -266,8 +261,8 @@ const useSubmit = () => {
       return;
     }
     
-    // Start global submission
-    const controller = globalSubmissionManager.startSubmission();
+    // Start global submission - no longer getting a controller
+    globalSubmissionManager.startSubmission();
     
     try {
       if (!services.submission.lock()) {
@@ -279,9 +274,9 @@ const useSubmit = () => {
       // Start tracking with state machine
       submission.dispatch({ type: 'SUBMIT_START' });
       
-      // Start request in Zustand
+      // Start request in Zustand - this creates the abort controller
       console.log('🔄 Starting request via Zustand');
-      startRequest();
+      const controller = startRequest();
       
       // Check storage quota
       submission.dispatch({ type: 'PREPARING' });
@@ -311,7 +306,7 @@ const useSubmit = () => {
         ...currentChat.config.modelConfig
       };
       
-      // Create submission service
+      // Create submission service - no longer passing controller
       console.log('🔧 Creating submission service');
       const submissionService = new ChatSubmissionService(
         providerSetup.provider,
@@ -329,8 +324,8 @@ const useSubmit = () => {
           );
           setChats(updatedChats);
         },
-        streamHandlerRef.current,
-        controller
+        streamHandlerRef.current
+        // No longer passing controller
       );
       
       // Submit request
