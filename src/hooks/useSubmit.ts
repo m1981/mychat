@@ -216,8 +216,13 @@ const useSubmit = () => {
     if (isRequestActiveRef.current && services.abortController.current) {
       console.log('⚡ Aborting current request');
       services.abortController.current.abort('User stopped generation');
-      // Don't null the controller here - do it in the finally block of the request
+      // Don't reset the state here - let the finally block in handleSubmit do it
+      console.log('⚡ Abort signal sent');
+    } else {
+      console.log('⚠️ No active request to abort');
     }
+    
+    // Always set generating to false to update UI
     setGenerating(false);
     console.log('⏹️ Generation state set to false');
   }, [setGenerating]);
@@ -342,7 +347,12 @@ const useSubmit = () => {
       // Clean up regardless of success or failure
       console.log('🧹 Cleaning up after submission');
       setGenerating(false);
+      
+      // Only reset request state here, after everything is done
+      console.log('🧹 Resetting request state');
       isRequestActiveRef.current = false;
+      services.abortController.current = null;
+      
       services.submission.unlock();
       console.log('🔓 Submission lock released');
     }
