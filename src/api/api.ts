@@ -2,7 +2,6 @@ import * as Sentry from '@sentry/react';
 import { ModelConfig, MessageInterface } from '@type/chat';
 import { ProviderKey } from '@type/chat';
 import { providers } from '@type/providers';
-import { ENV } from '@config/env';
 
 export const getChatCompletion = async (
   providerKey: ProviderKey,
@@ -31,28 +30,23 @@ export const getChatCompletion = async (
   };
 
   try {
-    // Determine API endpoint - use mock if in development mode and mock is enabled
-    const endpoint = ENV.MOCK_API.ENABLED 
-      ? `/api/chat/mock?provider=${provider.id}&delay=${ENV.MOCK_API.DELAY_MS}&messages=${ENV.MOCK_API.MESSAGES}`
-      : `/api/chat/${provider.id}`;
-      
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...customHeaders,
-      },
-      body: JSON.stringify({
-        messages: formattedRequest.messages,
-        config: requestConfig,
-        ...(apiKey ? { apiKey } : {})
-      }),
-    });
+  const response = await fetch(`/api/chat/${provider.id}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...customHeaders,
+    },
+    body: JSON.stringify({
+      messages: formattedRequest.messages,
+      config: requestConfig,
+      ...(apiKey ? { apiKey } : {})
+    }),
+  });
 
-    if (!response.ok) throw new Error(await response.text());
+  if (!response.ok) throw new Error(await response.text());
 
-    const data = await response.json();
-    return provider.parseResponse(data);
+  const data = await response.json();
+  return provider.parseResponse(data);
   } catch (error) {
     Sentry.withScope((scope: Sentry.Scope) => {
       scope.setExtra('messages', messages);
@@ -73,13 +67,8 @@ export const getChatCompletionStream = async (
   const provider = providers[providerKey];
   const formattedRequest = provider.formatRequest(messages, { ...config, stream: true });
 
-  // Determine API endpoint - use mock if in development mode and mock is enabled
-  const endpoint = ENV.MOCK_API.ENABLED 
-    ? `/api/chat/mock?provider=${provider.id}&delay=${ENV.MOCK_API.DELAY_MS}&messages=${ENV.MOCK_API.MESSAGES}`
-    : `/api/chat/${provider.id}`;
-
   return {
-    url: endpoint,
+    url: `/api/chat/${provider.id}`,
     options: {
       method: 'POST',
       headers: {
