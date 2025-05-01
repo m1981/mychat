@@ -21,7 +21,6 @@ const STORAGE_CONFIG = {
 } as const;
 
 interface Services {
-  abortController: React.MutableRefObject<AbortController | null>;
   submission: SubmissionLock;
   storage: StorageService;
   titleGeneration: TitleGenerationService;
@@ -31,7 +30,7 @@ const useSubmit = () => {
   const { i18n } = useTranslation();
   const store = useStore();
   
-  // Store access
+  // Store access - including request state
   const {
     currentChatIndex,
     chats,
@@ -42,7 +41,7 @@ const useSubmit = () => {
     generating,
     setChats,
     
-    // New request state
+    // Request state from Zustand
     isRequesting,
     startRequest,
     stopRequest,
@@ -65,45 +64,6 @@ const useSubmit = () => {
   const submissionLockRef = useRef(new SubmissionLock());
   const storageServiceRef = useRef(new StorageService(STORAGE_CONFIG));
   
-  // 1. Create a separate ref for the AbortController
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const isRequestActiveRef = useRef<boolean>(false);
-
-  // Single request state with clear ownership (for internal use only)
-  const requestState = useRef({
-    controller: null as AbortController | null,
-    isActive: false
-  });
-  
-  // Cleanup function that's called in exactly ONE place
-  const cleanupRequest = useCallback((reason: string) => {
-    console.log(`🧹 Cleaning up request: ${reason}`);
-    
-    if (requestState.current.controller) {
-      requestState.current.controller.abort(reason);
-      requestState.current.controller = null;
-    }
-    
-    requestState.current.isActive = false;
-    setGenerating(false);
-  }, [setGenerating]);
-  
-  // Only ONE effect for component lifecycle
-  useEffect(() => {
-    return () => {
-      cleanupRequest('Component unmounted');
-    };
-  }, [cleanupRequest]);
-  
-  // Add a helper function to track state changes
-  const logRequestState = (location: string) => {
-    console.log(`🔍 REQUEST STATE [${location}]`, {
-      isActive: requestState.current.isActive,
-      hasController: !!requestState.current.controller,
-      generating
-    });
-  };
-
   // Initialize stream handler with provider
   const streamHandlerRef = useRef<ChatStreamHandler>(
     new ChatStreamHandler(new TextDecoder(), providerSetup.provider)
@@ -157,7 +117,6 @@ const useSubmit = () => {
 
   // Group services for easier access
   const services: Services = {
-    abortController: abortControllerRef, // Use the dedicated AbortController ref
     submission: submissionLockRef.current,
     storage: storageServiceRef.current,
     titleGeneration: useRef(new TitleGenerationService(
@@ -170,20 +129,26 @@ const useSubmit = () => {
     )).current
   };
 
-  // Stream handler effect - ONLY handle stream handler initialization, not abort control
+  // Stream handler effect - ONLY handle stream handler initialization
   useEffect(() => {
     console.log('🔄 Setting up stream handler with provider:', providerSetup.providerKey);
-    logRequestState('stream handler effect start');
-    
     streamHandlerRef.current = new ChatStreamHandler(new TextDecoder(), providerSetup.provider);
-    console.log('🔄 Stream handler initialized');
     
-    // No abort controller management in this cleanup
+    // No state management in cleanup
     return () => {
-      console.log('🧹 Cleaning up stream handler resources - NO ABORT CONTROL HERE');
-      logRequestState('stream handler cleanup');
+      console.log('🧹 Cleaning up stream handler resources');
     };
-  }, [providerSetup.provider, generating]);
+  }, [providerSetup.provider]);
+
+  // Component unmount effect - ensure we clean up any active requests
+  useEffect(() => {
+    return () => {
+      if (isRequesting) {
+        console.log('🧹 Component unmounting, stopping active request');
+        stopRequest('Component unmounted');
+      }
+    };
+  }, [isRequesting, stopRequest]);
 
   // Chat state management utilities
   const chatUtils = {
@@ -247,31 +212,59 @@ const useSubmit = () => {
   };
 
   const stopGeneration = useCallback(() => {
+    console.log('🛑 Stopping generation');
     stopRequest('User stopped generation');
     setGenerating(false);
   }, [stopRequest, setGenerating]);
 
   const handleSubmit = useCallback(async () => {
-    if (!services.submission.lock()) return;
+    console.log('🚀 handleSubmit called');
+    
+    if (!services.submission.lock()) {
+      console.warn('⚠️ Submission already in progress');
+      return;
+    }
+    
+    console.log('🔒 Submission lock acquired');
     
     try {
-      // Start request and get controller
+      // Start request and get controller from Zustand
       const controller = startRequest();
+      console.log('🎮 Created new AbortController via Zustand');
+      
+      console.log('📊 Checking storage quota');
+      await services.storage.checkQuota();
+      
+      console.log('🔄 Setting generating state');
       setGenerating(true);
+      setError(null);
       
       // Get current state
       const currentState = utils.getStoreState();
+      console.log('📝 Current state retrieved', {
+        chatIndex: currentState.currentChatIndex,
+        chatCount: currentState.chats.length
+      });
       
       // Initialize chat with empty assistant message
+      console.log('💬 Current messages before adding assistant message', 
+        currentState.chats[currentState.currentChatIndex].messages);
+      
       const updatedChats = chatUtils.appendAssistantMessage(
         currentState.chats,
         currentState.currentChatIndex
       );
+      
+      console.log('💬 Updated messages after adding assistant message', 
+        updatedChats[currentState.currentChatIndex].messages);
+      
       setChats(updatedChats);
       
       // Get messages and model config
       const currentChat = updatedChats[currentState.currentChatIndex];
       const currentMessages = currentChat.messages;
+      
+      console.log('⚙️ Chat config', currentChat.config);
       
       // Get model configuration from the chat
       const modelConfig: ModelConfig = {
@@ -279,13 +272,17 @@ const useSubmit = () => {
         ...currentChat.config.modelConfig
       };
       
+      console.log('⚙️ Model config from chat', currentChat.config.modelConfig);
+      console.log('⚙️ Default model config', DEFAULT_MODEL_CONFIG);
+      console.log('⚙️ Final model config', modelConfig);
+      
       // Create submission service with the controller
+      console.log('🔧 Creating submission service');
       const submissionService = new ChatSubmissionService(
         providerSetup.provider,
         providerSetup.apiKey,
         (content) => {
           console.log('📨 Received content chunk', { length: content.length });
-          logRequestState('in content callback');
           const latestState = utils.getStoreState();
           const updatedChats = chatUtils.updateMessageContent(
             latestState.chats,
@@ -299,7 +296,6 @@ const useSubmit = () => {
       );
       
       console.log('📤 Submitting request');
-      logRequestState('before submit');
       
       try {
         // Use type assertion to add stream property
@@ -308,10 +304,8 @@ const useSubmit = () => {
           stream: true
         } as ModelConfig);
         console.log('✅ Submission completed successfully');
-        logRequestState('after successful submission');
       } catch (submissionError) {
         console.error('❌ Submission error:', submissionError);
-        logRequestState('after submission error');
         throw submissionError;
       }
       
@@ -330,20 +324,26 @@ const useSubmit = () => {
     } finally {
       // Clean up regardless of success or failure
       console.log('🧹 Cleaning up after submission');
-      logRequestState('in finally block before cleanup');
       
       setGenerating(false);
       
       // Only reset if not aborted by user
       if (isRequesting) {
+        console.log('🧹 Resetting request state in Zustand');
         resetRequestState();
       }
       
-      logRequestState('in finally block after cleanup');
       services.submission.unlock();
       console.log('🔓 Submission lock released');
     }
-  }, [setGenerating, setError, setChats, providerSetup.provider, providerSetup.apiKey, generating]);
+  }, [
+    setGenerating, 
+    setError, 
+    setChats, 
+    startRequest, 
+    resetRequestState, 
+    isRequesting
+  ]);
 
   const regenerateMessage = useCallback(async () => {
     if (generating || !chats) {
@@ -370,11 +370,6 @@ const useSubmit = () => {
       }
 
       console.log('🏷️ Generating title for chat', currentState.currentChatIndex);
-      console.log('🏷️ Messages for title generation', 
-        currentState.chats[currentState.currentChatIndex].messages.map(
-          m => ({ role: m.role, contentLength: m.content.length })
-        )
-      );
       
       await services.titleGeneration.generateAndUpdateTitle(
         currentState.chats[currentState.currentChatIndex].messages,
@@ -386,8 +381,6 @@ const useSubmit = () => {
       throw error;
     }
   };
-
-  // Component cleanup handled by store
 
   return { handleSubmit, stopGeneration, regenerateMessage, error, generating };
 };
