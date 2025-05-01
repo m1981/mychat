@@ -13,6 +13,8 @@ import { TitleGenerator } from '@src/services/TitleGenerator';
 import { StorageService, StorageQuotaError } from '@src/services/StorageService';
 import { SubmissionLock } from '@src/services/SubmissionLock';
 import { TitleGenerationService } from '@src/services/TitleGenerationService';
+import { debounce } from 'lodash';
+import { useSubmissionState } from './useSubmissionState';
 
 // Constants at the top
 const STORAGE_CONFIG = {
@@ -129,6 +131,12 @@ const useSubmit = () => {
     )).current
   };
 
+  // Add the submission state machine
+  const submission = useSubmissionState();
+
+  // Add a submitting ref to track active submissions
+  const isSubmittingRef = useRef(false);
+
   // Stream handler effect - ONLY handle stream handler initialization
   useEffect(() => {
     console.log('🔄 Setting up stream handler with provider:', providerSetup.providerKey);
@@ -143,9 +151,11 @@ const useSubmit = () => {
   // Component unmount effect - ensure we clean up any active requests
   useEffect(() => {
     return () => {
-      if (isRequesting) {
+      if (isRequesting && !isSubmittingRef.current) {
         console.log('🧹 Component unmounting, stopping active request');
         stopRequest('Component unmounted');
+      } else if (isSubmittingRef.current) {
+        console.log('⚠️ Component unmounting during active submission - not aborting');
       }
     };
   }, [isRequesting, stopRequest]);
@@ -213,137 +223,129 @@ const useSubmit = () => {
 
   const stopGeneration = useCallback(() => {
     console.log('🛑 Stopping generation');
+    submission.dispatch({ type: 'ABORT' });
     stopRequest('User stopped generation');
     setGenerating(false);
-  }, [stopRequest, setGenerating]);
+  }, [stopRequest, setGenerating, submission.dispatch]);
 
-  const handleSubmit = useCallback(async () => {
-    console.log('🚀 handleSubmit called');
-    
-    if (!services.submission.lock()) {
-      console.warn('⚠️ Submission already in progress');
-      return;
-    }
-    
-    console.log('🔒 Submission lock acquired');
-    
-    try {
-      // Start request and get controller from Zustand
-      const controller = startRequest();
-      console.log('🎮 Created new AbortController via Zustand');
+  const handleSubmit = useCallback(
+    debounce(async () => {
+      console.log('🚀 handleSubmit called');
       
-      console.log('📊 Checking storage quota');
-      await services.storage.checkQuota();
+      // Set submitting flag to prevent abort on unmount
+      isSubmittingRef.current = true;
       
-      console.log('🔄 Setting generating state');
-      setGenerating(true);
-      setError(null);
+      if (!services.submission.lock()) {
+        console.warn('⚠️ Submission canceled - already in progress');
+        isSubmittingRef.current = false;
+        return;
+      }
       
-      // Get current state
-      const currentState = utils.getStoreState();
-      console.log('📝 Current state retrieved', {
-        chatIndex: currentState.currentChatIndex,
-        chatCount: currentState.chats.length
-      });
-      
-      // Initialize chat with empty assistant message
-      console.log('💬 Current messages before adding assistant message', 
-        currentState.chats[currentState.currentChatIndex].messages);
-      
-      const updatedChats = chatUtils.appendAssistantMessage(
-        currentState.chats,
-        currentState.currentChatIndex
-      );
-      
-      console.log('💬 Updated messages after adding assistant message', 
-        updatedChats[currentState.currentChatIndex].messages);
-      
-      setChats(updatedChats);
-      
-      // Get messages and model config
-      const currentChat = updatedChats[currentState.currentChatIndex];
-      const currentMessages = currentChat.messages;
-      
-      console.log('⚙️ Chat config', currentChat.config);
-      
-      // Get model configuration from the chat
-      const modelConfig: ModelConfig = {
-        ...DEFAULT_MODEL_CONFIG,
-        ...currentChat.config.modelConfig
-      };
-      
-      console.log('⚙️ Model config from chat', currentChat.config.modelConfig);
-      console.log('⚙️ Default model config', DEFAULT_MODEL_CONFIG);
-      console.log('⚙️ Final model config', modelConfig);
-      
-      // Create submission service with the controller
-      console.log('🔧 Creating submission service');
-      const submissionService = new ChatSubmissionService(
-        providerSetup.provider,
-        providerSetup.apiKey,
-        (content) => {
-          console.log('📨 Received content chunk', { length: content.length });
-          const latestState = utils.getStoreState();
-          const updatedChats = chatUtils.updateMessageContent(
-            latestState.chats,
-            latestState.currentChatIndex,
-            content
-          );
-          setChats(updatedChats);
-        },
-        streamHandlerRef.current,
-        controller
-      );
-      
-      console.log('📤 Submitting request');
+      // Start tracking with state machine
+      submission.dispatch({ type: 'SUBMIT_START' });
       
       try {
-        // Use type assertion to add stream property
+        // Start request and get controller from Zustand
+        const controller = startRequest();
+        
+        // Check storage quota
+        submission.dispatch({ type: 'PREPARING' });
+        await services.storage.checkQuota();
+        
+        // Set generating state
+        setGenerating(true);
+        setError(null);
+        
+        // Get current state and prepare messages
+        const currentState = utils.getStoreState();
+        const updatedChats = chatUtils.appendAssistantMessage(
+          currentState.chats,
+          currentState.currentChatIndex
+        );
+        setChats(updatedChats);
+        
+        // Prepare submission
+        submission.dispatch({ type: 'SUBMITTING' });
+        const currentChat = updatedChats[currentState.currentChatIndex];
+        const currentMessages = currentChat.messages;
+        
+        // Get model configuration
+        const modelConfig = {
+          ...DEFAULT_MODEL_CONFIG,
+          ...currentChat.config.modelConfig
+        };
+        
+        // Create submission service
+        const submissionService = new ChatSubmissionService(
+          providerSetup.provider,
+          providerSetup.apiKey,
+          (content) => {
+            // Track streaming state
+            submission.dispatch({ type: 'CONTENT_RECEIVED' });
+            
+            // Update content (existing code)
+            const latestState = utils.getStoreState();
+            const updatedChats = chatUtils.updateMessageContent(
+              latestState.chats,
+              latestState.currentChatIndex,
+              content
+            );
+            setChats(updatedChats);
+          },
+          streamHandlerRef.current,
+          controller
+        );
+        
+        // Submit request
+        submission.dispatch({ type: 'STREAMING' });
         await submissionService.submit(currentMessages, {
           ...modelConfig,
           stream: true
         } as ModelConfig);
-        console.log('✅ Submission completed successfully');
-      } catch (submissionError) {
-        console.error('❌ Submission error:', submissionError);
-        throw submissionError;
+        
+        // Stream complete
+        submission.dispatch({ type: 'STREAM_COMPLETE' });
+        
+        // Generate title
+        submission.dispatch({ type: 'GENERATING_TITLE' });
+        await handleTitleGeneration();
+        
+        // Complete successfully
+        submission.dispatch({ type: 'COMPLETE' });
+        
+      } catch (error: unknown) {
+        // Track error state
+        submission.dispatch({ type: 'ERROR', payload: error as Error });
+        
+        // Existing error handling
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('🛑 Request was aborted:', error.message);
+        } else {
+          console.error('❌ Submit error:', error);
+          setError(utils.createErrorMessage(error));
+        }
+      } finally {
+        // Clean up
+        setGenerating(false);
+        
+        if (isRequesting) {
+          resetRequestState();
+        }
+        
+        services.submission.unlock();
+        isSubmittingRef.current = false;
       }
-      
-      console.log('🏷️ Starting title generation');
-      await handleTitleGeneration();
-      console.log('🏷️ Title generation completed');
-      
-    } catch (error: unknown) {
-      // Specifically handle abort errors
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.log('🛑 Request was aborted:', error.message);
-      } else {
-        console.error('❌ Submit error:', error);
-        setError(utils.createErrorMessage(error));
-      }
-    } finally {
-      // Clean up regardless of success or failure
-      console.log('🧹 Cleaning up after submission');
-      
-      setGenerating(false);
-      
-      // Only reset if not aborted by user
-      if (isRequesting) {
-        console.log('🧹 Resetting request state in Zustand');
-        resetRequestState();
-      }
-      
-      services.submission.unlock();
-      console.log('🔓 Submission lock released');
-    }
-  }, [
-    setGenerating, 
-    setError, 
-    setChats, 
-    startRequest, 
-    resetRequestState, 
-    isRequesting
-  ]);
+    }, 100),
+    [
+      setGenerating, 
+      setError, 
+      setChats, 
+      startRequest, 
+      resetRequestState, 
+      isRequesting,
+      submission.dispatch
+    ]
+  );
 
   const regenerateMessage = useCallback(async () => {
     if (generating || !chats) {

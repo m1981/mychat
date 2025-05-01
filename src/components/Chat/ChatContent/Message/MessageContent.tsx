@@ -249,14 +249,14 @@ const EditView: React.FC<EditViewProps> = ({
         updatedMessages.push({ role: inputRole, content: _content.trim() });
       }
 
-    // Update state and wait for it to complete
-    await new Promise<void>(resolve => {
-      setChats(updatedChats);
-      // Use a small timeout to ensure state is updated
-      setTimeout(resolve, 0);
-    });
+      // Update state and wait for it to complete
+      await new Promise<void>(resolve => {
+        setChats(updatedChats);
+        // Use a small timeout to ensure state is updated
+        setTimeout(resolve, 50); // Increased timeout for stability
+      });
 
-    // Clear content
+      // Clear content
       _setContent('');
       resetTextAreaHeight();
     } else {
@@ -264,12 +264,15 @@ const EditView: React.FC<EditViewProps> = ({
       // Remove all messages after the edited message
       updatedChats[currentChatIndex].messages = updatedMessages.slice(0, messageIndex + 1);
       setIsEdit(false);
+      
+      // Update state and wait for it to complete
+      await new Promise<void>(resolve => {
+        setChats(updatedChats);
+        setTimeout(resolve, 50); // Increased timeout for stability
+      });
     }
-    setChats(updatedChats);
+    
     setIsEditing(false);
-
-    // Small delay to ensure state is updated
-    await new Promise(resolve => setTimeout(resolve, 50));
 
     // Now submit with updated state
     handleSubmit();
