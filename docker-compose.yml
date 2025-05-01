@@ -45,8 +45,6 @@ services:
       - UID=${UID}
       - GID=${GID}
       - VITE_DEV_SERVER_FORCE_CLOSE=true
-      # Add this to make the proxy work correctly in Docker
-      - VITE_API_BASE_URL=http://localhost:3000
     stop_signal: SIGINT
     stop_grace_period: 30s
     deploy:
