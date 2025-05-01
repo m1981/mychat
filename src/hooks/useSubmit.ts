@@ -63,6 +63,15 @@ const useSubmit = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const isRequestActiveRef = useRef<boolean>(false);
 
+  // Add a helper function to track state changes
+  const logRequestState = (location: string) => {
+    console.log(`🔍 REQUEST STATE [${location}]`, {
+      isActive: isRequestActiveRef.current,
+      hasController: !!abortControllerRef.current,
+      generating
+    });
+  };
+
   // Initialize stream handler with provider
   const streamHandlerRef = useRef<ChatStreamHandler>(
     new ChatStreamHandler(new TextDecoder(), providerSetup.provider)
@@ -132,14 +141,17 @@ const useSubmit = () => {
   // Stream handler effect - ONLY handle stream handler initialization, not abort control
   useEffect(() => {
     console.log('🔄 Setting up stream handler with provider:', providerSetup.providerKey);
+    logRequestState('stream handler effect start');
+    
     streamHandlerRef.current = new ChatStreamHandler(new TextDecoder(), providerSetup.provider);
     console.log('🔄 Stream handler initialized');
     
     // No abort controller management in this cleanup
     return () => {
       console.log('🧹 Cleaning up stream handler resources - NO ABORT CONTROL HERE');
+      logRequestState('stream handler cleanup');
     };
-  }, [providerSetup.provider]);
+  }, [providerSetup.provider, generating]);
 
   // Separate effect for component unmount cleanup
   useEffect(() => {
@@ -223,8 +235,7 @@ const useSubmit = () => {
 
   const stopGeneration = useCallback(() => {
     console.log('⏹️ stopGeneration called');
-    console.log('⏹️ isRequestActive:', isRequestActiveRef.current);
-    console.log('⏹️ abortController exists:', !!services.abortController.current);
+    logRequestState('stopGeneration start');
     
     if (services.abortController.current) {
       console.log('⚡ Aborting current request');
@@ -236,11 +247,13 @@ const useSubmit = () => {
     
     // Always set generating to false to update UI
     setGenerating(false);
+    logRequestState('stopGeneration after setting generating false');
     console.log('⏹️ Generation state set to false');
-  }, [setGenerating]);
+  }, [setGenerating, generating]);
 
   const handleSubmit = useCallback(async () => {
     console.log('🚀 handleSubmit called');
+    logRequestState('handleSubmit start');
     
     if (!services.submission.lock()) {
       console.warn('⚠️ Submission already in progress');
@@ -259,14 +272,17 @@ const useSubmit = () => {
     services.abortController.current = new AbortController();
     isRequestActiveRef.current = true;
     console.log('🎮 Created new AbortController', services.abortController.current);
+    logRequestState('after controller creation');
     
     try {
       console.log('📊 Checking storage quota');
       await services.storage.checkQuota();
+      logRequestState('after quota check');
       
       console.log('🔄 Setting generating state');
       setGenerating(true);
       setError(null);
+      logRequestState('after setting generating state');
       
       // Get current state
       const currentState = utils.getStoreState();
@@ -309,11 +325,14 @@ const useSubmit = () => {
       
       // Create submission service with the controller
       console.log('🔧 Creating submission service');
+      logRequestState('before creating submission service');
+      
       const submissionService = new ChatSubmissionService(
         providerSetup.provider,
         providerSetup.apiKey,
         (content) => {
           console.log('📨 Received content chunk', { length: content.length });
+          logRequestState('in content callback');
           const latestState = utils.getStoreState();
           const updatedChats = chatUtils.updateMessageContent(
             latestState.chats,
@@ -327,9 +346,7 @@ const useSubmit = () => {
       );
       
       console.log('📤 Submitting request');
-      console.log('📤 Provider', providerSetup.providerKey);
-      console.log('📤 API key exists', !!providerSetup.apiKey);
-      console.log('📤 Messages count', currentMessages.length);
+      logRequestState('before submit');
       
       try {
         // Use type assertion to add stream property
@@ -338,8 +355,10 @@ const useSubmit = () => {
           stream: true
         } as ModelConfig);
         console.log('✅ Submission completed successfully');
+        logRequestState('after successful submission');
       } catch (submissionError) {
         console.error('❌ Submission error:', submissionError);
+        logRequestState('after submission error');
         throw submissionError;
       }
       
@@ -358,6 +377,8 @@ const useSubmit = () => {
     } finally {
       // Clean up regardless of success or failure
       console.log('🧹 Cleaning up after submission');
+      logRequestState('in finally block before cleanup');
+      
       setGenerating(false);
       
       // Only reset request state if this wasn't an abort
@@ -370,10 +391,11 @@ const useSubmit = () => {
         console.log('🧹 Not resetting request state - was aborted by user');
       }
       
+      logRequestState('in finally block after cleanup');
       services.submission.unlock();
       console.log('🔓 Submission lock released');
     }
-  }, [setGenerating, setError, setChats, providerSetup.provider, providerSetup.apiKey]);
+  }, [setGenerating, setError, setChats, providerSetup.provider, providerSetup.apiKey, generating]);
 
   const regenerateMessage = useCallback(async () => {
     if (generating || !chats) {
