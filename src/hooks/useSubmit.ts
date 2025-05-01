@@ -129,23 +129,36 @@ const useSubmit = () => {
     )).current
   };
 
-  // Stream handler effect
+  // Stream handler effect - ONLY handle stream handler initialization, not abort control
   useEffect(() => {
     console.log('🔄 Setting up stream handler with provider:', providerSetup.providerKey);
     streamHandlerRef.current = new ChatStreamHandler(new TextDecoder(), providerSetup.provider);
     console.log('🔄 Stream handler initialized');
     
+    // No abort controller management in this cleanup
     return () => {
-      console.log('🧹 Cleaning up stream handler resources');
+      console.log('🧹 Cleaning up stream handler resources - NO ABORT CONTROL HERE');
+    };
+  }, [providerSetup.provider]);
+
+  // Separate effect for component unmount cleanup
+  useEffect(() => {
+    console.log('🔄 Setting up component unmount cleanup effect');
+    
+    return () => {
+      console.log('🧹 Component UNMOUNT cleanup triggered');
+      console.log('🧹 isRequestActive:', isRequestActiveRef.current);
+      console.log('🧹 abortController exists:', !!services.abortController.current);
+      
       if (services.abortController.current) {
-        console.log('🧹 Aborting controller in stream handler cleanup');
+        console.log('🧹 Aborting controller in component unmount');
         services.abortController.current.abort('Component unmounted');
         services.abortController.current = null;
         isRequestActiveRef.current = false;
-        console.log('🧹 Reset request state in stream handler cleanup');
+        console.log('🧹 Reset request state in component unmount');
       }
     };
-  }, [providerSetup.provider]);
+  }, []); // Empty dependency array means this only runs on mount/unmount
 
   // Chat state management utilities
   const chatUtils = {
@@ -213,10 +226,9 @@ const useSubmit = () => {
     console.log('⏹️ isRequestActive:', isRequestActiveRef.current);
     console.log('⏹️ abortController exists:', !!services.abortController.current);
     
-    if (isRequestActiveRef.current && services.abortController.current) {
+    if (services.abortController.current) {
       console.log('⚡ Aborting current request');
       services.abortController.current.abort('User stopped generation');
-      // Don't reset the state here - let the finally block in handleSubmit do it
       console.log('⚡ Abort signal sent');
     } else {
       console.log('⚠️ No active request to abort');
@@ -238,7 +250,7 @@ const useSubmit = () => {
     console.log('🔒 Submission lock acquired');
     
     // Cancel any existing request first
-    if (isRequestActiveRef.current && services.abortController.current) {
+    if (services.abortController.current) {
       console.log('🛑 Aborting existing request');
       services.abortController.current.abort('New request started');
     }
@@ -348,10 +360,15 @@ const useSubmit = () => {
       console.log('🧹 Cleaning up after submission');
       setGenerating(false);
       
-      // Only reset request state here, after everything is done
-      console.log('🧹 Resetting request state');
-      isRequestActiveRef.current = false;
-      services.abortController.current = null;
+      // Only reset request state if this wasn't an abort
+      if (services.abortController.current && 
+          services.abortController.current.signal.reason !== 'User stopped generation') {
+        console.log('🧹 Resetting request state - normal completion');
+        isRequestActiveRef.current = false;
+        services.abortController.current = null;
+      } else {
+        console.log('🧹 Not resetting request state - was aborted by user');
+      }
       
       services.submission.unlock();
       console.log('🔓 Submission lock released');
