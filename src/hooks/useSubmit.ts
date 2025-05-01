@@ -200,79 +200,74 @@ const useSubmit = () => {
     }
   };
 
+  // Single source of truth for request state
+  const requestStateRef = useRef({
+    controller: null as AbortController | null,
+    isActive: false
+  });
+
   const stopGeneration = useCallback(() => {
-    console.log('🛑 Stop generation requested');
-    setGenerating(false);
-    
-    if (services.abortController.current) {
+    if (requestStateRef.current.isActive && requestStateRef.current.controller) {
       console.log('⚡ Aborting current request');
-      services.abortController.current.abort();
-      services.abortController.current = null;
+      requestStateRef.current.controller.abort();
+      // Don't null the controller here - do it in the finally block of the request
     }
+    setGenerating(false);
   }, [setGenerating]);
 
-  const handleSubmit = async () => {
-    if (!services.submission.lock()) {
-      console.warn('Submission already in progress');
-      return;
+  const handleSubmit = useCallback(async () => {
+    if (!services.submission.lock()) return;
+    
+    // Cancel any existing request first
+    if (requestStateRef.current.isActive && requestStateRef.current.controller) {
+      requestStateRef.current.controller.abort('New request started');
     }
-
+    
+    // Create new controller and update state
+    const controller = new AbortController();
+    requestStateRef.current = {
+      controller,
+      isActive: true
+    };
+    
     try {
-      const state = utils.getStoreState();
-      await services.storage.checkQuota();
-      
       setGenerating(true);
       setError(null);
-
-      console.log('🚀 Starting submission');
-      services.abortController.current = new AbortController();
-
-      try {
-        // Initialize chat with empty assistant message
-        const updatedChats = chatUtils.clone(state.chats);
-        const currentMessages = updatedChats[state.currentChatIndex].messages;
-        currentMessages.push({
-          role: 'assistant',
-          content: '',
-        });
-        setChats(updatedChats);
-
-        const { modelConfig } = updatedChats[state.currentChatIndex].config;
-        
-        // Create submission service
-        const submissionService = new ChatSubmissionService(
-          providerSetup.provider,
-          providerSetup.apiKey,
-          (content) => {
-            const latestState = utils.getStoreState();
-            const updatedChats = chatUtils.updateMessageContent(
-              latestState.chats,
-              state.currentChatIndex,
-              content
-            );
-            setChats(updatedChats);
-          },
-          streamHandlerRef.current,
-          services.abortController.current
-        );
-
-        // Submit request
-        await submissionService.submit(currentMessages, modelConfig);
-        await handleTitleGeneration();
-
-      } catch (error) {
+      
+      // Create submission service with the controller
+      const submissionService = new ChatSubmissionService(
+        providerSetup.provider,
+        providerSetup.apiKey,
+        (content) => {
+          const latestState = utils.getStoreState();
+          const updatedChats = chatUtils.updateMessageContent(
+            latestState.chats,
+            state.currentChatIndex,
+            content
+          );
+          setChats(updatedChats);
+        },
+        streamHandlerRef.current,
+        controller // Pass the controller from our ref
+      );
+      
+      await submissionService.submit(currentMessages, modelConfig);
+      
+    } catch (error) {
+      // Specifically handle abort errors
+      if (error.name === 'AbortError') {
+        console.log('Request was aborted:', error.message);
+      } else {
         console.error('❌ Submit error:', error);
         setError(utils.createErrorMessage(error));
-      } finally {
-        setGenerating(false);
-        services.abortController.current = null;
-        services.submission.unlock();
       }
-    } catch (error) {
-      setError(utils.createErrorMessage(error));
+    } finally {
+      // Clean up regardless of success or failure
+      setGenerating(false);
+      requestStateRef.current.isActive = false;
       services.submission.unlock();
     }
-  };
+  }, []);
 
   const regenerateMessage = async () => {
     if (generating || !chats) {
@@ -305,6 +300,19 @@ const useSubmit = () => {
       throw error;
     }
   };
+
+  // Component cleanup
+  useEffect(() => {
+    return () => {
+      if (requestStateRef.current.controller) {
+        requestStateRef.current.controller.abort('Component unmounted');
+        requestStateRef.current = {
+          controller: null,
+          isActive: false
+        };
+      }
+    };
+  }, []);
 
   return { handleSubmit, stopGeneration, regenerateMessage, error, generating };
 };
