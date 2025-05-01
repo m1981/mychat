@@ -41,6 +41,12 @@ const useSubmit = () => {
     setGenerating,
     generating,
     setChats,
+    
+    // New request state
+    isRequesting,
+    startRequest,
+    stopRequest,
+    resetRequestState
   } = store;
 
   // Group provider-related logic
@@ -59,7 +65,11 @@ const useSubmit = () => {
   const submissionLockRef = useRef(new SubmissionLock());
   const storageServiceRef = useRef(new StorageService(STORAGE_CONFIG));
   
-  // Single request state with clear ownership
+  // 1. Create a separate ref for the AbortController
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isRequestActiveRef = useRef<boolean>(false);
+
+  // Single request state with clear ownership (for internal use only)
   const requestState = useRef({
     controller: null as AbortController | null,
     isActive: false
@@ -147,7 +157,7 @@ const useSubmit = () => {
 
   // Group services for easier access
   const services: Services = {
-    abortController: requestState,
+    abortController: abortControllerRef, // Use the dedicated AbortController ref
     submission: submissionLockRef.current,
     storage: storageServiceRef.current,
     titleGeneration: useRef(new TitleGenerationService(
@@ -237,22 +247,37 @@ const useSubmit = () => {
   };
 
   const stopGeneration = useCallback(() => {
-    cleanupRequest('User stopped generation');
-  }, [cleanupRequest]);
+    stopRequest('User stopped generation');
+    setGenerating(false);
+  }, [stopRequest, setGenerating]);
 
   const handleSubmit = useCallback(async () => {
-    // Clean up any existing request first
-    if (requestState.current.isActive) {
-      cleanupRequest('New request started');
-    }
-    
-    // Set up new request
-    const controller = new AbortController();
-    requestState.current.controller = controller;
-    requestState.current.isActive = true;
+    if (!services.submission.lock()) return;
     
     try {
+      // Start request and get controller
+      const controller = startRequest();
       setGenerating(true);
+      
+      // Get current state
+      const currentState = utils.getStoreState();
+      
+      // Initialize chat with empty assistant message
+      const updatedChats = chatUtils.appendAssistantMessage(
+        currentState.chats,
+        currentState.currentChatIndex
+      );
+      setChats(updatedChats);
+      
+      // Get messages and model config
+      const currentChat = updatedChats[currentState.currentChatIndex];
+      const currentMessages = currentChat.messages;
+      
+      // Get model configuration from the chat
+      const modelConfig: ModelConfig = {
+        ...DEFAULT_MODEL_CONFIG,
+        ...currentChat.config.modelConfig
+      };
       
       // Create submission service with the controller
       const submissionService = new ChatSubmissionService(
@@ -309,14 +334,9 @@ const useSubmit = () => {
       
       setGenerating(false);
       
-      // Only reset request state if this wasn't an abort
-      if (requestState.current.isActive && 
-          !controller.signal.aborted) {
-        console.log('🧹 Resetting request state - normal completion');
-        requestState.current.isActive = false;
-        requestState.current.controller = null;
-      } else {
-        console.log('🧹 Not resetting request state - was aborted by user');
+      // Only reset if not aborted by user
+      if (isRequesting) {
+        resetRequestState();
       }
       
       logRequestState('in finally block after cleanup');
@@ -367,24 +387,7 @@ const useSubmit = () => {
     }
   };
 
-  // Component cleanup
-  useEffect(() => {
-    console.log('🔄 Setting up cleanup effect');
-    
-    return () => {
-      console.log('🧹 Cleanup effect triggered');
-      console.log('🧹 isRequestActive:', requestState.current.isActive);
-      console.log('🧹 abortController exists:', !!requestState.current.controller);
-      
-      if (requestState.current.controller) {
-        console.log('🧹 Aborting controller in cleanup');
-        requestState.current.controller.abort('Component unmounted');
-        requestState.current.controller = null;
-        requestState.current.isActive = false;
-        console.log('🧹 Reset request state in cleanup');
-      }
-    };
-  }, []);
+  // Component cleanup handled by store
 
   return { handleSubmit, stopGeneration, regenerateMessage, error, generating };
 };

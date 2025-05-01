@@ -9,12 +9,14 @@ import { ChatSlice, createChatSlice } from './chat-slice';
 import { ConfigSlice, createConfigSlice } from './config-slice';
 import { InputSlice, createInputSlice } from './input-slice';
 import { PromptSlice, createPromptSlice } from './prompt-slice';
+import { RequestSlice, createRequestSlice } from './request-slice';
 
 export type StoreState = ChatSlice &
   InputSlice &
   AuthSlice &
   ConfigSlice &
-  PromptSlice;
+  PromptSlice &
+  RequestSlice;
 
 export type StoreSlice<T> = (
   set: StoreApi<StoreState>['setState'],
@@ -75,6 +77,7 @@ const useStore = create<StoreState>()(
       ...createAuthSlice(set, get),
       ...createConfigSlice(set, get),
       ...createPromptSlice(set, get),
+      ...createRequestSlice(set, get),
     }),
     {
       name: 'free-chat-gpt',
