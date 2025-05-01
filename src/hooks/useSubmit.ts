@@ -131,14 +131,18 @@ const useSubmit = () => {
 
   // Stream handler effect
   useEffect(() => {
+    console.log('🔄 Setting up stream handler with provider:', providerSetup.providerKey);
     streamHandlerRef.current = new ChatStreamHandler(new TextDecoder(), providerSetup.provider);
+    console.log('🔄 Stream handler initialized');
     
     return () => {
-      console.log('🧹 Cleaning up resources');
+      console.log('🧹 Cleaning up stream handler resources');
       if (services.abortController.current) {
+        console.log('🧹 Aborting controller in stream handler cleanup');
         services.abortController.current.abort('Component unmounted');
         services.abortController.current = null;
         isRequestActiveRef.current = false;
+        console.log('🧹 Reset request state in stream handler cleanup');
       }
     };
   }, [providerSetup.provider]);
@@ -205,58 +209,94 @@ const useSubmit = () => {
   };
 
   const stopGeneration = useCallback(() => {
+    console.log('⏹️ stopGeneration called');
+    console.log('⏹️ isRequestActive:', isRequestActiveRef.current);
+    console.log('⏹️ abortController exists:', !!services.abortController.current);
+    
     if (isRequestActiveRef.current && services.abortController.current) {
       console.log('⚡ Aborting current request');
       services.abortController.current.abort('User stopped generation');
       // Don't null the controller here - do it in the finally block of the request
     }
     setGenerating(false);
+    console.log('⏹️ Generation state set to false');
   }, [setGenerating]);
 
   const handleSubmit = useCallback(async () => {
+    console.log('🚀 handleSubmit called');
+    
     if (!services.submission.lock()) {
-      console.warn('Submission already in progress');
+      console.warn('⚠️ Submission already in progress');
       return;
     }
     
+    console.log('🔒 Submission lock acquired');
+    
     // Cancel any existing request first
     if (isRequestActiveRef.current && services.abortController.current) {
+      console.log('🛑 Aborting existing request');
       services.abortController.current.abort('New request started');
     }
     
     // Create new controller and update state
     services.abortController.current = new AbortController();
     isRequestActiveRef.current = true;
+    console.log('🎮 Created new AbortController', services.abortController.current);
     
     try {
+      console.log('📊 Checking storage quota');
       await services.storage.checkQuota();
+      
+      console.log('🔄 Setting generating state');
       setGenerating(true);
       setError(null);
       
       // Get current state
       const currentState = utils.getStoreState();
+      console.log('📝 Current state retrieved', { 
+        chatIndex: currentState.currentChatIndex,
+        chatCount: currentState.chats.length
+      });
       
       // Initialize chat with empty assistant message
       const updatedChats = chatUtils.clone(currentState.chats);
       const currentChat = updatedChats[currentState.currentChatIndex];
       const currentMessages = currentChat.messages;
+      
+      console.log('💬 Current messages before adding assistant message', 
+        currentMessages.map(m => ({ role: m.role, contentLength: m.content.length }))
+      );
+      
       currentMessages.push({
         role: 'assistant',
         content: '',
       });
+      
+      console.log('💬 Updated messages after adding assistant message', 
+        currentMessages.map(m => ({ role: m.role, contentLength: m.content.length }))
+      );
+      
       setChats(updatedChats);
       
       // Get model configuration from the chat
+      console.log('⚙️ Chat config', currentChat.config);
+      console.log('⚙️ Model config from chat', currentChat.config.modelConfig);
+      console.log('⚙️ Default model config', DEFAULT_MODEL_CONFIG);
+      
       const modelConfig: ModelConfig = {
         ...DEFAULT_MODEL_CONFIG,
         ...currentChat.config.modelConfig // Use modelConfig from chat config
       };
-
+      
+      console.log('⚙️ Final model config', modelConfig);
+      
       // Create submission service with the controller
+      console.log('🔧 Creating submission service');
       const submissionService = new ChatSubmissionService(
         providerSetup.provider,
         providerSetup.apiKey,
         (content) => {
+          console.log('📨 Received content chunk', { length: content.length });
           const latestState = utils.getStoreState();
           const updatedChats = chatUtils.updateMessageContent(
             latestState.chats,
@@ -268,27 +308,43 @@ const useSubmit = () => {
         streamHandlerRef.current,
         services.abortController.current
       );
-
-      // Use type assertion to add stream property
-      await submissionService.submit(currentMessages, {
-        ...modelConfig,
-        stream: true
-      } as ModelConfig);
+      
+      console.log('📤 Submitting request');
+      console.log('📤 Provider', providerSetup.providerKey);
+      console.log('📤 API key exists', !!providerSetup.apiKey);
+      console.log('📤 Messages count', currentMessages.length);
+      
+      try {
+        // Use type assertion to add stream property
+        await submissionService.submit(currentMessages, {
+          ...modelConfig,
+          stream: true
+        } as ModelConfig);
+        console.log('✅ Submission completed successfully');
+      } catch (submissionError) {
+        console.error('❌ Submission error:', submissionError);
+        throw submissionError;
+      }
+      
+      console.log('🏷️ Starting title generation');
       await handleTitleGeneration();
+      console.log('🏷️ Title generation completed');
       
     } catch (error: unknown) {
       // Specifically handle abort errors
       if (error instanceof Error && error.name === 'AbortError') {
-        console.log('Request was aborted:', error.message);
+        console.log('🛑 Request was aborted:', error.message);
       } else {
         console.error('❌ Submit error:', error);
         setError(utils.createErrorMessage(error));
       }
     } finally {
       // Clean up regardless of success or failure
+      console.log('🧹 Cleaning up after submission');
       setGenerating(false);
       isRequestActiveRef.current = false;
       services.submission.unlock();
+      console.log('🔓 Submission lock released');
     }
   }, [setGenerating, setError, setChats, providerSetup.provider, providerSetup.apiKey]);
 
@@ -308,29 +364,47 @@ const useSubmit = () => {
   }, [generating, chats, currentChatIndex, setChats, handleSubmit]);
 
   const handleTitleGeneration = async () => {
+    console.log('🏷️ handleTitleGeneration called');
     try {
       const currentState = utils.getStoreState();
       if (!currentState.chats || currentState.currentChatIndex < 0) {
+        console.error('❌ No active chat found for title generation');
         throw new Error('No active chat found');
       }
 
+      console.log('🏷️ Generating title for chat', currentState.currentChatIndex);
+      console.log('🏷️ Messages for title generation', 
+        currentState.chats[currentState.currentChatIndex].messages.map(
+          m => ({ role: m.role, contentLength: m.content.length })
+        )
+      );
+      
       await services.titleGeneration.generateAndUpdateTitle(
         currentState.chats[currentState.currentChatIndex].messages,
         currentState.currentChatIndex
       );
+      console.log('🏷️ Title generation completed successfully');
     } catch (error) {
-      console.error('Title generation failed:', error);
+      console.error('❌ Title generation failed:', error);
       throw error;
     }
   };
 
   // Component cleanup
   useEffect(() => {
+    console.log('🔄 Setting up cleanup effect');
+    
     return () => {
+      console.log('🧹 Cleanup effect triggered');
+      console.log('🧹 isRequestActive:', isRequestActiveRef.current);
+      console.log('🧹 abortController exists:', !!services.abortController.current);
+      
       if (services.abortController.current) {
+        console.log('🧹 Aborting controller in cleanup');
         services.abortController.current.abort('Component unmounted');
         services.abortController.current = null;
         isRequestActiveRef.current = false;
+        console.log('🧹 Reset request state in cleanup');
       }
     };
   }, []);
