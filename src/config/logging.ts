@@ -6,7 +6,8 @@ export const LOG_MODULES = [
   'ui', 
   'perf', 
   'useSubmit', 
-  'scrollToEdit'
+  'scrollToEdit',
+  'focus'
 ] as const;
 
 export type LogModule = typeof LOG_MODULES[number];
