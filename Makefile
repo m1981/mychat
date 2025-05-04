@@ -85,7 +85,7 @@ shell: ensure-pnpm-dirs ## Start an interactive shell session in the app contain
 	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE) run --rm shell
 
 dev: ensure-pnpm-dirs ## Start development environment (flexible mode for rapid development)
-	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE) up
+	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) PNPM_FROZEN_LOCKFILE=false $(DOCKER_COMPOSE) up --build
 
 dev-strict: ## Start development environment (strict mode for CI/CD)
 	UID=$(UID) GID=$(GID) PNPM_FROZEN_LOCKFILE=true $(DOCKER_COMPOSE) up --build
@@ -167,6 +167,12 @@ test-file: ensure-pnpm-dirs ## Run specific test file. Usage: make test-file f=p
 
 lint: ## Run linter and fix issues
 	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint
+
+lint-all: ## Run all linters
+	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint:all
+
+format: ## Format all files
+	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) format:all
 
 type: ## Run type checking
 	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) type-check
