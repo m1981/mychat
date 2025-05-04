@@ -41,6 +41,13 @@ export const globalSubmissionManager = {
 };
 
 const useSubmit = () => {
+  console.log('🔄 useSubmit hook called');
+  
+  // Add component identification if possible
+  const componentStack = new Error().stack;
+  const callingComponent = componentStack?.split('\n')[2] || 'Unknown component';
+  console.log(`🧩 useSubmit called from: ${callingComponent}`);
+  
   const store = useStore();
   
   // Store access - including request state
@@ -60,19 +67,31 @@ const useSubmit = () => {
     resetRequestState
   } = store;
 
-  // Provider setup with memoization
+  // Create a render counter outside useMemo
+  const renderCountRef = useRef(0);
+
+  // Provider setup with memoization and caller tracking
   const providerSetup = useMemo(() => {
+    renderCountRef.current += 1;
+    
     const currentChat = chats?.[currentChatIndex];
     const providerKey = currentChat?.config.provider || DEFAULT_PROVIDER;
     const key = apiKeys[providerKey];
     
+    // Create a stack trace to identify the caller
+    const stackTrace = new Error().stack;
+    const caller = stackTrace?.split('\n')[2] || 'Unknown caller';
+    
+    console.log(`🔍 useMemo for providerSetup called from: ${caller}`);
     console.log(`🔑 Retrieved API key for provider ${providerKey}: ${key ? 'Key exists' : 'Key missing'}`);
+    console.log(`📊 providerSetup render count: ${renderCountRef.current}`);
     
     return {
       currentChat,
       providerKey,
       provider: providers[providerKey],
-      apiKey: key
+      apiKey: key,
+      renderCount: renderCountRef.current
     };
   }, [chats, currentChatIndex, apiKeys]);
 
