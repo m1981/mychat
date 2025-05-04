@@ -1,4 +1,15 @@
-export type LogModule = 'store' | 'api' | 'chat' | 'ui' | 'perf';
+// Define modules in a single place
+export const LOG_MODULES = [
+  'store',
+  'api', 
+  'chat', 
+  'ui', 
+  'perf', 
+  'useSubmit', 
+  'scrollToEdit'
+] as const;
+
+export type LogModule = typeof LOG_MODULES[number];
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug' | 'trace';
 
 export interface LogConfig {
@@ -15,11 +26,11 @@ export const getLogConfig = (): LogConfig => {
     level: (import.meta.env.VITE_LOG_LEVEL || 'info') as LogLevel,
     modules: storedModules
       ? (storedModules.split(',').filter((m: string) => 
-          m.length > 0 && ['store', 'api', 'chat', 'ui', 'perf'].includes(m)) as LogModule[])
+          m.length > 0 && LOG_MODULES.includes(m as LogModule)) as LogModule[])
       : ((import.meta.env.VITE_LOG_MODULES || 'store,api')
           .split(',')
           .filter((m: string) => 
-            m.length > 0 && ['store', 'api', 'chat', 'ui', 'perf'].includes(m)) as LogModule[])
+            m.length > 0 && LOG_MODULES.includes(m as LogModule)) as LogModule[])
   };
 
   return config;

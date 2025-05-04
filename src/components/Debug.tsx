@@ -1,6 +1,6 @@
 import useStore from '@store/store';
 import { useEffect, useRef, useState } from 'react';
-import { LogModule } from '@config/logging';
+import { LogModule, LOG_MODULES } from '@config/logging';
 import { debug } from '@utils/debug';
 
 const Debug = () => {
@@ -48,7 +48,7 @@ const Debug = () => {
         <div style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '8px', marginBottom: '8px' }}>
           <strong>Debug Modules:</strong>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
-            {(['store', 'api', 'chat', 'perf', 'ui'] as LogModule[]).map((module) => (
+            {LOG_MODULES.map((module) => (
               <label
                 key={module}
                 style={{
