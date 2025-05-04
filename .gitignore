@@ -29,4 +29,5 @@ release/
 
 # Add PNPM specific entries
 .pnpm-store/
+.pnpm-cache/
 pnpm-debug.log
