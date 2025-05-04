@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useMemo } from 'react';
 import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 import useStore from '@store/store';
@@ -60,20 +60,21 @@ const useSubmit = () => {
     resetRequestState
   } = store;
 
-  // Provider setup
-  const providerSetup = {
-    currentChat: chats?.[currentChatIndex],
-    providerKey: chats?.[currentChatIndex]?.config.provider || DEFAULT_PROVIDER,
-    get provider() {
-      return providers[this.providerKey];
-    },
-    get apiKey() {
-      // Add logging to debug API key retrieval
-      const key = apiKeys[this.providerKey];
-      console.log(`🔑 Retrieved API key for provider ${this.providerKey}: ${key ? 'Key exists' : 'Key missing'}`);
-      return key;
-    }
-  };
+  // Provider setup with memoization
+  const providerSetup = useMemo(() => {
+    const currentChat = chats?.[currentChatIndex];
+    const providerKey = currentChat?.config.provider || DEFAULT_PROVIDER;
+    const key = apiKeys[providerKey];
+    
+    console.log(`🔑 Retrieved API key for provider ${providerKey}: ${key ? 'Key exists' : 'Key missing'}`);
+    
+    return {
+      currentChat,
+      providerKey,
+      provider: providers[providerKey],
+      apiKey: key
+    };
+  }, [chats, currentChatIndex, apiKeys]);
 
   // Create refs for services that need to persist
   const submissionLockRef = useRef(new SubmissionLock());
@@ -242,8 +243,7 @@ const useSubmit = () => {
     streamHandler,
     handleTitleGeneration,
     createErrorMessage,
-    providerSetup.provider,
-    providerSetup.apiKey
+    providerSetup  // Use the entire memoized object instead of individual properties
   ]);
 
   const regenerateMessage = useCallback(async () => {
