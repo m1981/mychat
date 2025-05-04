@@ -11,6 +11,7 @@ import { useSubmissionState } from './useSubmissionState';
 import { useStreamHandler } from './useStreamHandler';
 import { useMessageManager } from './useMessageManager';
 import { useTitleGeneration } from './useTitleGeneration';
+import { debug } from '@utils/debug';
 
 // Constants at the top
 const STORAGE_CONFIG = {
@@ -24,29 +25,29 @@ export const globalSubmissionManager = {
   isSubmitting: false,
   
   startSubmission() {
-    console.log('🌎 Global submission started');
+    debug.log('useSubmit', '[useSubmit] Global submission started');
     this.isSubmitting = true;
     return true;
   },
   
   endSubmission() {
-    console.log('🌎 Global submission ended');
+    debug.log('useSubmit', '[useSubmit] Global submission ended');
     this.isSubmitting = false;
   },
   
   abort(reason: string) {
-    console.log(`🌎 Global submission aborted: ${reason}`);
+    debug.log('useSubmit', `[useSubmit] Global submission aborted: ${reason}`);
     this.isSubmitting = false;
   }
 };
 
 const useSubmit = () => {
-  console.log('🔄 useSubmit hook called');
+  debug.log('useSubmit', '[useSubmit] useSubmit hook called');
   
   // Add component identification if possible
   const componentStack = new Error().stack;
   const callingComponent = componentStack?.split('\n')[2] || 'Unknown component';
-  console.log(`🧩 useSubmit called from: ${callingComponent}`);
+  debug.log('useSubmit', `[useSubmit] useSubmit called from: ${callingComponent}`);
   
   const store = useStore();
   
@@ -82,9 +83,9 @@ const useSubmit = () => {
     const stackTrace = new Error().stack;
     const caller = stackTrace?.split('\n')[2] || 'Unknown caller';
     
-    console.log(`🔍 useMemo for providerSetup called from: ${caller}`);
-    console.log(`🔑 Retrieved API key for provider ${providerKey}: ${key ? 'Key exists' : 'Key missing'}`);
-    console.log(`📊 providerSetup render count: ${renderCountRef.current}`);
+    debug.log('useSubmit', `[useSubmit] useMemo for providerSetup called from: ${caller}`);
+    debug.log('useSubmit', `[useSubmit] Retrieved API key for provider ${providerKey}: ${key ? 'Key exists' : 'Key missing'}`);
+    debug.log('useSubmit', `[useSubmit] providerSetup render count: ${renderCountRef.current}`);
     
     return {
       currentChat,
@@ -117,7 +118,7 @@ const useSubmit = () => {
   }, []);
 
   const stopGeneration = useCallback(() => {
-    console.log('🛑 Stopping generation');
+    debug.log('useSubmit', '[useSubmit] Stopping generation');
     submission.dispatch({ type: 'ABORT' });
     stopRequest('User stopped generation');
     globalSubmissionManager.abort('User stopped generation');
@@ -125,17 +126,17 @@ const useSubmit = () => {
   }, [stopRequest, setGenerating, submission.dispatch]);
 
   const handleSubmit = useCallback(async () => {
-    console.log('🚀 handleSubmit called');
+    debug.log('useSubmit', '[useSubmit] handleSubmit called');
     
     // Use global submission manager
     if (globalSubmissionManager.isSubmitting) {
-      console.warn('⚠️ Global submission already in progress');
+      debug.log('useSubmit', '[useSubmit] Global submission already in progress');
       return;
     }
     
     // Check if API key exists
     if (!providerSetup.apiKey) {
-      console.error('❌ No API key found for provider:', providerSetup.providerKey);
+      debug.error('useSubmit', '[useSubmit] No API key found for provider:', providerSetup.providerKey);
       setError(`No API key found for ${providerSetup.providerKey}. Please add your API key in settings.`);
       return;
     }
@@ -145,7 +146,7 @@ const useSubmit = () => {
     
     try {
       if (!submissionLockRef.current.lock()) {
-        console.warn('⚠️ Submission canceled - already in progress');
+        debug.log('useSubmit', '[useSubmit] Submission canceled - already in progress');
         globalSubmissionManager.endSubmission();
         return;
       }
@@ -154,7 +155,7 @@ const useSubmit = () => {
       submission.dispatch({ type: 'SUBMIT_START' });
       
       // Start request in Zustand - this creates the abort controller
-      console.log('🔄 Starting request via Zustand');
+      debug.log('useSubmit', '[useSubmit] Starting request via Zustand');
       startRequest();
       
       // Check storage quota
@@ -171,7 +172,7 @@ const useSubmit = () => {
         currentState.chats,
         currentState.currentChatIndex
       );
-      console.log('📝 Appending assistant message');
+      debug.log('useSubmit', '[useSubmit] Appending assistant message');
       messageManager.setChats(updatedChats);
       
       // Prepare submission
@@ -186,7 +187,7 @@ const useSubmit = () => {
       };
       
       // Create submission service
-      console.log('🔧 Creating submission service');
+      debug.log('useSubmit', '[useSubmit] Creating submission service');
       const submissionService = new ChatSubmissionService(
         providerSetup.provider,
         providerSetup.apiKey,
@@ -207,7 +208,7 @@ const useSubmit = () => {
       );
       
       // Submit request
-      console.log('📤 Submitting request');
+      debug.log('useSubmit', '[useSubmit] Submitting request');
       submission.dispatch({ type: 'STREAMING' });
       await submissionService.submit(currentMessages, {
         ...modelConfig,
@@ -215,16 +216,16 @@ const useSubmit = () => {
       } as ModelConfig);
       
       // Stream complete
-      console.log('✅ Stream complete');
+      debug.log('useSubmit', '[useSubmit] Stream complete');
       submission.dispatch({ type: 'STREAM_COMPLETE' });
       
       // Generate title
-      console.log('🏷️ Generating title');
+      debug.log('useSubmit', '[useSubmit] Generating title');
       submission.dispatch({ type: 'GENERATING_TITLE' });
       await handleTitleGeneration();
       
       // Complete successfully
-      console.log('🎉 Submission complete');
+      debug.log('useSubmit', '[useSubmit] Submission complete');
       submission.dispatch({ type: 'COMPLETE' });
       
     } catch (error: unknown) {
@@ -233,18 +234,18 @@ const useSubmit = () => {
       
       // Error handling
       if (error instanceof Error && error.name === 'AbortError') {
-        console.log('🛑 Request was aborted:', error.message);
+        debug.log('useSubmit', '[useSubmit] Request was aborted:', error.message);
       } else {
-        console.error('❌ Submit error:', error);
+        debug.error('useSubmit', '[useSubmit] Submit error:', error);
         setError(createErrorMessage(error));
       }
     } finally {
       // Clean up
-      console.log('🧹 Cleaning up after submission');
+      debug.log('useSubmit', '[useSubmit] Cleaning up after submission');
       setGenerating(false);
       
       if (isRequesting) {
-        console.log('🧹 Resetting request state in Zustand');
+        debug.log('useSubmit', '[useSubmit] Resetting request state in Zustand');
         resetRequestState();
       }
       
