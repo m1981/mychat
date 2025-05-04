@@ -19,6 +19,7 @@ import { usePasteHandler } from '@hooks/usePasteHandler';
 import useSubmit from '@hooks/useSubmit';
 import useStore from '@store/store';
 import { ChatInterface, Role } from '@type/chat';
+import { useTextareaFocus } from '@hooks/useTextareaFocus';
 
 import CodeBlock from './CodeBlock';
 
@@ -278,6 +279,13 @@ const EditView: React.FC<EditViewProps> = ({
     handleSubmit();
   };
 
+  useTextareaFocus(textareaRef, {
+    scrollIntoView: true,
+    cursorAtEnd: true,
+    debugId: `edit-${messageIndex}`,
+    refocusOnScroll: false // Don't refocus on scroll to allow normal browsing
+  });
+
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -296,29 +304,6 @@ const EditView: React.FC<EditViewProps> = ({
     setIsEditing(true);
     return () => setIsEditing(false);
   }, []);
-
-  useEffect(() => {
-    if (textareaRef.current) {
-      // Focus the textarea
-      textareaRef.current.focus();
-      
-      // Set cursor position to the end of the text
-      const length = textareaRef.current.value.length;
-      textareaRef.current.setSelectionRange(length, length);
-      
-      // On mobile, ensure the element is in view when the keyboard appears
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        // Add a slight delay to account for keyboard appearance
-        setTimeout(() => {
-          textareaRef.current?.scrollIntoView({ 
-            behavior: 'smooth',
-            block: 'center'
-          });
-        }, 300);
-      }
-    }
-  }, []); // Run only once when component mounts
 
   return (
     <>

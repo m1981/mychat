@@ -11,6 +11,7 @@ import MessageContent from './MessageContent';
 import RoleSelector from './RoleSelector';
 import { SelectionCopyProvider } from '../SelectionCopyProvider';
 import EditIcon from '@icon/EditIcon';
+import JumpToEditButton from './JumpToEditButton';
 
 const backgroundStyle = ['dark:bg-gray-800', 'bg-gray-50 dark:bg-gray-650'];
 
@@ -217,19 +218,10 @@ const Message = React.memo(
             </div>
           </div>
         </div>
-        {/* Simple Jump to Edit button that appears when in edit mode */}
-        {isEdit && !isComposer && (
-          <a 
-            href={`#${editAreaId}`}
-            className="fixed right-6 bottom-[120px] z-50 rounded-full border border-blue-400 bg-blue-50 text-blue-600 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400 p-3 shadow-lg"
-            aria-label="Jump to edit area"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">↑</span>
-              <span className="text-sm font-medium">Jump to Edit</span>
-            </div>
-          </a>
-        )}
+        <JumpToEditButton 
+          editAreaId={editAreaId} 
+          visible={isEdit && !isComposer} 
+        />
       </div>
     );
   }
