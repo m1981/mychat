@@ -57,27 +57,3 @@ export const getChatCompletion = async (
     throw error;
   }
 };
-
-export const getChatCompletionStream = async (
-  providerKey: ProviderKey,
-  messages: MessageInterface[],
-  config: ModelConfig,
-  apiKey?: string,
-) => {
-  const provider = providers[providerKey];
-  const formattedRequest = provider.formatRequest(messages, { ...config, stream: true });
-
-  return {
-    url: `/api/chat/${provider.id}`,
-    options: {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...formattedRequest,
-        apiKey,
-      }),
-    }
-  };
-};

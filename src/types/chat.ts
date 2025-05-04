@@ -1,5 +1,4 @@
 export type Role = 'user' | 'assistant' | 'system';
-export const roles: Role[] = ['user', 'assistant', 'system'];
 export type ProviderKey = 'anthropic' | 'openai' | string;
 
 export interface ModelConfig {
@@ -41,10 +40,6 @@ export interface ChatHistoryInterface {
   title: string;
   index: number;
   id: string;
-}
-
-export interface ChatHistoryFolderInterface {
-  [folderId: string]: ChatHistoryInterface[];
 }
 
 export interface FolderCollection {
