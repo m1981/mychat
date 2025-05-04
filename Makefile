@@ -165,8 +165,8 @@ test-file: ensure-pnpm-dirs ## Run specific test file. Usage: make test-file f=p
 ##@ Quality Checks
 .PHONY: lint type-check
 
-lint: ## Run linter and fix issues
-	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint
+dead: ## Find unsed code
+	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint:deadcode | ./add-todos.sh
 
 lint-all: ## Run all linters
 	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint:all

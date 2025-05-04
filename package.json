@@ -20,7 +20,7 @@
     "deps:check": "depcheck",
     "lint": "eslint . --ext .ts,.tsx --fix",
     "lint:js": "eslint --ext .ts,.tsx,.js,.jsx .",
-    "lint:deadcode": "ts-prune -i '(test|gatsby)'",
+    "lint:deadcode": "ts-prune -i '(test|gatsby)' | grep -v cssExports | grep -v 'used in module'",
     "lint:styles": "stylelint src/**/*.{js,jsx,ts,tsx,css}",
     "lint:md": "markdownlint-cli2 content/**/*.{md,mdx}",
     "lint:format": "prettier --check '**/*.{js,jsx,ts,tsx,css}'",
