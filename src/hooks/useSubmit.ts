@@ -68,7 +68,10 @@ const useSubmit = () => {
       return providers[this.providerKey];
     },
     get apiKey() {
-      return apiKeys[this.providerKey];
+      // Add logging to debug API key retrieval
+      const key = apiKeys[this.providerKey];
+      console.log(`🔑 Retrieved API key for provider ${this.providerKey}: ${key ? 'Key exists' : 'Key missing'}`);
+      return key;
     }
   };
 
@@ -107,6 +110,13 @@ const useSubmit = () => {
     // Use global submission manager
     if (globalSubmissionManager.isSubmitting) {
       console.warn('⚠️ Global submission already in progress');
+      return;
+    }
+    
+    // Check if API key exists
+    if (!providerSetup.apiKey) {
+      console.error('❌ No API key found for provider:', providerSetup.providerKey);
+      setError(`No API key found for ${providerSetup.providerKey}. Please add your API key in settings.`);
       return;
     }
     

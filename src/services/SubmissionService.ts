@@ -11,15 +11,26 @@ export interface SubmissionService {
 
 export class ChatSubmissionService implements SubmissionService {
   constructor(
-    private provider: Provider,
+    private provider: any,
     private apiKey: string,
-    private onContent: (content: string) => void,
-    private streamHandler: ChatStreamHandler
-  ) {}
+    private contentCallback: (content: string) => void,
+    private streamHandler: any
+  ) {
+    // Add validation for API key
+    if (!this.apiKey) {
+      console.error('⚠️ No API key provided for provider:', provider);
+    }
+  }
 
-  async submit(messages: MessageInterface[], config: ModelConfig): Promise<void> {
+  async submit(messages: any[], modelConfig: any) {
+    console.log('🔐 Submitting with API key:', this.apiKey ? 'Key exists' : 'Key missing');
+    
+    if (!this.apiKey) {
+      throw new Error('API key is missing. Please add your API key in settings.');
+    }
+    
     const formattedRequest = this.provider.formatRequest(messages, {
-      ...config,
+      ...modelConfig,
       stream: true
     });
 
@@ -64,7 +75,7 @@ export class ChatSubmissionService implements SubmissionService {
       const reader = response.body?.getReader();
       if (!reader) throw new Error('Response body is null');
 
-      await this.streamHandler.processStream(reader, this.onContent);
+      await this.streamHandler.processStream(reader, this.contentCallback);
     } catch (error) {
       if (error instanceof Error) {
         console.error('Submission error details:', error);
