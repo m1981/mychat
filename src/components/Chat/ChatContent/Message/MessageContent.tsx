@@ -297,6 +297,29 @@ const EditView: React.FC<EditViewProps> = ({
     return () => setIsEditing(false);
   }, []);
 
+  useEffect(() => {
+    if (textareaRef.current) {
+      // Focus the textarea
+      textareaRef.current.focus();
+      
+      // Set cursor position to the end of the text
+      const length = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(length, length);
+      
+      // On mobile, ensure the element is in view when the keyboard appears
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        // Add a slight delay to account for keyboard appearance
+        setTimeout(() => {
+          textareaRef.current?.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'center'
+          });
+        }, 300);
+      }
+    }
+  }, []); // Run only once when component mounts
+
   return (
     <>
       <div
