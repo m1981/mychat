@@ -1,22 +1,20 @@
 import { useCallback, useEffect } from 'react';
-import { useMessageEditorContext } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
-import { useStore } from '@store/store';
+import useStore from '@store/store';
 
-interface UseKeyboardShortcutsReturn {
-  handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+import { useMessageEditorContext } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
+
+interface UseKeyboardShortcutsProps {
+  customKeyHandler?: (e: React.KeyboardEvent) => void;
 }
 
-export function useKeyboardShortcuts(): UseKeyboardShortcutsReturn {
-  const {
-    isComposer,
-    setIsEdit,
-    handleSave,
-    handleSaveAndSubmit,
-    resetTextAreaHeight
-  } = useMessageEditorContext();
-
-  // Handle keyboard shortcuts in the textarea
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+export const useKeyboardShortcuts = ({ customKeyHandler }: UseKeyboardShortcutsProps = {}) => {
+  const { handleSave, handleSaveAndSubmit, isComposer, setIsEdit, resetTextAreaHeight } = useMessageEditorContext();
+  
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (customKeyHandler) {
+      customKeyHandler(e);
+    }
+    
     const isMobile =
       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|playbook|silk/i.test(
         navigator.userAgent
@@ -47,7 +45,7 @@ export function useKeyboardShortcuts(): UseKeyboardShortcutsReturn {
         } else if (e.ctrlKey || e.shiftKey) handleSave();
       }
     }
-  }, [isComposer, setIsEdit, handleSave, handleSaveAndSubmit, resetTextAreaHeight]);
+  }, [isComposer, setIsEdit, handleSave, handleSaveAndSubmit, resetTextAreaHeight, customKeyHandler]);
 
   // Add global keyboard event listener for Escape key
   useEffect(() => {
@@ -68,4 +66,4 @@ export function useKeyboardShortcuts(): UseKeyboardShortcutsReturn {
   }, [isComposer, setIsEdit]);
 
   return { handleKeyDown };
-}
+};
