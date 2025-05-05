@@ -4,4 +4,4 @@ bin
 .pmpm-cache
 .pnpm-store
 docs
-
+coverage
