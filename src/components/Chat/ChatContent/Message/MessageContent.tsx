@@ -67,6 +67,10 @@ const MessageContent: React.FC<MessageContentProps> = ({
   setIsEditing,
 }) => {
   // Add keyboard event handler at component level
+  // This dual-handler approach ensures that:
+  //     Users can exit edit mode with Escape regardless of where focus is
+  // The component responds appropriately in all focus scenarios
+  // Edit mode can be exited even if focus moves to another element
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isEdit && !isComposer) {
@@ -180,6 +184,11 @@ const EditView: React.FC<EditViewProps> = ({
   const resetTextAreaHeight = () => {
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
   };
+
+  // This dual-handler approach ensures that:
+  //     Users can exit edit mode with Escape regardless of where focus is
+  // The component responds appropriately in all focus scenarios
+  // Edit mode can be exited even if focus moves to another element
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const isMobile =

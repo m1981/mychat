@@ -138,4 +138,51 @@ describe('useKeyboardShortcuts', () => {
     // Verify that removeEventListener was called
     expect(document.removeEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
   });
+
+  it('should handle global Escape key to exit edit mode (non-composer)', () => {
+    // Render the hook
+    renderHook(() => useKeyboardShortcuts());
+    
+    // Get the event handler that was registered
+    const eventListenerCallback = (document.addEventListener as jest.Mock).mock.calls[0][1];
+    
+    // Create a keyboard event
+    const event = new KeyboardEvent('keydown', { key: 'Escape' });
+    Object.defineProperty(event, 'preventDefault', { value: vi.fn() });
+    
+    // Call the event handler directly
+    eventListenerCallback(event);
+    
+    // Verify that setIsEdit was called with false
+    expect(mockSetIsEdit).toHaveBeenCalledWith(false);
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  it('should not exit edit mode on Escape if in composer mode', () => {
+    // Change context to composer mode
+    (useMessageEditorContext as jest.Mock).mockReturnValue({
+      isComposer: true,
+      setIsEdit: mockSetIsEdit,
+      handleSave: mockHandleSave,
+      handleSaveAndSubmit: mockHandleSaveAndSubmit,
+      resetTextAreaHeight: mockResetTextAreaHeight
+    });
+    
+    // Render the hook
+    renderHook(() => useKeyboardShortcuts());
+    
+    // Get the event handler that was registered
+    const eventListenerCallback = (document.addEventListener as jest.Mock).mock.calls[0][1];
+    
+    // Create a keyboard event
+    const event = new KeyboardEvent('keydown', { key: 'Escape' });
+    Object.defineProperty(event, 'preventDefault', { value: vi.fn() });
+    
+    // Call the event handler directly
+    eventListenerCallback(event);
+    
+    // Verify that setIsEdit was NOT called
+    expect(mockSetIsEdit).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
 });
