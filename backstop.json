@@ -20,7 +20,7 @@
   "scenarios": [
     {
       "label": "Chat Interface",
-      "url": "http://host.docker.internal:5173/",
+      "url": "http://localhost:5173/",
       "delay": 500,
       "readySelector": "#root"
     }
@@ -36,7 +36,7 @@
   "engine": "puppeteer",
   "engineOptions": {
     "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
-    "browserWSEndpoint": "ws://selenium:4444/devtools/browser"
+    "browserWSEndpoint": "ws://localhost:4444/devtools/browser"
   },
   "asyncCaptureLimit": 5,
   "asyncCompareLimit": 50,
