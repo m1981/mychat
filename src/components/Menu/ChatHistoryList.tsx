@@ -266,7 +266,7 @@ const ChatHistoryList = ({ searchFilter, onSearchChange }: ChatHistoryListProps)
                   className="flex flex-col gap-1"
                 >
                   {Object.entries(chatFolders)
-                    .filter(([_, chats]) => chats.length > 0) // Only show folders with matching chats
+                    .filter(([_, chats]) => !searchFilter || chats.length > 0) // Only filter out empty folders when searching
                     .map(([folderId, chats], index) => (
                       <ChatFolder
                         key={folderId}
