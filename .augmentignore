@@ -5,3 +5,6 @@ bin
 .pnpm-store
 docs
 coverage
+backstop_data
+html_report
+.tmp
