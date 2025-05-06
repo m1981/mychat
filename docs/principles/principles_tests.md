@@ -1,3 +1,5 @@
+Here are the most crucial principles that developers should follow when writing tests:
+
 1. Keep Tests READABLE
 - Write clear, descriptive test names (e.g., "should_calculate_total_price_with_discount")
 - Use meaningful variable names
@@ -28,3 +30,6 @@
 - Don't test private methods
 - Write tests from user's perspective
 
+These principles form the acronym RITOM (Readable, Isolated, Test one thing, Organized, Maintainable). Following these core principles will help create a robust and maintainable test suite.
+
+Would you like me to provide examples for any of these principles?

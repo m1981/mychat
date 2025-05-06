@@ -50,10 +50,9 @@ const EditView: React.FC<EditViewProps> = ({ customKeyHandler }) => {
   });
 
   // Set up text selection tracking
-  // Add a default value to prevent destructuring errors
-  const { selectionStart = 0, selectionEnd = 0 } = useTextSelection({
+  const { selectionStart, selectionEnd } = useTextSelection({
     textareaRef
-  }) || { selectionStart: 0, selectionEnd: 0 };
+  });
 
   // Auto-resize textarea as content changes
   useEffect(() => {
