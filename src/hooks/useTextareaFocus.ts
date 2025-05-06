@@ -4,112 +4,108 @@ import { debug } from '@utils/debug';
 interface UseTextareaFocusOptions {
   scrollIntoView?: boolean;
   cursorAtEnd?: boolean;
-  debugId?: string; // Optional ID for debugging
-  refocusOnScroll?: boolean; // Whether to attempt refocus after scroll events
+  debugId?: string;
+  refocusOnScroll?: boolean;
 }
 
-export function useTextareaFocus(
-  textareaRef: RefObject<HTMLTextAreaElement>,
-  options: UseTextareaFocusOptions = { 
-    scrollIntoView: true, 
-    cursorAtEnd: true,
+export function useTextareaFocus({
+  textareaRef,
+  options = {
+    scrollIntoView: true,
+    cursorAtEnd: false,
     debugId: 'textarea',
-    refocusOnScroll: false // Default to false to allow normal scrolling
+    refocusOnScroll: false
   }
-) {
-  const { scrollIntoView, cursorAtEnd, debugId, refocusOnScroll } = options;
-  const focusAttempts = useRef(0);
+}: {
+  textareaRef: RefObject<HTMLTextAreaElement>;
+  options?: UseTextareaFocusOptions;
+}) {
+  const { cursorAtEnd, debugId } = options;
   const userInteracting = useRef(false);
+  const isMounted = useRef(false);
   
-  // Initial focus
-  useEffect(() => {
-    if (!textareaRef.current) return;
-    
-    const focusTextarea = () => {
-      if (!textareaRef.current || userInteracting.current) return;
-      
-      // Focus the textarea
-      textareaRef.current.focus();
-      focusAttempts.current++;
-      
-      debug.log('focus', `[${debugId}] Focus attempt ${focusAttempts.current}`);
-      
-      // Set cursor position to the end of the text if requested
-      if (cursorAtEnd) {
-        const length = textareaRef.current.value.length;
-        textareaRef.current.setSelectionRange(length, length);
-        debug.log('focus', `[${debugId}] Cursor set to position ${length}`);
-      }
-    };
-    
-    // Initial focus
-    focusTextarea();
-    
-    // On mobile, ensure the element is in view when the keyboard appears
-    if (scrollIntoView) {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        debug.log('focus', `[${debugId}] Mobile detected, scrolling into view`);
-        
-        // Add a slight delay to account for keyboard appearance
-        setTimeout(() => {
-          if (!textareaRef.current) return;
-          
-          textareaRef.current.scrollIntoView({ 
-            behavior: 'smooth',
-            block: 'center'
-          });
-        }, 300);
-      }
+  // Focus logic
+  const focusTextarea = () => {
+    if (!textareaRef.current || !isMounted.current || userInteracting.current) {
+      return;
     }
     
-    // Track user interaction with the page
+    textareaRef.current.focus();
+    
+    // Set cursor position
+    if (cursorAtEnd) {
+      const length = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(length, length);
+      debug.log('focus', `[${debugId}] Cursor at end: position ${length}`);
+    } else {
+      // Position cursor at the end of the first line
+      const firstLineEnd = textareaRef.current.value.indexOf('\n');
+      const position = firstLineEnd > -1 ? firstLineEnd : textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(position, position);
+      debug.log('focus', `[${debugId}] Cursor at first line end: position ${position}`);
+    }
+  };
+  
+  // Initial focus effect
+  useEffect(() => {
+    isMounted.current = true;
+    
+    // Try to focus with a small delay to ensure the ref is available
+    const timer = setTimeout(() => {
+      if (isMounted.current && textareaRef.current) {
+        focusTextarea();
+      }
+    }, 50);
+    
+    return () => {
+      clearTimeout(timer);
+      isMounted.current = false;
+    };
+  }, [textareaRef]);
+  
+  // Handle user interaction and blur events
+  useEffect(() => {
+    if (!isMounted.current) return;
+    
     const handleMouseDown = () => {
       userInteracting.current = true;
-      debug.log('focus', `[${debugId}] User interaction detected`);
       
-      // Reset after a short delay to allow focus to be regained
+      // Reset after a delay
       setTimeout(() => {
-        userInteracting.current = false;
-        debug.log('focus', `[${debugId}] User interaction flag reset`);
-      }, 1000);
+        if (isMounted.current) {
+          userInteracting.current = false;
+        }
+      }, 500);
     };
     
-    // Only refocus on blur if the textarea itself is blurred
     const handleBlur = (e: FocusEvent) => {
-      debug.log('focus', `[${debugId}] Textarea blur detected`);
+      if (!isMounted.current || userInteracting.current) return;
       
-      // If user is interacting, don't interfere
-      if (userInteracting.current) {
-        debug.log('focus', `[${debugId}] User is interacting, not refocusing`);
-        return;
-      }
-      
-      // Only refocus if the blur was not caused by clicking another interactive element
+      // Only refocus if blur was not to another element
       if (e.relatedTarget === null) {
-        // Short delay to allow other focus events to settle
         setTimeout(() => {
-          // Check if user is still not interacting
-          if (!userInteracting.current) {
-            debug.log('focus', `[${debugId}] Refocusing after blur with no target`);
+          if (isMounted.current && !userInteracting.current) {
             focusTextarea();
           }
         }, 100);
-      } else {
-        debug.log('focus', `[${debugId}] Blur to ${e.relatedTarget?.tagName}, not refocusing`);
       }
     };
     
     // Add event listeners
     document.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('touchstart', handleMouseDown);
-    textareaRef.current.addEventListener('blur', handleBlur);
+    
+    if (textareaRef.current) {
+      textareaRef.current.addEventListener('blur', handleBlur);
+    }
     
     return () => {
       document.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('touchstart', handleMouseDown);
-      textareaRef.current?.removeEventListener('blur', handleBlur);
-      debug.log('focus', `[${debugId}] Cleanup: removed event listeners`);
+      
+      if (textareaRef.current) {
+        textareaRef.current.removeEventListener('blur', handleBlur);
+      }
     };
-  }, []); // Run only once when component mounts
+  }, [textareaRef, debugId, cursorAtEnd]);
 }
