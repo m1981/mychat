@@ -121,12 +121,36 @@ jobs:
           pnpm backstop test || true
           echo "status=$?" >> $GITHUB_OUTPUT
 
-      # Upload Pages artifact (replaces peaceiris/actions-gh-pages)
+      # Prepare report with images for GitHub Pages
+      - name: Prepare report for GitHub Pages
+        if: always()
+        run: |
+          # Create a directory for the complete report
+          mkdir -p gh-pages-report
+          
+          # Copy the HTML report
+          cp -r backstop_data/html_report/* gh-pages-report/
+          
+          # Create directories for images
+          mkdir -p gh-pages-report/bitmaps_reference
+          mkdir -p gh-pages-report/bitmaps_test
+          
+          # Copy reference images
+          cp -r backstop_data/bitmaps_reference/* gh-pages-report/bitmaps_reference/ || true
+          
+          # Copy test images and diffs
+          cp -r backstop_data/bitmaps_test/* gh-pages-report/bitmaps_test/ || true
+          
+          # Fix paths in config.js
+          sed -i 's/\.\.\/bitmaps_reference/\.\/bitmaps_reference/g' gh-pages-report/config.js
+          sed -i 's/\.\.\/bitmaps_test/\.\/bitmaps_test/g' gh-pages-report/config.js
+
+      # Upload Pages artifact with complete report
       - name: Upload Pages artifact
         if: always()
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'backstop_data/html_report'
+          path: 'gh-pages-report'
 
       # Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
