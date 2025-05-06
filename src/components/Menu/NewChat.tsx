@@ -18,8 +18,8 @@ const NewChat = ({ folder }: { folder?: string }) => {
         text-sm text-gray-800 dark:text-gray-100
         ${generating ? 'cursor-not-allowed opacity-40' : 'hover:bg-gray-500/10 cursor-pointer'}
         ${folder 
-          ? 'justify-start' 
-          : 'p-2 gap-3 mb-2 border border-gray-200 dark:border-gray-600'
+          ? 'justify-start select-none' 
+          : 'p-2 gap-3 mb-2 border border-gray-200 dark:border-gray-600 select-none'
         }
       `}
       onClick={() => {
@@ -40,13 +40,13 @@ const NewChat = ({ folder }: { folder?: string }) => {
         <div className="max-h-0 parent-sibling-hover:max-h-10 hover:max-h-10
                        parent-sibling-hover:py-2 hover:py-2 px-2
                        overflow-hidden transition-all duration-200 delay-500
-                       flex gap-3 items-center">
+                       flex gap-3 items-center select-none">
           <PlusIcon /> {t('newChat')}
         </div>
       ) : (
         <>
           <PlusIcon />
-          <span className="inline-flex">{t('newChat')}</span>
+          <span className="inline-flex select-none">{t('newChat')}</span>
         </>
       )}
     </a>

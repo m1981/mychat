@@ -54,6 +54,7 @@ const NewFolder = () => {
     hover:bg-gray-500/10
     transition-all duration-200
     flex-shrink-0
+    select-none
     ${generating ? 'cursor-not-allowed opacity-40' : 'cursor-pointer opacity-100'}
   `}
       onClick={() => {

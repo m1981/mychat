@@ -207,11 +207,11 @@ const ChatFolder: React.FC<ChatFolderProps> = ({ folderChats, folderId }) => {
                 <div {...provided.dragHandleProps}>
                   <FolderIcon className='h-4 w-4' />
                 </div>
-                <div className='flex-1 text-ellipsis max-h-5 overflow-hidden break-all relative'>
+                <div className='flex-1 text-ellipsis max-h-5 overflow-hidden break-all relative select-none'>
                 {isEdit ? (
                   <input
                     type='text'
-                    className='focus:outline-blue-600 text-sm border-none bg-transparent p-0 m-0 w-full'
+                    className='focus:outline-blue-600 text-sm border-none bg-transparent p-0 m-0 w-full select-text'
                     value={_folderName}
                     onChange={(e) => {
                       _setFolderName(e.target.value);
