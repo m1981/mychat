@@ -81,8 +81,9 @@ jobs:
       - name: Start app
         run: |
           pnpm dev:host &
-          sleep 10
-      
+          echo "Waiting for app to start..."
+          sleep 15
+
       # Run BackstopJS tests with environment variables
       - name: Run visual tests
         env:
@@ -97,3 +98,51 @@ jobs:
         with:
           name: backstop-report
           path: backstop_data/
+
+  # Add this job to implement the Quality Gate and Deploy Preview
+  deploy-preview:
+    needs: [lint-typecheck, unit-tests, build-test, visual-tests]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: dist
+      # Add your deployment steps here
+      - name: Deploy to preview environment
+        run: echo "Deploying to preview environment"
+        # This would typically use a service like Vercel, Netlify, etc.
+
+  # Add this job to implement E2E tests on the preview deployment
+  e2e-tests:
+    needs: [deploy-preview]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10.4.1
+      - run: pnpm install
+      - name: Run E2E tests
+        run: echo "Running E2E tests on preview deployment"
+        # This would typically use Cypress, Playwright, etc.
+
+  # Add this job to implement Production Build and Deploy
+  deploy-production:
+    needs: [lint-typecheck, unit-tests, build-test, visual-tests]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10.4.1
+      - run: PNPM_FROZEN_LOCKFILE=true pnpm install
+      - run: NODE_ENV=production pnpm build:vite
+      - name: Deploy to production
+        run: echo "Deploying to production"
+        # This would typically use a service like Vercel, Netlify, etc.
