@@ -192,4 +192,15 @@ colima-stop: ## Stop Colima development environment
 colima-list: ## List all Colima profiles
 	colima list
 
+##@ Visual Testing
+.PHONY: backstop-init backstop-test backstop-approve
+
+backstop-init: ensure-pnpm-dirs ## Initialize BackstopJS reference images
+	$(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm backstop reference"
+
+backstop-test: ensure-pnpm-dirs ## Run BackstopJS visual regression tests
+	$(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm backstop test"
+
+backstop-approve: ensure-pnpm-dirs ## Approve BackstopJS test images as references
+	$(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm backstop approve"
 

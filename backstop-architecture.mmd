@@ -1,0 +1,36 @@
+graph TD
+    subgraph "Visual Testing Flow"
+        BS[BackstopJS] --> |1. Initiates test| PUP[Puppeteer]
+        PUP --> |2. Controls| CHR[Chromium Browser]
+        CHR --> |3. Renders| APP[Your React App]
+        CHR --> |4. Captures| SS[Screenshots]
+        SS --> |5. Sent to| COMP[BackstopJS Comparator]
+        COMP --> |6. Compares with| REF[Reference Images]
+        COMP --> |7. Generates| REP[HTML Report]
+    end
+
+    subgraph "Docker Container"
+        DOCK[Docker] --> |Provides| NODE[Node.js]
+        DOCK --> |Installs| SYS_CHR[System Chromium]
+        NODE --> |Runs| BS
+        PUP --> |Uses| SYS_CHR
+        PUP --> |Configured by| CONF[.puppeteerrc.cjs]
+    end
+
+    subgraph "Configuration Files"
+        BACK_CONF[backstop.json] --> |Configures| BS
+        BACK_CONF --> |Defines| SCEN[Test Scenarios]
+        BACK_CONF --> |Specifies| VIEW[Viewports]
+        BACK_CONF --> |Sets| ENG_OPT[Engine Options]
+        ENG_OPT --> |Points to| SYS_CHR
+    end
+
+    subgraph "Makefile Commands"
+        MAKE[Makefile] --> |Provides| CMD_REF[backstop-init]
+        MAKE --> |Provides| CMD_TEST[backstop-test]
+        MAKE --> |Provides| CMD_APP[backstop-approve]
+        
+        CMD_REF --> |Creates| REF
+        CMD_TEST --> |Runs| BS
+        CMD_APP --> |Updates| REF
+    end

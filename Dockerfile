@@ -12,7 +12,21 @@ RUN apt-get update && apt-get install -y \
     netcat-traditional \
     lsof \
     iproute2 \
+    # BackstopJS dependencies
+    chromium \
+    libatk-bridge2.0-0 \
+    libgtk-3-0 \
+    libasound2 \
+    fonts-freefont-ttf \
+    libxss1 \
+    libxtst6 \
+    xauth \
+    xvfb \
     && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables for Puppeteer
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Enable IPv4 for localhost
 RUN echo "net.ipv6.bindv6only=0" >> /etc/sysctl.conf

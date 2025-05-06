@@ -1,0 +1,99 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-typecheck:
+    runs-on: ubuntu-latest
+    container:
+      image: node:22-slim
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10.4.1
+      - run: pnpm install
+      - run: pnpm lint
+      - run: pnpm type-check
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    container:
+      image: node:22-slim
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10.4.1
+      - run: pnpm install
+      - run: pnpm test
+      - name: Upload test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+
+  build-test:
+    runs-on: ubuntu-latest
+    container:
+      image: node:22-slim
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10.4.1
+      - run: PNPM_FROZEN_LOCKFILE=true pnpm install
+      - run: NODE_ENV=production pnpm build:vite
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: dist/
+
+  visual-tests:
+    runs-on: ubuntu-latest
+    services:
+      selenium:
+        image: selenium/standalone-chromium:latest
+        options: --shm-size="2g"
+        ports:
+          - 4444:4444
+          - 7900:7900
+      app:
+        image: node:22-slim
+        ports:
+          - 5173:5173
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10.4.1
+      
+      # Install dependencies
+      - name: Install dependencies
+        run: pnpm install
+      
+      # Start app in background
+      - name: Start app
+        run: |
+          pnpm dev:host &
+          sleep 10
+      
+      # Run BackstopJS tests with environment variables
+      - name: Run visual tests
+        env:
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
+          PUPPETEER_EXECUTABLE_PATH: "/usr/bin/chromium"
+        run: |
+          pnpm backstop test
+      
+      # Upload test results
+      - name: Upload visual test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: backstop-report
+          path: backstop_data/
