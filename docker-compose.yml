@@ -55,6 +55,12 @@ services:
         reservations:
           cpus: '1'
           memory: 1G
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:5173"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   shell:
     extends: app
@@ -62,6 +68,36 @@ services:
     stdin_open: true
     tty: true
     command: /bin/bash
+
+  visual-test:
+    platform: ${PLATFORM:-linux/arm64}
+    build:
+      context: .
+      dockerfile: Dockerfile.visual-test
+    profiles: ["visual-testing"]
+    container_name: ${COMPOSE_PROJECT_NAME:-mychat}-visual-test
+    volumes:
+      - type: bind
+        source: ${VISUAL_TEST_DIR:-./.tmp/visual-tests}
+        target: /visual-tests
+        bind:
+          create_host_path: true
+    environment:
+      - NODE_ENV=test
+      - TARGET_APP=http://app:5173
+    depends_on:
+      app:
+        condition: service_healthy
+
+  screenshot:
+    extends: visual-test
+    profiles: ["visual-testing"]
+    command: -c "npx puppeteer screenshot --url $$TARGET_APP --path /visual-tests/screenshots/${COMMIT_HASH:-latest}.png"
+
+  compare:
+    extends: visual-test
+    profiles: ["visual-testing"]
+    command: -c "npx pixelmatch /visual-tests/screenshots/${PREV_COMMIT_HASH}.png /visual-tests/screenshots/${COMMIT_HASH}.png /visual-tests/diffs/${COMMIT_HASH}_diff.png"
 
 volumes:
   node_modules:

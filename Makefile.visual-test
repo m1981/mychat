@@ -1,0 +1,13 @@
+.PHONY: build-retroactive start-retroactive stop-retroactive capture-screenshot
+
+build-retroactive:
+    docker compose build app
+
+start-retroactive:
+    docker compose up -d app
+
+stop-retroactive:
+    docker compose down
+
+capture-screenshot:
+    docker compose --profile visual-testing run --rm visual-test -c "node /path/to/screenshot-script.js"
