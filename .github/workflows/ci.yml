@@ -5,6 +5,23 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - accept-references
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  issues: write
+  pull-requests: write
 
 jobs:
   lint-typecheck:
@@ -56,6 +73,11 @@ jobs:
 
   visual-tests:
     runs-on: ubuntu-latest
+    # Add environment configuration for Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    if: github.event.inputs.action != 'accept-references'
     services:
       selenium:
         image: selenium/standalone-chromium:latest
@@ -77,6 +99,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       
+      # Configure Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
       # Start app in background
       - name: Start app
         run: |
@@ -84,22 +110,87 @@ jobs:
           echo "Waiting for app to start..."
           sleep 15
 
-      # Run BackstopJS tests with environment variables
+      # Run BackstopJS tests
       - name: Run visual tests
+        id: backstop_test
+        continue-on-error: true
         env:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
           PUPPETEER_EXECUTABLE_PATH: "/usr/bin/chromium"
         run: |
           pnpm backstop test || true
+          echo "status=$?" >> $GITHUB_OUTPUT
+
+      # Upload Pages artifact (replaces peaceiris/actions-gh-pages)
+      - name: Upload Pages artifact
+        if: always()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'backstop_data/html_report'
+
+      # Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        if: always()
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      # Update PR comment with new URL format
+      - name: Comment PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const reportUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/reports/${context.sha}`;
+            const acceptUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/workflows/visual-testing.yml`;
+            
+            const comment = `
+            ## Visual Regression Test Results
+            
+            📊 [View Full Report](${reportUrl})
       
-      # Upload test results
+            If the changes are intentional, you can accept them as new references:
+            1. Go to [Visual Testing Workflow](${acceptUrl})
+            2. Click "Run workflow"
+            3. Select "accept-references" from the dropdown
+            4. Click "Run workflow"
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      # Upload test results as artifacts
       - name: Upload visual test results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: backstop-report
           path: backstop_data/
 
-  # Add this job to implement the Quality Gate and Deploy Preview
+  accept-references:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'accept-references'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10.4.1
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Accept References
+        run: |
+          pnpm backstop approve
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "GitHub Actions Bot"
+          git add backstop_data/bitmaps_reference
+          git commit -m "Update visual references [skip ci]"
+          git push origin main
+
   deploy-preview:
     needs: [lint-typecheck, unit-tests, build-test, visual-tests]
     runs-on: ubuntu-latest

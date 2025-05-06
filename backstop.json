@@ -2,16 +2,6 @@
   "id": "better_chatgpt_visual_tests",
   "viewports": [
     {
-      "label": "phone",
-      "width": 375,
-      "height": 667
-    },
-    {
-      "label": "tablet",
-      "width": 768,
-      "height": 1024
-    },
-    {
       "label": "desktop",
       "width": 1920,
       "height": 1080

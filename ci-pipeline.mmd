@@ -1,7 +1,8 @@
 graph TD
-    subgraph "CI/CD Pipeline"
-        PR[Pull Request] --> |Triggers| CI[CI Workflow]
-        
+    subgraph CI_CD_Pipeline
+        Trigger{Trigger Type} --> |PR/Push| CI[CI Workflow]
+        Trigger --> |Manual| AcceptRef[Accept References]
+
         subgraph "Parallel Jobs"
             CI --> Lint[Lint Code]
             CI --> TypeCheck[Type Check]
@@ -29,7 +30,11 @@ graph TD
         DockerEnv --> |2. Start App| DevServer[Dev Server]
         DevServer --> |3. Run| BackstopTests[BackstopJS Tests]
         BackstopTests --> |4. Generate| TestReport[Test Report]
-        TestReport --> |5. Upload| Artifacts[Upload Artifacts]
+        TestReport --> GHPages[GitHub Pages]
+        GHPages --> PRComment[PR Comment with Links]
+
+        AcceptRef --> References[Reference Images]
+        References --> MainBranch[Main Branch]
     end
     
     subgraph "Vercel Build Process"
@@ -46,7 +51,8 @@ graph TD
         GHActions[GitHub Actions] --> |Defines| BuildJob[Build Job]
         GHActions --> |Defines| TestJob[Test Job]
         GHActions --> |Defines| VisualJob[Visual Test Job]
-        
+        GHActions --> AcceptJob[Accept References Job]
+
         BuildJob --> |Uses| DockerImage[Docker Image]
         TestJob --> |Uses| DockerImage
         VisualJob --> |Uses| DockerImage
@@ -54,3 +60,11 @@ graph TD
         DockerImage --> |Contains| NodePNPM[Node + PNPM]
         DockerImage --> |Contains| Chromium[Chromium for BackstopJS]
     end
+
+    classDef trigger fill:#f9f,stroke:#333,stroke-width:2px
+    classDef manual fill:#fcf,stroke:#333,stroke-width:2px
+    classDef report fill:#cff,stroke:#333,stroke-width:2px
+
+    class Trigger trigger
+    class AcceptRef manual
+    class GHPages,PRComment report
