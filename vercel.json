@@ -1,5 +1,5 @@
 {
-  "buildCommand": "PNPM_FROZEN_LOCKFILE=true NODE_ENV=production pnpm vercel-build",
+  "buildCommand": "pnpm vercel-build",
   "installCommand": "PNPM_FROZEN_LOCKFILE=true pnpm install",
   "env": {
     "NODE_ENV": "production",
