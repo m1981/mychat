@@ -31,3 +31,5 @@ release/
 .pnpm-store/
 .pnpm-cache/
 pnpm-debug.log
+# Sentry Config File
+.env.sentry-build-plugin

@@ -1,3 +1,4 @@
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 /**
  * Vite Production Configuration
  * Responsibilities:
@@ -20,11 +21,10 @@ import wasm from 'vite-plugin-wasm';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [
-    react(),
-    wasm(),
-    topLevelAwait()
-  ],
+  plugins: [react(), wasm(), topLevelAwait(), sentryVitePlugin({
+    org: "pixelcrate",
+    project: "chatai"
+  })],
   define: {
     'process.cwd': 'function() { return "/" }',
     'process.env': JSON.stringify(process.env)
