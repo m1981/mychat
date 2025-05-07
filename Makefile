@@ -204,3 +204,22 @@ backstop-test: ensure-pnpm-dirs ## Run BackstopJS visual regression tests
 backstop-approve: ensure-pnpm-dirs ## Approve BackstopJS test images as references
 	$(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm backstop approve"
 
+##@ Sentry Testing
+.PHONY: sentry-test
+
+sentry-test: ensure-pnpm-dirs ## Build and test Sentry integration
+    @echo "=== Building production version with Sentry integration ==="
+    $(DOCKER_COMPOSE_RUN) \
+        -e NODE_ENV=production \
+        -e PLATFORM=$(PLATFORM) \
+        app sh -c "pnpm install && pnpm build:vite"
+    @echo "=== Starting production server ==="
+    @echo "1. Open http://localhost:4173 in your browser"
+    @echo "2. Trigger an error in the application"
+    @echo "3. Check Sentry dashboard: https://pixelcrate.sentry.io/issues/?project=4509238037446656"
+    @echo "4. Press Ctrl+C to stop the server when done"
+    $(DOCKER_COMPOSE_RUN) \
+        -e NODE_ENV=production \
+        -p 4173:4173 \
+        app sh -c "cd dist && npx serve -s"
+
