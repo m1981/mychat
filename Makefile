@@ -231,3 +231,10 @@ serve-sentry-test: ensure-pnpm-dirs ## Serve Sentry test build
 		-p 3000:3000 \
 		app sh -c "env && cd dist && npx serve -s -l tcp://0.0.0.0:3000"
 
+##@ CI/CD Testing
+.PHONY: test-ci test-ci-local
+
+test-ci-local: ## Test GitHub Actions workflows locally using act
+	@command -v act >/dev/null 2>&1 || { echo "Error: act not installed. Run 'brew install act' or visit https://github.com/nektos/act"; exit 1; }
+	act -j lint-typecheck --container-architecture linux/amd64
+
