@@ -104,9 +104,10 @@ jobs:
         uses: actions/configure-pages@v4
 
       # Start app in background
-      - name: Start app
+      - name: Build and start app for testing
         run: |
-          pnpm dev:host &
+          NODE_ENV=production pnpm build:vite
+          cd dist && npx serve -s -l 5173 &
           echo "Waiting for app to start..."
           sleep 15
 
