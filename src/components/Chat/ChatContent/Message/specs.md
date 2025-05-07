@@ -391,7 +391,7 @@ graph TD
     Message --> EditMode[EditMode/]
     Message --> CodeBlock[CodeBlock/]
     Message --> interfaces[interfaces.ts]
-    Message --> context[Context/]
+    Message --> context[context/]
     
     context --> MessageEditorContext[MessageEditorContext.tsx]
     context --> MessageEditorProvider[MessageEditorProvider.tsx]
