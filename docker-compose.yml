@@ -36,7 +36,7 @@ services:
         volume:
           nocopy: false
     environment:
-      - NODE_ENV=development
+      - NODE_ENV
       - PNPM_HOME=/home/node/.local/share/pnpm
       - PATH=/home/node/.local/share/pnpm:$PATH
       - PACKAGE_HASH=${PACKAGE_HASH:-default}
@@ -51,10 +51,10 @@ services:
       resources:
         limits:
           cpus: '2'
-          memory: 2G
+          memory: 4G
         reservations:
           cpus: '1'
-          memory: 1G
+          memory: 4G
 
   shell:
     extends: app

@@ -223,3 +223,22 @@ sentry-test: ensure-pnpm-dirs ## Build and test Sentry integration
 		-p 4173:4173 \
 		app sh -c "cd dist && npx serve -s"
 
+##@ Production Build
+.PHONY: build-prod
+
+build-prod: init-volumes ## Build production-ready application
+	@echo "$(GREEN)Building production version...$(RESET)"
+	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) \
+		-e NODE_ENV=production \
+		app sh -c "pnpm install && NODE_ENV=production pnpm build:vite"
+	@echo "$(GREEN)Production build completed in ./dist directory$(RESET)"
+	@echo "Use 'make serve-prod' to serve the production build"
+
+serve-prod: ensure-pnpm-dirs ## Serve production build with proper network binding
+	$(DOCKER_COMPOSE_RUN) \
+		-e NODE_ENV=production \
+		-p 3000:3000 \
+		app sh -c "env && cd dist && npx serve -s -l tcp://0.0.0.0:3000"
+
+
+
