@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, RefObject } from 'react';
 import { UseMessageEditorProps, UseMessageEditorReturn } from '../components/Chat/ChatContent/Message/interfaces';
-import { useStore } from '@store/store';
+import useStore from '@store/store';
 
 export function useMessageEditor({
   initialContent,

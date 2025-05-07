@@ -64,15 +64,17 @@ describe('EditViewButtons', () => {
     const mockHandleSave = vi.fn();
     
     // Create a mock implementation of MessageEditorContext
-    vi.mock('@components/Chat/ChatContent/Message/Context/MessageEditorContext', () => ({
+    vi.mock('@components/Chat/ChatContent/Message/context/MessageEditorContext', () => ({
       useMessageEditorContext: () => ({
         handleSave: mockHandleSave,
         setIsEdit: vi.fn(),
         isComposer: false,
+        handleSaveAndSubmit: vi.fn(),
       }),
       MessageEditorProvider: ({ children }) => children,
     }));
     
+    // Re-render after mocking
     render(<EditViewButtons />);
     
     fireEvent.click(screen.getByTestId('save-edit-button'));
@@ -82,23 +84,24 @@ describe('EditViewButtons', () => {
 
   it('calls customSaveHandler when provided and Save button is clicked', () => {
     const customSaveHandler = vi.fn();
+    const mockHandleSave = vi.fn();
     
-    render(
-      <MessageEditorProvider
-        initialContent="Test"
-        messageIndex={0}
-        isComposer={false}
-        setIsEdit={vi.fn()}
-        setIsEditing={vi.fn()}
-      >
-        <EditViewButtons customSaveHandler={customSaveHandler} />
-      </MessageEditorProvider>
-    );
+    // Create a mock implementation of MessageEditorContext
+    vi.mock('@components/Chat/ChatContent/Message/context/MessageEditorContext', () => ({
+      useMessageEditorContext: () => ({
+        handleSave: mockHandleSave,
+        setIsEdit: vi.fn(),
+        isComposer: false,
+        handleSaveAndSubmit: vi.fn(),
+      }),
+      MessageEditorProvider: ({ children }) => children,
+    }), { virtual: true });
+    
+    render(<EditViewButtons customSaveHandler={customSaveHandler} />);
     
     fireEvent.click(screen.getByTestId('save-edit-button'));
     
-    // Since we can't easily test if customSaveHandler is called due to the mocking,
-    // we're just verifying the component renders without errors
-    expect(screen.getByTestId('save-edit-button')).toBeInTheDocument();
+    expect(customSaveHandler).toHaveBeenCalled();
+    expect(mockHandleSave).not.toHaveBeenCalled();
   });
 });
