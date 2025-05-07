@@ -205,40 +205,29 @@ backstop-approve: ensure-pnpm-dirs ## Approve BackstopJS test images as referenc
 	$(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm backstop approve"
 
 ##@ Sentry Testing
-.PHONY: sentry-test
+.PHONY: build-sentry-test serve-sentry-test
 
-sentry-test: ensure-pnpm-dirs ## Build and test Sentry integration
-	@echo "=== Building production version with Sentry integration ==="
-	$(DOCKER_COMPOSE_RUN) \
-		-e NODE_ENV=production \
-		-e PLATFORM=$(PLATFORM) \
-		app sh -c "pnpm install && pnpm build:vite"
-	@echo "=== Starting production server ==="
-	@echo "1. Open http://localhost:4173 in your browser"
-	@echo "2. Trigger an error in the application"
-	@echo "3. Check Sentry dashboard: https://pixelcrate.sentry.io/issues/?project=4509238037446656"
-	@echo "4. Press Ctrl+C to stop the server when done"
-	$(DOCKER_COMPOSE_RUN) \
-		-e NODE_ENV=production \
-		-p 4173:4173 \
-		app sh -c "cd dist && npx serve -s"
-
-##@ Production Build
-.PHONY: build-prod
-
-build-prod: init-volumes ## Build production-ready application
-	@echo "$(GREEN)Building production version...$(RESET)"
+build-sentry-test: init-volumes ## Build production with Sentry test button
+	@echo "$(GREEN)Building production version with Sentry test button...$(RESET)"
+	@if [ -z "$(SENTRY_AUTH_TOKEN)" ]; then \
+		echo "$(RED)Error: SENTRY_AUTH_TOKEN environment variable is not set$(RESET)"; \
+		echo "Please set it with: export SENTRY_AUTH_TOKEN=your_token"; \
+		exit 1; \
+	fi
 	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) \
 		-e NODE_ENV=production \
+		-e VITE_ENABLE_SENTRY_TEST=true \
+		-e SENTRY_AUTH_TOKEN=$(SENTRY_AUTH_TOKEN) \
+		-e SENTRY_ORG=pixelcrate \
+		-e SENTRY_PROJECT=chatai \
 		app sh -c "pnpm install && NODE_ENV=production pnpm build:vite"
-	@echo "$(GREEN)Production build completed in ./dist directory$(RESET)"
-	@echo "Use 'make serve-prod' to serve the production build"
+	@echo "$(GREEN)Sentry test build completed in ./dist directory$(RESET)"
+	@echo "Use 'make serve-sentry-test' to serve the Sentry test build"
 
-serve-prod: ensure-pnpm-dirs ## Serve production build with proper network binding
+
+serve-sentry-test: ensure-pnpm-dirs ## Serve Sentry test build
 	$(DOCKER_COMPOSE_RUN) \
 		-e NODE_ENV=production \
 		-p 3000:3000 \
 		app sh -c "env && cd dist && npx serve -s -l tcp://0.0.0.0:3000"
-
-
 
