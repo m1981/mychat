@@ -139,8 +139,8 @@ const Debug = () => {
       <div
         style={{
           position: 'fixed',
-          bottom: 0,
-          right: 0,
+          bottom: 80,
+          right: 40,
           background: 'rgba(0,0,0,0.8)',
           color: 'white',
           padding: '10px',
