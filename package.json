@@ -12,6 +12,7 @@
     "dev:host": "vite --config vite.config.dev.ts --host",
     "build": "pnpm type-check && NODE_ENV=production TS_NODE_BASEURL=./ pnpm build:vite",
     "build:vite": "NODE_OPTIONS='--max_old_space_size=8192' vite build --config vite.config.prod.ts",
+    "postbuild": "node scripts/upload-to-sentry.js",
     "test": "NODE_ENV=test vitest run",
     "test:watch": "NODE_ENV=test vitest watch",
     "test:coverage": "NODE_ENV=test vitest run --coverage",

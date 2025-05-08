@@ -220,7 +220,7 @@ sentry-build: init-volumes ## Build production with Sentry test button
 		-e SENTRY_AUTH_TOKEN=$(SENTRY_AUTH_TOKEN) \
 		-e SENTRY_ORG=pixelcrate \
 		-e SENTRY_PROJECT=chatai \
-		app sh -c "pnpm install && NODE_ENV=production pnpm build:vite"
+		app sh -c "pnpm install && NODE_ENV=production pnpm build:vite && pnpm postbuild"
 	@echo "$(GREEN)Sentry test build completed in ./dist directory$(RESET)"
 	@echo "Use 'make sentry-serve' to serve the Sentry test build"
 
