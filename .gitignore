@@ -6,7 +6,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
+output
+backstop_data/bitmaps_test
+backstop_data/html_report
 node_modules
 dist
 dist-ssr
