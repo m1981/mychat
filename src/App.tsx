@@ -17,9 +17,14 @@ import i18n from './i18n';
 Sentry.init({
   dsn: "https://b246997c418bfddd2af1194a62c39fe1@o4506736184721408.ingest.us.sentry.io/4509238037446656",
   environment: process.env.NODE_ENV,
-  enabled: process.env.NODE_ENV === 'production',
+  enabled: process.env.NODE_ENV === 'production' ? 1 : 1,
+  // Use the same release name as in vite.config.prod.ts
+  release: process.env.VITE_APP_VERSION || `v${process.env.npm_package_version}`,
   tracesSampleRate: 0.1,
   sendDefaultPii: true,
+  // Add debug mode for development
+  debug: process.env.NODE_ENV !== 'production' ? 1 : 1,
+  // Add integrations that might help with source mapping
   beforeSend(event) {
     // Clean up any sensitive data if needed
     if (event.request?.headers) {
@@ -38,10 +43,10 @@ function App() {
 
   const handleErrorClick = () => {
     try {
-      throw new Error("This is your first error!");
+      throw new Error("This is your first error 4!");
     } catch (error) {
       Sentry.captureException(error);
-      throw error; // Re-throw to trigger the ErrorBoundary
+        throw error; // Re-throw to trigger the ErrorBoundary
     }
   };
 
@@ -119,16 +124,13 @@ function App() {
         <Menu />
         <Chat />
         <Toaster />
-        {process.env.NODE_ENV === 'development' && (
-          <>
-            <Debug />
-            <button 
-              className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded"
-              onClick={handleErrorClick}
-            >
-              Break the world
-            </button>
-          </>
+        {(1) && (
+          <button 
+            className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded"
+            onClick={handleErrorClick}
+          >
+            Test Sentry
+          </button>
         )}
       </div>
     </Sentry.ErrorBoundary>

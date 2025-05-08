@@ -21,92 +21,89 @@ import wasm from 'vite-plugin-wasm';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react(), wasm(), topLevelAwait(), sentryVitePlugin({
-    org: "pixelcrate",
-    project: "chatai"
-  })],
+  plugins: [react(), wasm(), topLevelAwait(),
+    sentryVitePlugin({
+	      authToken: process.env.SENTRY_AUTH_TOKEN,
+	  org: "pixelcrate",
+      project: "chatai",
+      release: {
+        name: process.env.VITE_APP_VERSION || `v${process.env.npm_package_version}`,
+      },
+      sourcemaps: {
+        include: ['./dist/assets'],
+        urlPrefix: '~/assets',
+        ignore: ['node_modules'],
+      },
+      debug: true,
+      stripPrefix: ['webpack://_N_E/'],
+      rewrite: true,
+	})
+  ],
   define: {
-    'process.cwd': 'function() { return "/" }',
-    'process.env': JSON.stringify(process.env)
+	'process.cwd': 'function() { return "/" }',
+	'process.env': JSON.stringify(process.env)
   },
   optimizeDeps: {
-    include: ['mermaid'],
-    esbuildOptions: {
-      target: 'esnext',
-      platform: 'browser',
-      supported: {
-        'dynamic-import': true
-      }
-    }
+	include: ['mermaid'],
+	esbuildOptions: {
+	  target: 'esnext',
+	  platform: 'browser',
+	  supported: {
+		'dynamic-import': true
+	  }
+	}
   },
   build: {
-    sourcemap: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'core-vendor': ['react', 'react-dom', 'zustand'],
-          'markdown-core': [
-            'react-markdown',
-            'remark-gfm',
-            'remark-math'
-          ],
-          'markdown-plugins': [
-            'rehype-highlight',
-            'rehype-katex'
-          ],
-          'mermaid': ['mermaid'],
-          'ui-utils': [
-            'react-hot-toast',
-            'html2canvas',
-            'jspdf'
-          ],
-          'i18n': [
-            'i18next',
-            'react-i18next',
-            'i18next-browser-languagedetector',
-            'i18next-http-backend'
-          ],
-          'data-utils': [
-            'lodash',
-            'uuid',
-            'lz-string',
-            'papaparse'
-          ]
-        }
-      }
-    },
-    chunkSizeWarningLimit: 1600,
-    target: 'esnext',
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: false,
-        drop_debugger: false
-      }
-    },
-    reportCompressedSize: false,
-    cssCodeSplit: true
+	sourcemap: true,
+	rollupOptions: {
+	  output: {
+		sourcemapExcludeSources: false,
+		// Comment out manualChunks temporarily as we did before
+		}
+	},
+	// Add this to ensure source map comments are included
+	minify: 'terser',
+	terserOptions: {
+	  compress: {
+		drop_console: false,
+		drop_debugger: false
+	  },
+	  // Ensure comments are preserved
+	  format: {
+		comments: 'some',
+		preamble: '/* Source maps enabled */'
+	  }
+	},
+	// Add this to fix source map paths
+	sourcemapPathTransform: (relativeSourcePath) => {
+	  // Ensure paths are correctly formatted for Sentry
+	  return relativeSourcePath.replace(/^\.\.\/\.\.\//, '');
+	},
+	chunkSizeWarningLimit: 1600,
+	target: 'esnext',
+	reportCompressedSize: false,
+	cssCodeSplit: true
   },
   resolve: {
-    alias: {
-      '@icon': path.resolve(__dirname, './src/assets/icons'),
-      '@type': path.resolve(__dirname, './src/types'),
-      '@store': path.resolve(__dirname, './src/store'),
-      '@hooks': path.resolve(__dirname, './src/hooks'),
-      '@constants': path.resolve(__dirname, './src/constants'),
-      '@config': path.resolve(__dirname, './src/config'),
-      '@api': path.resolve(__dirname, './src/api'),
-      '@components': path.resolve(__dirname, './src/components'),
-      '@models': path.resolve(__dirname, './src/config/models'),
-      '@utils': path.resolve(__dirname, './src/utils'),
-      '@lib': path.resolve(__dirname, './src/lib'),
-      '@src': path.resolve(__dirname, './src')
-    }
+	alias: {
+	  '@icon': path.resolve(__dirname, './src/assets/icons'),
+	  '@type': path.resolve(__dirname, './src/types'),
+	  '@store': path.resolve(__dirname, './src/store'),
+	  '@hooks': path.resolve(__dirname, './src/hooks'),
+	  '@constants': path.resolve(__dirname, './src/constants'),
+	  '@config': path.resolve(__dirname, './src/config'),
+	  '@api': path.resolve(__dirname, './src/api'),
+	  '@components': path.resolve(__dirname, './src/components'),
+	  '@models': path.resolve(__dirname, './src/config/models'),
+	  '@utils': path.resolve(__dirname, './src/utils'),
+	  '@lib': path.resolve(__dirname, './src/lib'),
+	  '@src': path.resolve(__dirname, './src')
+	}
   },
   base: '/',
   preview: {
-    port: 4173,
-    host: true,
-    strictPort: true,
+	port: 4173,
+	host: true,
+	strictPort: true,
   }
 });
