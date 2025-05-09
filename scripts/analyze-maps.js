@@ -1,73 +1,101 @@
-// analyze-maps.js
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { glob } from 'glob';
-import { dirname } from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-async function analyzeMaps() {
+async function analyzeSourceMapCoverage(sourceDir = './src') {
     try {
-        // Find all .map files in dist/assets
-        const mapFiles = await glob('./dist/assets/**/*.map');
+        // 1. Get all source files (excluding tests and icons)
+        const sourceFiles = await glob(`${sourceDir}/**/*.{ts,tsx,js,jsx}`, {
+            ignore: [
+                '**/node_modules/**',
+                '**/dist/**',
+                '**/__tests__/**',
+                '**/icons/**',
+                '**/*.test.{ts,tsx,js,jsx}',
+                '**/*.spec.{ts,tsx,js,jsx}'
+            ],
+            nodir: true
+        });
 
-        const results = [];
+        // Sort and normalize source paths
+        const normalizedSourceFiles = sourceFiles
+            .map(file => path.normalize(file))
+            .sort();
+
+        console.log('\n=== Source Files ===\n');
+        console.log(`Found ${normalizedSourceFiles.length} source files`);
+        normalizedSourceFiles.forEach(file => console.log(file));
+
+        // 2. Get all files referenced in source maps (excluding node_modules)
+        const mapFiles = await glob('./dist/assets/**/*.map');
+        const sourcesFromMaps = new Set();
 
         for (const mapFile of mapFiles) {
             const content = JSON.parse(await fs.promises.readFile(mapFile, 'utf8'));
-            const jsFile = mapFile.replace('.map', '');
-
-            // Get file sizes
-            const mapStats = await fs.promises.stat(mapFile);
-            const jsStats = await fs.promises.stat(jsFile).catch(() => null);
-
-            results.push({
-                file: path.basename(mapFile),
-                sourceCount: content.sources.length,
-                mapSize: (mapStats.size / 1024).toFixed(2) + ' KB',
-                jsSize: jsStats ? (jsStats.size / 1024).toFixed(2) + ' KB' : 'N/A',
-                ratio: jsStats ? (mapStats.size / jsStats.size * 100).toFixed(2) + '%' : 'N/A',
-                sources: content.sources.map(src => {
-                    // Clean up node_modules paths for better readability
-                    return src.replace('../../node_modules/.pnpm/', '')
-                        .replace('/node_modules/', '')
-                        .split('/').slice(0, 2).join('/');
-                })
+            content.sources
+                .filter(source => !source.includes('node_modules')) // Exclude node_modules
+                .forEach(source => {
+                // Clean up source paths (remove relative paths, etc.)
+                const cleanPath = path.normalize(source)
+                    .replace('../../', '')
+                    .replace(/^\//, '');
+                sourcesFromMaps.add(cleanPath);
             });
         }
 
-        // Print summary
-        console.log('\n=== Source Map Analysis ===\n');
+        const sortedMapSources = Array.from(sourcesFromMaps).sort();
 
-        results.forEach(result => {
-            console.log(`\nFile: ${result.file}`);
-            console.log(`JS Size: ${result.jsSize}`);
-            console.log(`Map Size: ${result.mapSize}`);
-            console.log(`Map/JS Ratio: ${result.ratio}`);
-            console.log(`Number of sources: ${result.sourceCount}`);
-            console.log('\nTop dependencies:');
+        console.log('\n=== Files in Source Maps (excluding node_modules) ===\n');
+        console.log(`Found ${sortedMapSources.length} files in source maps`);
+        sortedMapSources.forEach(file => console.log(file));
 
-            // Count and sort dependencies by frequency
-            const deps = result.sources.reduce((acc, src) => {
-                acc[src] = (acc[src] || 0) + 1;
-                return acc;
-            }, {});
+        // 3. Compare lists
+        console.log('\n=== Coverage Analysis ===\n');
 
-            Object.entries(deps)
-                .sort(([,a], [,b]) => b - a)
-                .slice(0, 10)
-                .forEach(([dep, count]) => {
-                    console.log(`  ${dep}: ${count} files`);
-                });
+        // Normalize paths for comparison
+        const normalizedMapSources = sortedMapSources.map(file =>
+            path.normalize(file).replace(/^.*?src\//, 'src/')
+        );
 
-            console.log('\n' + '='.repeat(50));
-        });
+        // Files in source but not in maps
+        const missingInMaps = normalizedSourceFiles.filter(sourceFile =>
+            !normalizedMapSources.includes(sourceFile)
+        );
+
+        // Files in maps but not in source
+        const extraInMaps = normalizedMapSources.filter(mapSource =>
+            !normalizedSourceFiles.includes(mapSource)
+        );
+
+        console.log('Files missing from source maps:');
+        missingInMaps.forEach(file => console.log(`  - ${file}`));
+
+        console.log('\nExtra files in source maps:');
+        extraInMaps.forEach(file => console.log(`  - ${file}`));
+
+        // 4. Statistics
+        const filesInBoth = normalizedSourceFiles.length - missingInMaps.length;
+        const coverage = (filesInBoth / normalizedSourceFiles.length) * 100;
+
+        console.log('\n=== Statistics ===\n');
+        console.log(`Total source files: ${normalizedSourceFiles.length}`);
+        console.log(`Files found in source maps: ${sortedMapSources.length}`);
+        console.log(`Files present in both: ${filesInBoth}`);
+        console.log(`Files missing from maps: ${missingInMaps.length}`);
+        console.log(`Extra files in maps: ${extraInMaps.length}`);
+        console.log(`Coverage: ${coverage.toFixed(2)}%`);
+
+        // 5. Detailed matching analysis
+        console.log('\n=== Matched Files ===\n');
+        normalizedSourceFiles
+            .filter(sourceFile => normalizedMapSources.includes(sourceFile))
+            .forEach(file => console.log(`  ✓ ${file}`));
 
     } catch (error) {
         console.error('Error analyzing source maps:', error);
     }
 }
 
-analyzeMaps();
+// Execute with command line argument or default to './src'
+const sourceDir = process.argv[2] || './src';
+analyzeSourceMapCoverage(sourceDir);

@@ -1,19 +1,3 @@
-import { sentryVitePlugin } from "@sentry/vite-plugin";
-/**
- * Vite Production Configuration
- * Responsibilities:
- * - Build configuration and optimization
- * - Plugin management
- * - Asset bundling and chunking
- * - Path aliases (must match tsconfig.json paths)
- * 
- * Contracts:
- * - Must maintain path aliases in sync with tsconfig.json
- * - Must not override test configurations (handled by vitest.config.ts)
- * - Must maintain manual chunks for optimal code splitting
- * - Must provide all necessary build optimizations
- * - Must handle WASM and top-level await support
- */
 import react from '@vitejs/plugin-react-swc';
 import { defineConfig } from 'vite';
 import topLevelAwait from 'vite-plugin-top-level-await';
@@ -21,27 +5,13 @@ import wasm from 'vite-plugin-wasm';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react(), wasm(), topLevelAwait(),
-    sentryVitePlugin({
-	      authToken: process.env.SENTRY_AUTH_TOKEN,
-	  org: "pixelcrate",
-      project: "chatai",
-      release: {
-        name: process.env.VITE_APP_VERSION || `v${process.env.npm_package_version}`,
-      },
-      sourcemaps: {
-        include: ['./dist/assets'],
-        urlPrefix: '~/assets',
-        ignore: ['node_modules'],
-      },
-      debug: true,
-      stripPrefix: ['webpack://_N_E/'],
-      rewrite: true,
-	})
-  ],
+  plugins: [react(), wasm(), topLevelAwait()],
   define: {
 	'process.cwd': 'function() { return "/" }',
-	'process.env': JSON.stringify(process.env)
+	'process.env': JSON.stringify({
+	  ...process.env,
+	  npm_package_version: process.env.npm_package_version || '1.0.4'
+	})
   },
   optimizeDeps: {
 	include: ['mermaid'],
@@ -54,33 +24,51 @@ export default defineConfig({
 	}
   },
   build: {
-	sourcemap: true,
 	rollupOptions: {
 	  output: {
-		sourcemapExcludeSources: false,
-		// Comment out manualChunks temporarily as we did before
-		}
+        sourcemapExcludeSources: false,
+        manualChunks: {
+          'core-vendor': ['react', 'react-dom', 'zustand'],
+          'markdown-core': [
+            'react-markdown',
+            'remark-gfm',
+            'remark-math'
+          ],
+          'markdown-plugins': [
+            'rehype-highlight',
+            'rehype-katex'
+          ],
+          'mermaid': ['mermaid'],
+          'ui-utils': [
+            'react-hot-toast',
+            'html2canvas',
+            'jspdf'
+          ],
+          'i18n': [
+            'i18next',
+            'react-i18next',
+            'i18next-browser-languagedetector',
+            'i18next-http-backend'
+          ],
+          'data-utils': [
+            'lodash',
+            'uuid',
+            'lz-string',
+            'papaparse'
+          ]
+        }
+	  }
 	},
-	// Add this to ensure source map comments are included
+    chunkSizeWarningLimit: 1600,
+    sourcemap: true,
+    target: 'esnext',
 	minify: 'terser',
 	terserOptions: {
 	  compress: {
 		drop_console: false,
 		drop_debugger: false
-	  },
-	  // Ensure comments are preserved
-	  format: {
-		comments: 'some',
-		preamble: '/* Source maps enabled */'
 	  }
 	},
-	// Add this to fix source map paths
-	sourcemapPathTransform: (relativeSourcePath) => {
-	  // Ensure paths are correctly formatted for Sentry
-	  return relativeSourcePath.replace(/^\.\.\/\.\.\//, '');
-	},
-	chunkSizeWarningLimit: 1600,
-	target: 'esnext',
 	reportCompressedSize: false,
 	cssCodeSplit: true
   },

@@ -29,6 +29,13 @@ const baseConfig: UserConfig = {
   optimizeDeps: {
     exclude: ['@webassembly/*'],
     force: true
+  },
+  define: {
+    'process.cwd': 'function() { return "/" }',
+    'process.env': JSON.stringify({
+      ...process.env,
+      npm_package_version: process.env.npm_package_version || '1.0.4'
+    })
   }
 };
 
