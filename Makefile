@@ -26,7 +26,7 @@ else
 endif
 
 # Add consistent container naming for run commands
-DOCKER_COMPOSE_RUN = $(DOCKER_COMPOSE) run --rm --name $(COMPOSE_PROJECT_NAME)-app-run
+DOCKER_COMPOSE_RUN = $(DOCKER_COMPOSE) run --build --rm
 
 # User/Group detection with fallbacks
 UID := $(shell id -u)
