@@ -34,6 +34,13 @@ vi.mock('@hooks/useTextSelection', () => ({
   }),
 }));
 
+// Mock the useSubmit hook
+vi.mock('@hooks/useSubmit', () => ({
+  default: () => ({
+    handleSubmit: vi.fn(),
+  }),
+}));
+
 // Mock EditViewButtons to simplify testing
 vi.mock('../EditViewButtons', () => ({
   default: () => <div data-testid="edit-view-buttons">Buttons</div>,
