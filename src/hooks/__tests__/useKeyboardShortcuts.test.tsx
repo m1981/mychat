@@ -2,7 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { useKeyboardShortcuts } from '../useKeyboardShortcuts';
 import { useMessageEditorContext } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
-import { useStore } from '@store/store';
+import useStore from '@store/store';
 
 // Mock the dependencies
 vi.mock('@components/Chat/ChatContent/Message/context/MessageEditorContext', () => ({
@@ -10,7 +10,7 @@ vi.mock('@components/Chat/ChatContent/Message/context/MessageEditorContext', () 
 }));
 
 vi.mock('@store/store', () => ({
-  useStore: {
+  default: {
     getState: vi.fn()
   }
 }));
