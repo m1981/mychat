@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 
 import { useTextSelection } from '@hooks/useTextSelection';
@@ -12,6 +12,7 @@ export const SelectionCopyProvider: React.FC<SelectionCopyProviderProps> = ({
 }) => {
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleCopy = useCallback(async (text: string) => {
     try {
@@ -35,8 +36,27 @@ export const SelectionCopyProvider: React.FC<SelectionCopyProviderProps> = ({
   }, []);
 
   useTextSelection({
-    onCopy: handleCopy
+    textareaRef
   });
+
+  useEffect(() => {
+    const handleSelection = async () => {
+      if (window.getSelection) {
+        const selection = window.getSelection();
+        if (selection && selection.toString()) {
+          await handleCopy(selection.toString());
+        }
+      }
+    };
+
+    document.addEventListener('mouseup', handleSelection);
+    document.addEventListener('keyup', handleSelection);
+
+    return () => {
+      document.removeEventListener('mouseup', handleSelection);
+      document.removeEventListener('keyup', handleSelection);
+    };
+  }, [handleCopy]);
 
   return (
     <div ref={containerRef} className="selection-copy-container">
