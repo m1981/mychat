@@ -1,7 +1,6 @@
-import React from 'react';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, RenderResult } from '@testing-library/react';
 import ContentView from '../ContentView';
-import { vi } from 'vitest';
 
 // Mock the CodeBlock component
 vi.mock('../../CodeBlock', () => ({

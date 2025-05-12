@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi, it, expect, describe } from 'vitest';
 import EditView from '../EditView';
 import { MessageEditorProvider } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
 
