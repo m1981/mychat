@@ -49,7 +49,16 @@ describe('useKeyboardShortcuts', () => {
       setIsEdit: mockSetIsEdit,
       handleSave: mockHandleSave,
       handleSaveAndSubmit: mockHandleSaveAndSubmit,
-      resetTextAreaHeight: mockResetTextAreaHeight
+      resetTextAreaHeight: mockResetTextAreaHeight,
+      // Add missing properties from MessageEditorContextType
+      editContent: '',
+      isModalOpen: false,
+      isEditing: false,
+      setEditContent: vi.fn(),
+      setIsModalOpen: vi.fn(),
+      textareaRef: { current: null },
+      messageIndex: 0,
+      focusLine: null
     });
     
     // Setup mock store
@@ -119,7 +128,16 @@ describe('useKeyboardShortcuts', () => {
       setIsEdit: mockSetIsEdit,
       handleSave: mockHandleSave,
       handleSaveAndSubmit: mockHandleSaveAndSubmit,
-      resetTextAreaHeight: mockResetTextAreaHeight
+      resetTextAreaHeight: mockResetTextAreaHeight,
+      // Add missing properties from MessageEditorContextType
+      editContent: '',
+      isModalOpen: false,
+      isEditing: false,
+      setEditContent: vi.fn(),
+      setIsModalOpen: vi.fn(),
+      textareaRef: { current: null },
+      messageIndex: 0,
+      focusLine: null
     });
     
     const { result } = renderHook(() => useKeyboardShortcuts());
@@ -175,7 +193,16 @@ describe('useKeyboardShortcuts', () => {
       setIsEdit: mockSetIsEdit,
       handleSave: mockHandleSave,
       handleSaveAndSubmit: mockHandleSaveAndSubmit,
-      resetTextAreaHeight: mockResetTextAreaHeight
+      resetTextAreaHeight: mockResetTextAreaHeight,
+      // Add missing properties from MessageEditorContextType
+      editContent: '',
+      isModalOpen: false,
+      isEditing: false,
+      setEditContent: vi.fn(),
+      setIsModalOpen: vi.fn(),
+      textareaRef: { current: null },
+      messageIndex: 0,
+      focusLine: null
     });
     
     // Render the hook
