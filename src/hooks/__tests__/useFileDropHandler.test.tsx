@@ -59,8 +59,8 @@ describe('useFileDropHandler', () => {
     document.execCommand = vi.fn().mockReturnValue(true);
     
     // Reset the mock implementation of formatDroppedContent
-    (contentProcessing.formatDroppedContent as jest.Mock).mockImplementation(
-      (content, path) => `Formatted: ${content} (${path})`
+    (contentProcessing.formatDroppedContent as vi.Mock).mockImplementation(
+      (content: string, path: string) => `Formatted: ${content} (${path})`
     );
   });
   
