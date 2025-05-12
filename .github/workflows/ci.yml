@@ -65,6 +65,8 @@ jobs:
           version: 10.4.1
       - run: PNPM_FROZEN_LOCKFILE=true pnpm install
       - run: NODE_ENV=production pnpm build:vite
+      - name: Validate source maps
+        run: node scripts/analyze-maps.js --validate
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
