@@ -38,15 +38,15 @@ const EditView: React.FC<EditViewProps> = ({ customKeyHandler }) => {
   });
 
   // Set up textarea focus and cursor positioning
-  useTextareaFocus({
+  useTextareaFocus(
     textareaRef,
-    options: {
+    {
       scrollIntoView: true,
       cursorAtEnd: false, // Set to false to use end of first line
       debugId: 'edit-view-textarea',
       refocusOnScroll: false
     }
-  });
+  );
 
   // Set up text selection tracking
   // Add a default value to prevent destructuring errors
