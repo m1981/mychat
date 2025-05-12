@@ -34,7 +34,9 @@ export const SelectionCopyProvider: React.FC<SelectionCopyProviderProps> = ({
     }
   }, []);
 
-  useTextSelection(handleCopy);
+  useTextSelection({
+    onCopy: handleCopy
+  });
 
   return (
     <div ref={containerRef} className="selection-copy-container">

@@ -1,7 +1,11 @@
 import React from 'react';
-import { MessageEditorContext } from './MessageEditorContext';
+import { createContext } from 'react'; // Import createContext
+import { useMessageEditorContext } from './MessageEditorContext';
 import { MessageEditorProviderProps, MessageEditorContextType } from '../interfaces';
 import { useMessageEditor } from '@hooks/useMessageEditor';
+
+// Create the context
+export const MessageEditorContext = createContext<MessageEditorContextType | undefined>(undefined);
 
 export function MessageEditorProvider({
   children,
