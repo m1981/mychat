@@ -28,8 +28,7 @@ const EditView: React.FC<EditViewProps> = ({ customKeyHandler }) => {
 
   // Set up paste handler
   const { handlePaste } = usePasteHandler({
-    onContentUpdate: setEditContent,
-    content: editContent  // Change currentContent to content
+    onContentUpdate: setEditContent
   });
 
   // Set up file drop handler
