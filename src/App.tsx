@@ -59,7 +59,6 @@ Sentry.init({
   // replaysOnErrorSampleRate: 1.0,
 
   // Optional: Configure error boundaries
-  autoSessionTracking: true,
 });
 
 // Optional: Add global tags
@@ -108,18 +107,18 @@ function App() {
   };
 
   useEffect(() => {
-    const span = Sentry.startSpan({ name: "app-initialization" });
-
-    try {
-    document.documentElement.lang = i18n.language;
-    i18n.on('languageChanged', (lng) => {
-      document.documentElement.lang = lng;
+    Sentry.startSpan({ name: "app-initialization" }, (span) => {
+      try {
+        document.documentElement.lang = i18n.language;
+        i18n.on('languageChanged', (lng) => {
+          document.documentElement.lang = lng;
+        });
+      } catch (error) {
+        Sentry.captureException(error);
+      } finally {
+        span.end();
+      }
     });
-    } catch (error) {
-      Sentry.captureException(error);
-    } finally {
-      span.end();
-    }
   }, []);
 
   useEffect(() => {
@@ -172,11 +171,16 @@ function App() {
 
   return (
     <Sentry.ErrorBoundary 
-      fallback={ErrorFallback}
-      onError={(error, {componentStack}) => {
+      fallback={({ error, resetError }) => (
+        <ErrorFallback 
+          error={error as Error}
+          resetError={resetError} 
+        />
+      )}
+      onError={(error, info) => {
         Sentry.withScope((scope) => {
-          scope.setExtra("componentStack", componentStack);
-        Sentry.captureException(error);
+          scope.setExtra("componentStack", info);
+          Sentry.captureException(error);
         });
         console.error("Error caught by boundary:", error);
       }}
