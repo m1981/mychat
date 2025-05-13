@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { debug } from '@utils/debug';
+
 
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
 import CancelIcon from '@icon/CancelIcon';
@@ -10,6 +10,7 @@ import DotIcon from '@icon/DotIcon';
 import EditIcon from '@icon/EditIcon';
 import TickIcon from '@icon/TickIcon';
 import useStore from '@store/store';
+import { debug } from '@utils/debug';
 
 const ChatHistoryClass = {
   base: 'flex py-2 px-2 items-center gap-3 relative rounded-md break-all group transition-opacity text-gray-800 dark:text-gray-100',

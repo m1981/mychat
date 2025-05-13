@@ -1,4 +1,5 @@
-import { useEffect, RefObject, useRef } from 'react';
+import { useEffect, useRef } from 'react';
+
 import { debug } from '@utils/debug';
 
 interface UseTextareaFocusOptions {

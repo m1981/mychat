@@ -1,7 +1,8 @@
 import { useCallback, useEffect } from 'react';
-import useStore from '@store/store';
 
 import { useMessageEditorContext } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
+import useStore from '@store/store';
+
 
 interface UseKeyboardShortcutsProps {
   customKeyHandler?: (e: React.KeyboardEvent) => void;

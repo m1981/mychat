@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+
 
 import PopupModal from '@components/PopupModal';
 import { ProviderModel } from '@config/providers/provider.config';
@@ -7,6 +7,7 @@ import { ProviderRegistry } from '@config/providers/provider.registry';
 import DownChevronArrow from '@icon/DownChevronArrow';
 import { ChatConfig, ModelConfig, ProviderKey } from '@type/chat';
 import { providers } from '@type/providers';
+import { useTranslation } from 'react-i18next';
 
 const ConfigMenu = ({
   setIsModalOpen,

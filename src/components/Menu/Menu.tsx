@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 
 import CrossIcon2 from '@icon/CrossIcon2';
 import DownArrow from '@icon/DownArrow';
@@ -7,10 +7,10 @@ import useStore from '@store/store';
 import { debug } from '@utils/debug';
 
 import ChatHistoryList from './ChatHistoryList';
+import ChatSearch from './ChatSearch';
 import MenuOptions from './MenuOptions';
 import NewChat from './NewChat';
 import NewFolder from './NewFolder';
-import ChatSearch from './ChatSearch';
 
 const Menu: React.FC = () => {
   const [searchFilter, setSearchFilter] = useState<string>('');

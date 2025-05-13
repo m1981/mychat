@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+
 import { debug } from '@utils/debug';
 
 interface JumpToEditButtonProps {

@@ -1,6 +1,6 @@
+import { Prompt } from '@type/prompt';
 import Papa from 'papaparse';
 
-import { Prompt } from '@type/prompt';
 
 import { getToday } from './date';
 

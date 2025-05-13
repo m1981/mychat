@@ -1,7 +1,9 @@
-import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useFileDropHandler } from '../useFileDropHandler';
 import * as contentProcessing from '@utils/contentProcessing';
+import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
+
+import { useFileDropHandler } from '../useFileDropHandler';
+
 
 // Mock the formatDroppedContent utility
 vi.mock('@utils/contentProcessing', () => ({

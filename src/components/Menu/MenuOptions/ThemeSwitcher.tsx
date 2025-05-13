@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+
 
 import MoonIcon from '@icon/MoonIcon';
 import SunIcon from '@icon/SunIcon';
 import useStore from '@store/store';
 import { Theme } from '@type/theme';
+import { useTranslation } from 'react-i18next';
 
 const getOppositeTheme = (theme: Theme): Theme => {
   if (theme === 'dark') {

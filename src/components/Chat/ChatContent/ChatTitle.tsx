@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { shallow } from 'zustand/shallow';
+
 
 import ConfigMenu from '@components/ConfigMenu';
 import { DEFAULT_CHAT_CONFIG } from '@constants/chat';
 import useStore from '@store/store';
 import { ChatInterface, ChatConfig } from '@type/chat';
 import { providers } from '@type/providers';
+import { useTranslation } from 'react-i18next';
+import { shallow } from 'zustand/shallow';
 
 const ChatTitle = React.memo(() => {
   const { t } = useTranslation('model');

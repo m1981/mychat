@@ -1,9 +1,10 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+
 
 import useAddChat from '@hooks/useAddChat';
 import PlusIcon from '@icon/PlusIcon';
 import useStore from '@store/store';
+import { useTranslation } from 'react-i18next';
 
 const NewChat = ({ folder }: { folder?: string }) => {
   const { t } = useTranslation();

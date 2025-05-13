@@ -1,13 +1,14 @@
 import { useRef, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import useStore from '@store/store';
-import { TitleGenerator } from '@src/services/TitleGenerator';
-import { TitleGenerationService } from '@src/services/TitleGenerationService';
+
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
-import { MessageInterface, ModelConfig } from '@type/chat';
-import { providers } from '@type/providers';
-import { RequestConfig } from '@type/provider';
 import { getChatCompletion } from '@src/api/api';
+import { TitleGenerationService } from '@src/services/TitleGenerationService';
+import { TitleGenerator } from '@src/services/TitleGenerator';
+import useStore from '@store/store';
+import { MessageInterface, ModelConfig } from '@type/chat';
+import { RequestConfig } from '@type/provider';
+import { providers } from '@type/providers';
+import { useTranslation } from 'react-i18next';
 
 export function useTitleGeneration(providerKey: string) {
   const { i18n } = useTranslation();

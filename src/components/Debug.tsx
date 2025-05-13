@@ -1,6 +1,7 @@
-import useStore from '@store/store';
 import { useEffect, useRef, useState } from 'react';
+
 import { LogModule, LOG_MODULES } from '@config/logging';
+import useStore from '@store/store';
 import { debug } from '@utils/debug';
 
 // Interface to track cursor position

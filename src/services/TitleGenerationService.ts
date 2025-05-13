@@ -1,6 +1,7 @@
-import { MessageInterface, ChatInterface } from '@type/chat';
-import { TitleGenerator } from './TitleGenerator';
 import useStore from '@store/store';
+import { MessageInterface, ChatInterface } from '@type/chat';
+
+import { TitleGenerator } from './TitleGenerator';
 
 export class TitleGenerationService {
   constructor(

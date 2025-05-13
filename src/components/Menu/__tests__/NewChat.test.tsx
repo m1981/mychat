@@ -1,11 +1,13 @@
 import React from 'react';
+
+import * as useAddChatModule from '@hooks/useAddChat';
+import useStore, { StoreState } from '@store/store';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { describe, it, expect, beforeEach } from 'vitest';
+
 import NewChat from '../NewChat';
-import useStore, { StoreState } from '@store/store';
-import * as useAddChatModule from '@hooks/useAddChat';
 import '@testing-library/jest-dom';
 
 // Mock the required hooks and modules

@@ -1,8 +1,9 @@
-import { debounce } from 'lodash';
 import React, { useEffect, useRef, useState } from 'react';
+
 import SearchBar from '@components/SearchBar';
 import useStore from '@store/store';
 import { debug } from '@utils/debug';
+import { debounce } from 'lodash';
 
 interface ChatSearchProps {
   filter: string;

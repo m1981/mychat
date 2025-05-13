@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SSEConnection } from '../base';
 import type { NextApiResponse } from 'next';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Mock } from 'vitest';
+
+import { SSEConnection } from '../base';
 
 describe('SSEConnection', () => {
   let mockRes: NextApiResponse;

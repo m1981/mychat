@@ -1,6 +1,9 @@
 import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 
+// Add Jest compatibility
+global.jest = vi;
+
 declare global {
   interface Window {
     scrollTo: typeof vi.fn;
@@ -84,3 +87,16 @@ global.matchMedia = vi.fn().mockImplementation(query => ({
   removeEventListener: vi.fn(),
   dispatchEvent: vi.fn(),
 }));
+
+// Common document mocks
+beforeAll(() => {
+  // Mock document.execCommand which is used in multiple tests
+  global.document.execCommand = vi.fn().mockReturnValue(false);
+  
+  // Other common mocks...
+});
+
+// Reset all mocks after each test
+afterEach(() => {
+  vi.clearAllMocks();
+});

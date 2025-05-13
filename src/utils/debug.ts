@@ -1,4 +1,4 @@
-import { LogModule, LogLevel, LogConfig, getLogConfig } from '@config/logging';
+import { LogModule, LogLevel, getLogConfig } from '@config/logging';
 
 class Debug {
   private static instance: Debug;

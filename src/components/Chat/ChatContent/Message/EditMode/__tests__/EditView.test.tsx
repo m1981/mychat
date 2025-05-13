@@ -1,8 +1,10 @@
 import React from 'react';
+
+import { MessageEditorProvider } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { vi, it, expect, describe } from 'vitest';
+
 import EditView from '../EditView';
-import { MessageEditorProvider } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
 
 // Mock the hooks
 vi.mock('@hooks/useKeyboardShortcuts', () => ({

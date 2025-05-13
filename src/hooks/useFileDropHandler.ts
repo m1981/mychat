@@ -1,5 +1,6 @@
 // src/hooks/useFileDropHandler.ts
 import { useCallback } from 'react';
+
 import { formatDroppedContent } from '@utils/contentProcessing';
 
 interface UseFileDropHandlerProps {

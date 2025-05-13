@@ -1,8 +1,8 @@
+import { ProviderRegistry } from '@config/providers/provider.registry';
+import { DEFAULT_CHAT_CONFIG } from '@constants/chat';
 import { StoreApi, create } from 'zustand';
 import { persist, PersistStorage } from 'zustand/middleware';
 
-import { ProviderRegistry } from '@config/providers/provider.registry';
-import { DEFAULT_CHAT_CONFIG } from '@constants/chat';
 
 import { AuthSlice, createAuthSlice } from './auth-slice';
 import { ChatSlice, createChatSlice } from './chat-slice';

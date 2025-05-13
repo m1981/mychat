@@ -1,6 +1,9 @@
-import { useState, useRef, useCallback, RefObject } from 'react';
-import { UseMessageEditorProps, UseMessageEditorReturn } from '../components/Chat/ChatContent/Message/interfaces';
+import { useState, useRef, useCallback } from 'react';
+
 import useStore from '@store/store';
+
+import { UseMessageEditorProps, UseMessageEditorReturn } from '../components/Chat/ChatContent/Message/interfaces';
+
 import useSubmit from './useSubmit'; // Import as default export
 
 export function useMessageEditor({

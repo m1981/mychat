@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach, afterEach, MockInstance } from 'vitest';
+
 import { useSSE } from '../useSSE';
-import { vi, describe, it, expect, beforeEach, afterEach, Mock, MockInstance } from 'vitest';
 
 // Mock EventSource globally
 type MockCall = [string, (event: MessageEvent) => void];

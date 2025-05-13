@@ -5,6 +5,10 @@
     "jsx": "react-jsx",
     "strict": true
   },
-  "include": ["src"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "vitest.setup.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }

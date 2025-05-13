@@ -1,9 +1,10 @@
-import { matchSorter } from 'match-sorter';
 import React, { useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+
 
 import useStore from '@store/store';
 import { Prompt } from '@type/prompt';
+import { matchSorter } from 'match-sorter';
+import { useTranslation } from 'react-i18next';
 
 const CommandPrompt = ({
   _setContent,

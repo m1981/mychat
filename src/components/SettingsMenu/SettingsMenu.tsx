@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+
 
 import ChatConfigMenu from '@components/ChatConfigMenu';
 import LanguageSelector from '@components/LanguageSelector';
@@ -9,6 +9,7 @@ import PopupModal from '@components/PopupModal';
 import PromptLibraryMenu from '@components/PromptLibraryMenu';
 import SettingIcon from '@icon/SettingIcon';
 import useStore from '@store/store';
+import { useTranslation } from 'react-i18next';
 
 
 import AutoTitleToggle from './AutoTitleToggle';

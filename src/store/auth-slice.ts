@@ -1,7 +1,8 @@
 
-import { getEnvVar } from '@utils/env';
 import { officialAPIEndpoint } from '@constants/auth';
 import { ProviderKey } from '@type/chat';
+import { getEnvVar } from '@utils/env';
+
 import { StoreSlice } from './store';
 
 export interface AuthSlice {

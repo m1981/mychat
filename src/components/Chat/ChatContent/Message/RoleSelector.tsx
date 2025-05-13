@@ -1,7 +1,8 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 
 import { Role } from '@type/chat';
+import { useTranslation } from 'react-i18next';
+
 
 export interface RoleSelectorProps {
   role: Role;

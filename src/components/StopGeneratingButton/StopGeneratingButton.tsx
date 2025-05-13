@@ -1,6 +1,7 @@
 import React from 'react';
-import useStore from '@store/store';
+
 import useSubmit from '@hooks/useSubmit';
+import useStore from '@store/store';
 
 const StopGeneratingButton = () => {
   const generating = useStore((state) => state.generating);

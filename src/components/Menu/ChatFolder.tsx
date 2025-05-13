@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Draggable } from 'react-beautiful-dnd';
+
 
 import { folderColorOptions } from '@constants/color';
 import CancelIcon from '@icon/CancelIcon';
@@ -17,6 +17,7 @@ import {
   ChatInterface,
   FolderCollection,
 } from '@type/chat';
+import { Draggable } from 'react-beautiful-dnd';
 
 import ChatHistory from './ChatHistory';
 import NewChat from './NewChat';

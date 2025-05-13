@@ -5,13 +5,13 @@ import useStore from '@store/store';
 import { ChatInterface } from '@type/chat';
 import { Role } from '@type/chat';
 
+import { SelectionCopyProvider } from '../SelectionCopyProvider';
+
 import Avatar from './Avatar';
+import JumpToEditButton from './JumpToEditButton';
 import MessageActionButtons from './MessageActionButtons';
 import MessageContent from './MessageContent';
 import RoleSelector from './RoleSelector';
-import { SelectionCopyProvider } from '../SelectionCopyProvider';
-import EditIcon from '@icon/EditIcon';
-import JumpToEditButton from './JumpToEditButton';
 
 const backgroundStyle = ['dark:bg-gray-800', 'bg-gray-50 dark:bg-gray-650'];
 

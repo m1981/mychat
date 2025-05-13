@@ -1,9 +1,9 @@
 import React from 'react';
-import { Role } from '@type/chat';
-import ContentView from './ViewMode/ContentView';
-import EditView from './EditMode/EditView';
+
 import { MessageEditorProvider } from './context/MessageEditorContext';
+import EditView from './EditMode/EditView';
 import { MessageContentProps } from './interfaces';
+import ContentView from './ViewMode/ContentView';
 
 const MessageContent: React.FC<MessageContentProps> = ({
   content,

@@ -1,9 +1,10 @@
 
-import { renderHook, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
-import { useKeyboardShortcuts } from '../useKeyboardShortcuts';
 import { useMessageEditorContext } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
 import useStore, { StoreState } from '@store/store'; // Import StoreState from store.ts
+import { renderHook, act } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
+
+import { useKeyboardShortcuts } from '../useKeyboardShortcuts';
 
 // Mock the dependencies
 vi.mock('@components/Chat/ChatContent/Message/context/MessageEditorContext', () => ({

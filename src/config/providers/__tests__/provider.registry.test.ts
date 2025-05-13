@@ -1,7 +1,7 @@
 // src/config/providers/__tests__/provider.registry.test.ts
+import { ProviderKey } from '@type/chat';
 import { describe, it, expect } from 'vitest';
 
-import { ProviderKey } from '@type/chat';
 
 import { ProviderRegistry } from '../provider.registry';
 

@@ -1,7 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
-import { shallow } from 'zustand/shallow';
-import { debug } from '@utils/debug';
 
 import useStore from '@store/store';
 import {
@@ -9,10 +6,13 @@ import {
   Folder,
   FolderCollection,
 } from '@type/chat';
+import { debug } from '@utils/debug';
+import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
+import { shallow } from 'zustand/shallow';
+
 
 import ChatFolder from './ChatFolder';
 import ChatHistory from './ChatHistory';
-import ChatSearch from './ChatSearch';
 
 // Separate filtering logic
 const filterChatsByTitle = (

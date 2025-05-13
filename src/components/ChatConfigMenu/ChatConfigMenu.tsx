@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+
 
 import {
   FrequencyPenaltySlider,
@@ -14,6 +14,7 @@ import { DEFAULT_CHAT_CONFIG, DEFAULT_SYSTEM_MESSAGE } from '@config/chat/ChatCo
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 import useStore from '@store/store';
 import { ModelConfig, ProviderKey } from '@type/chat';
+import { useTranslation } from 'react-i18next';
 
 
 const ChatConfigMenu = () => {

@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
+
 import useStore from '@store/store';
-import { ChatInterface, MessageInterface } from '@type/chat';
+import { ChatInterface } from '@type/chat';
 
 export function useMessageManager() {
   const setChats = useStore(state => state.setChats);

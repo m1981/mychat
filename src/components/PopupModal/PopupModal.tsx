@@ -1,8 +1,9 @@
 import React from 'react';
+
+import CrossIcon2 from '@icon/CrossIcon2';
 import ReactDOM from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
-import CrossIcon2 from '@icon/CrossIcon2';
 
 
 const PopupModal = ({

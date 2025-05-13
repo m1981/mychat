@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+
 
 import { languageCodeToName, selectableLanguages } from '@constants/language';
 import DownChevronArrow from '@icon/DownChevronArrow';
+import { useTranslation } from 'react-i18next';
 
 
 const LanguageSelector = () => {

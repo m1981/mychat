@@ -1,14 +1,14 @@
 import React, { useEffect } from 'react';
-import { Toaster } from 'react-hot-toast';
-import * as Sentry from '@sentry/react'; // Remove duplicate import
+
 
 import Chat from '@components/Chat';
 import Menu from '@components/Menu';
-import Debug from '@components/Debug';
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
+import * as Sentry from '@sentry/react'; // Remove duplicate import
 import useStore from '@store/store';
 import { ChatInterface } from '@type/chat';
 import { Theme } from '@type/theme';
+import { Toaster } from 'react-hot-toast';
 
 import i18n from './i18n';
 

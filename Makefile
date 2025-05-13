@@ -168,8 +168,8 @@ test-file: ensure-pnpm-dirs ## Run specific test file. Usage: make test-file f=p
 dead: ## Find unsed code
 	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint:deadcode | ./add-todos.sh
 
-lint-all: ## Run all linters
-	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint:all
+lint-fix: ## Run all linters
+	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint:fix
 
 format: ## Format all files
 	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) format:all
