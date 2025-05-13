@@ -43,6 +43,8 @@
 - [ ] Standardize Vitest import pattern
 - [ ] Use consistent test patterns
 - [ ] Extract common mock setup to reusable functions
+- [ ] Use `setupTimers()` for timer management
+- [ ] Use proper type safety with `vi.mocked()`
 
 ### 5. `src/hooks/__tests__/usePasteHandler.test.tsx`
 - [ ] Use `createMockEvent()` for test events
@@ -101,3 +103,6 @@
 - [x] Fix global mocks to use proper typing with `as unknown as Type`
 - [x] Improve cleanup in test files by using returned cleanup functions
 - [x] Use `vi.mocked()` consistently for type safety when accessing mock properties
+- [ ] Ensure consistent use of `vi.mocked()` for type safety across all files
+- [ ] Add explicit return type annotations to mock functions where appropriate
+- [ ] Consider extracting common EventSource mocking to test utilities

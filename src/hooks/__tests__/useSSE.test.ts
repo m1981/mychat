@@ -1,5 +1,6 @@
 import { renderHook } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach, MockInstance } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { setupTimers } from '@utils/test-utils';
 
 import { useSSE } from '../useSSE';
 
@@ -13,7 +14,7 @@ const mockEventSource = {
 };
 
 const EventSourceMock = vi.fn(() => mockEventSource);
-global.EventSource = EventSourceMock as any;
+global.EventSource = EventSourceMock as unknown as typeof EventSource;
 
 describe('useSSE Hook', () => {
   beforeEach(() => {
@@ -25,8 +26,11 @@ describe('useSSE Hook', () => {
   });
 
   afterEach(() => {
-    vi.clearAllTimers();
+    vi.clearAllMocks();
   });
+
+  // Setup and cleanup timers for each test
+  setupTimers();
 
   it('should initialize with basic configuration', () => {
     const onMessage = vi.fn();
@@ -62,7 +66,7 @@ describe('useSSE Hook', () => {
     const messageEvent1 = new MessageEvent('message', { data: 'First message' });
     const messageEvent2 = new MessageEvent('message', { data: 'Second message' });
     
-    const mockCalls = (mockEventSource.addEventListener as MockInstance).mock.calls as MockCall[];
+    const mockCalls = vi.mocked(mockEventSource.addEventListener).mock.calls as MockCall[];
     const messageHandler = mockCalls.find(
       (call) => call[0] === 'message'
     )?.[1];
@@ -82,7 +86,7 @@ describe('useSSE Hook', () => {
     expect(mockEventSource.close).toHaveBeenCalled();
   });
 
-  it('should handle connection errors', async () => {
+  it('should handle connection errors', () => {
     const onMessage = vi.fn();
     const onError = vi.fn();
     const url = 'http://test.com/stream';
@@ -97,7 +101,7 @@ describe('useSSE Hook', () => {
     
     // Simulate error event
     const errorEvent = new Event('error');
-    const errorHandler = mockEventSource.addEventListener.mock.calls
+    const errorHandler = vi.mocked(mockEventSource.addEventListener).mock.calls
       .find(call => call[0] === 'error')?.[1];
     
     if (errorHandler) {
@@ -106,7 +110,7 @@ describe('useSSE Hook', () => {
     }
   });
 
-  it('should close connection when close() is called', async () => {
+  it('should close connection when close() is called', () => {
     const onMessage = vi.fn();
     const url = 'http://test.com/stream';
     
