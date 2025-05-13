@@ -34,7 +34,7 @@ jobs:
         with:
           version: 10.4.1
       - run: pnpm install
-      - run: pnpm lint-all
+      - run: pnpm lint:all
 
   unit-tests:
     runs-on: ubuntu-latest
