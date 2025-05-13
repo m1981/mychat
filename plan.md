@@ -13,19 +13,19 @@ gantt
     excludes weekends
     tickInterval 1day
 
-    Start                 :active, start, 2025-05-12, 0d
+    Start: done, start, 2025-05-12, 1d
     
     section Tracing
-    Sentry Integration    :sen1, after start, 2d
+    Sentry Integration: done, sen1, after start, 2d
     
     section Refactor MessageContent
-    Fix type errors :ref0, after sen1, 1d    
-    Add missing Save&Submit functionality :ref1, after ref0, 3d
+    Fix type errors: done, ref0, after sen1, 1d    
+    Add missing Save&Submit functionality: ref1, after ref0, 3d
     
     section Common button
-    Gen diff patch  :but1, after ref1, 1d
-    Describe all missing features :but2, after but1, 1d 
-    Implement features :but3, after but2, 1d
+    Gen diff patch: but1, after ref1, 1d
+    Describe all missing features:  but2, after but1, 1d 
+    Implement features: but3, after but2, 1d
     
 
 ```
