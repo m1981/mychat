@@ -147,7 +147,7 @@ test: init-volumes ensure-pnpm-dirs ## Run tests
 	$(DOCKER_COMPOSE_RUN) \
 		-e NODE_ENV=test \
 		-e PLATFORM=$(PLATFORM) \
-		app sh -c "pnpm --version && pnpm install && pnpm test"
+		app sh -c "pnpm install && pnpm test:coverage && pnpm type:check"
 
 test-watch: ensure-pnpm-dirs ## Run tests in watch mode
 	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm test:watch"
@@ -175,10 +175,10 @@ format: ## Format all files
 	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) format:all
 
 type: ## Run type checking
-	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) type-check
+	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) type:check
 
 type-watch: ## Run type checking
-	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) type-watch
+	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) type:watch
 
 ##@ Infrastructure Management
 .PHONY: colima-start colima-stop colima-status colima-list colima-delete
