@@ -66,6 +66,14 @@ jobs:
       - run: NODE_ENV=production pnpm build:vite
       - name: Validate source maps
         run: node scripts/analyze-maps.js --validate
+      - name: Upload source maps to Sentry
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: pixelcrate
+          SENTRY_PROJECT: chatai
+          SENTRY_ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+        run: pnpm sentry:upload
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:

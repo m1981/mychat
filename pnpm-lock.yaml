@@ -23,9 +23,6 @@ importers:
       '@types/react-beautiful-dnd':
         specifier: ^13.1.8
         version: 13.1.8
-      depcheck:
-        specifier: ^1.4.7
-        version: 1.4.7
       highlight.js:
         specifier: ^11.11.1
         version: 11.11.1
@@ -171,6 +168,9 @@ importers:
       backstopjs:
         specifier: ^6.3.2
         version: 6.3.25(typescript@5.8.3)
+      depcheck:
+        specifier: ^1.4.7
+        version: 1.4.7
       esbuild:
         specifier: '0.25'
         version: 0.25.2

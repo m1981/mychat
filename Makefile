@@ -208,9 +208,9 @@ backstop-approve: ensure-pnpm-dirs ## Approve BackstopJS test images as referenc
 	$(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm backstop approve"
 
 ##@ Sentry Testing
-.PHONY: sentry-build sentry-serve
+.PHONY: sentry-test-build sentry-test-serve
 
-sentry-build: init-volumes ## Build production with Sentry test button
+sentry-test-build: init-volumes ## Build production with Sentry test button
 	@echo "$(GREEN)Building production version with Sentry test button...$(RESET)"
 	@if [ -z "$(SENTRY_AUTH_TOKEN)" ]; then \
 		echo "$(RED)Error: SENTRY_AUTH_TOKEN environment variable is not set$(RESET)"; \
@@ -222,9 +222,9 @@ sentry-build: init-volumes ## Build production with Sentry test button
 		-e SENTRY_AUTH_TOKEN=$(SENTRY_AUTH_TOKEN) \
 		-e SENTRY_ORG=pixelcrate \
 		-e SENTRY_PROJECT=chatai \
-		app sh -c "pnpm install && pnpm build && node scripts/analyze-maps.js --validate"
+		app sh -c "pnpm install && pnpm build && node scripts/analyze-maps.js --validate && pnpm sentry:upload"
 
-sentry-serve: ensure-pnpm-dirs ## Serve Sentry test build
+sentry-test-serve: ensure-pnpm-dirs ## Serve Sentry test build
 	$(DOCKER_COMPOSE_RUN) \
 		-e NODE_ENV=production \
 		-p 3000:3000 \
