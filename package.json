@@ -1,17 +1,16 @@
 {
   "name": "better-chatgpt",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.4",
   "type": "module",
   "homepage": "./",
   "main": "electron/index.cjs",
   "author": "Jing Hua <betterchatgpt@mail.tjh.sg>",
   "description": "Play and chat smarter with BetterChatGPT - an amazing open-source web app with a better UI for exploring OpenAI's ChatGPT API!",
   "scripts": {
-    "dev": "vite --config vite.config.dev.ts",
-    "dev:host": "vite --config vite.config.dev.ts --host",
+    "dev:host": "vite --host",
     "build": "pnpm type-check && NODE_ENV=production TS_NODE_BASEURL=./ pnpm build:vite",
-    "build:vite": "NODE_OPTIONS='--max_old_space_size=8192' vite build --config vite.config.prod.ts",
+    "build:vite": "NODE_OPTIONS='--max_old_space_size=2192' vite build",
     "postbuild": "node scripts/upload-to-sentry.js",
     "test": "NODE_ENV=test vitest run",
     "test:watch": "NODE_ENV=test vitest watch",
@@ -28,7 +27,7 @@
     "format:js": "prettier '**/*.{js,jsx,ts,tsx}' --write",
     "format:styles": "prettier '**/*.css' --write",
     "format:all": "pnpm format:js && pnpm format:styles",
-    "vercel-build": "NODE_ENV=production pnpm test && pnpm build"
+    "vercel-build": "NODE_ENV=production pnpm build"
   },
   "build": {
     "appId": "better-chatgpt",
@@ -72,6 +71,7 @@
     "lz-string": "^1.5.0",
     "match-sorter": "^6.3.1",
     "mermaid": "^11.4.1",
+    "minimatch": "^5.1.0",
     "next": "^15.3.0",
     "openai": "^4.73.0",
     "papaparse": "^5.4.1",

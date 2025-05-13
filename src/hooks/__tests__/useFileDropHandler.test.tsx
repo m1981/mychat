@@ -1,5 +1,5 @@
+import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { useFileDropHandler } from '../useFileDropHandler';
 import * as contentProcessing from '@utils/contentProcessing';
 
@@ -59,8 +59,8 @@ describe('useFileDropHandler', () => {
     document.execCommand = vi.fn().mockReturnValue(true);
     
     // Reset the mock implementation of formatDroppedContent
-    (contentProcessing.formatDroppedContent as jest.Mock).mockImplementation(
-      (content, path) => `Formatted: ${content} (${path})`
+    (contentProcessing.formatDroppedContent as unknown as Mock).mockImplementation(
+      (content: string, path: string) => `Formatted: ${content} (${path})`
     );
   });
   

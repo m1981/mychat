@@ -1,73 +1,94 @@
-// analyze-maps.js
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { glob } from 'glob';
-import { dirname } from 'path';
+import minimatch from 'minimatch';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-async function analyzeMaps() {
+async function validateSourceMapCoverage(sourceDir = './src') {
     try {
-        // Find all .map files in dist/assets
-        const mapFiles = await glob('./dist/assets/**/*.map');
+        // 1. Get all source files (excluding tests and icons)
+        const sourceFiles = await glob(`${sourceDir}/**/*.{ts,tsx,js,jsx}`, {
+            ignore: [
+                '**/node_modules/**',
+                '**/dist/**',
+                '**/__tests__/**',
+                '**/icons/**',
+                '**/*.test.{ts,tsx,js,jsx}',
+                '**/*.spec.{ts,tsx,js,jsx}',
+                '**/assets/icons/**'
+            ],
+            nodir: true
+        });
 
-        const results = [];
+        // Normalize source paths
+        const normalizedSourceFiles = sourceFiles
+            .map(file => path.normalize(file))
+            .sort();
+
+        console.log(`Found ${normalizedSourceFiles.length} source files`);
+
+        // 2. Get all files referenced in source maps (excluding node_modules)
+        const mapFiles = await glob('./dist/assets/**/*.map');
+        const sourcesFromMaps = new Set();
 
         for (const mapFile of mapFiles) {
             const content = JSON.parse(await fs.promises.readFile(mapFile, 'utf8'));
-            const jsFile = mapFile.replace('.map', '');
-
-            // Get file sizes
-            const mapStats = await fs.promises.stat(mapFile);
-            const jsStats = await fs.promises.stat(jsFile).catch(() => null);
-
-            results.push({
-                file: path.basename(mapFile),
-                sourceCount: content.sources.length,
-                mapSize: (mapStats.size / 1024).toFixed(2) + ' KB',
-                jsSize: jsStats ? (jsStats.size / 1024).toFixed(2) + ' KB' : 'N/A',
-                ratio: jsStats ? (mapStats.size / jsStats.size * 100).toFixed(2) + '%' : 'N/A',
-                sources: content.sources.map(src => {
-                    // Clean up node_modules paths for better readability
-                    return src.replace('../../node_modules/.pnpm/', '')
-                        .replace('/node_modules/', '')
-                        .split('/').slice(0, 2).join('/');
-                })
-            });
+            content.sources
+                .filter(source => !source.includes('node_modules'))
+                .forEach(source => {
+                    const cleanPath = path.normalize(source)
+                        .replace('../../', '')
+                        .replace(/^\//, '');
+                    sourcesFromMaps.add(cleanPath);
+                });
         }
 
-        // Print summary
-        console.log('\n=== Source Map Analysis ===\n');
+        const normalizedMapSources = Array.from(sourcesFromMaps)
+            .map(file => path.normalize(file).replace(/^.*?src\//, 'src/'))
+            .sort();
 
-        results.forEach(result => {
-            console.log(`\nFile: ${result.file}`);
-            console.log(`JS Size: ${result.jsSize}`);
-            console.log(`Map Size: ${result.mapSize}`);
-            console.log(`Map/JS Ratio: ${result.ratio}`);
-            console.log(`Number of sources: ${result.sourceCount}`);
-            console.log('\nTop dependencies:');
+        console.log(`Found ${normalizedMapSources.length} files in source maps`);
 
-            // Count and sort dependencies by frequency
-            const deps = result.sources.reduce((acc, src) => {
-                acc[src] = (acc[src] || 0) + 1;
-                return acc;
-            }, {});
+        // 3. Find files missing from source maps
+        const missingInMaps = normalizedSourceFiles.filter(sourceFile =>
+            !normalizedMapSources.includes(sourceFile)
+        );
 
-            Object.entries(deps)
-                .sort(([,a], [,b]) => b - a)
-                .slice(0, 10)
-                .forEach(([dep, count]) => {
-                    console.log(`  ${dep}: ${count} files`);
-                });
-
-            console.log('\n' + '='.repeat(50));
+        // 4. Validate against .mapignore
+        let allowedMissingPatterns = [];
+        try {
+            const mapIgnoreContent = await fs.promises.readFile('.mapignore', 'utf8');
+            allowedMissingPatterns = mapIgnoreContent
+                .split('\n')
+                .filter(line => line.trim() && !line.startsWith('#'));
+            console.log(`Loaded ${allowedMissingPatterns.length} patterns from .mapignore`);
+        } catch (error) {
+            console.warn('No .mapignore file found or error reading it:', error.message);
+        }
+        
+        // Check if any missing files are not in the allowed list
+        const unexpectedMissingFiles = missingInMaps.filter(file => {
+            return !allowedMissingPatterns.some(pattern => minimatch(file, pattern));
         });
-
+        
+        if (unexpectedMissingFiles.length > 0) {
+            console.error('\n❌ VALIDATION FAILED: Unexpected files missing from source maps:');
+            unexpectedMissingFiles.forEach(file => console.error(`  - ${file}`));
+            process.exit(1);
+        } else {
+            console.log('\n✅ VALIDATION PASSED: All missing files are in the allowed list');
+        }
     } catch (error) {
-        console.error('Error analyzing source maps:', error);
+        console.error('Error validating source maps:', error);
+        process.exit(1);
     }
 }
 
-analyzeMaps();
+// Parse command line arguments
+let sourceDir = './src';
+process.argv.slice(2).forEach(arg => {
+    if (!arg.startsWith('--')) {
+        sourceDir = arg;
+    }
+});
+
+validateSourceMapCoverage(sourceDir);

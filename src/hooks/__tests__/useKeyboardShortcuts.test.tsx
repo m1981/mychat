@@ -1,8 +1,9 @@
+
 import { renderHook, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
 import { useKeyboardShortcuts } from '../useKeyboardShortcuts';
 import { useMessageEditorContext } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
-import { useStore } from '@store/store';
+import useStore, { StoreState } from '@store/store'; // Import StoreState from store.ts
 
 // Mock the dependencies
 vi.mock('@components/Chat/ChatContent/Message/context/MessageEditorContext', () => ({
@@ -10,10 +11,15 @@ vi.mock('@components/Chat/ChatContent/Message/context/MessageEditorContext', () 
 }));
 
 vi.mock('@store/store', () => ({
-  useStore: {
+  default: {
     getState: vi.fn()
   }
 }));
+
+// Helper function to get a properly typed mock function
+function getMockFunction<T extends (...args: any[]) => any>(mock: any): Mock<T> {
+  return mock as Mock<T>;
+}
 
 describe('useKeyboardShortcuts', () => {
   // Mock context values
@@ -37,18 +43,29 @@ describe('useKeyboardShortcuts', () => {
     vi.resetAllMocks();
     
     // Setup mock context
-    (useMessageEditorContext as jest.Mock).mockReturnValue({
+    const mockMessageEditorContext = getMockFunction<typeof useMessageEditorContext>(useMessageEditorContext);
+    mockMessageEditorContext.mockReturnValue({
       isComposer: false,
       setIsEdit: mockSetIsEdit,
       handleSave: mockHandleSave,
       handleSaveAndSubmit: mockHandleSaveAndSubmit,
-      resetTextAreaHeight: mockResetTextAreaHeight
+      resetTextAreaHeight: mockResetTextAreaHeight,
+      // Add missing properties from MessageEditorContextType
+      editContent: '',
+      isModalOpen: false,
+      isEditing: false,
+      setEditContent: vi.fn(),
+      setIsModalOpen: vi.fn(),
+      textareaRef: { current: null },
+      messageIndex: 0,
+      focusLine: null
     });
     
     // Setup mock store
-    (useStore.getState as jest.Mock).mockReturnValue({
+    const mockGetState = getMockFunction<typeof useStore.getState>(useStore.getState);
+    mockGetState.mockReturnValue({
       enterToSubmit: true
-    });
+    } as Partial<StoreState> as StoreState);
     
     // Mock document event listeners
     vi.spyOn(document, 'addEventListener').mockImplementation(() => {});
@@ -105,12 +122,22 @@ describe('useKeyboardShortcuts', () => {
   
   it('should handle Enter to submit when enterToSubmit is true (composer)', () => {
     // Change context to composer mode
-    (useMessageEditorContext as jest.Mock).mockReturnValue({
+    const mockMessageEditorContext = getMockFunction<typeof useMessageEditorContext>(useMessageEditorContext);
+    mockMessageEditorContext.mockReturnValue({
       isComposer: true,
       setIsEdit: mockSetIsEdit,
       handleSave: mockHandleSave,
       handleSaveAndSubmit: mockHandleSaveAndSubmit,
-      resetTextAreaHeight: mockResetTextAreaHeight
+      resetTextAreaHeight: mockResetTextAreaHeight,
+      // Add missing properties from MessageEditorContextType
+      editContent: '',
+      isModalOpen: false,
+      isEditing: false,
+      setEditContent: vi.fn(),
+      setIsModalOpen: vi.fn(),
+      textareaRef: { current: null },
+      messageIndex: 0,
+      focusLine: null
     });
     
     const { result } = renderHook(() => useKeyboardShortcuts());
@@ -144,7 +171,7 @@ describe('useKeyboardShortcuts', () => {
     renderHook(() => useKeyboardShortcuts());
     
     // Get the event handler that was registered
-    const eventListenerCallback = (document.addEventListener as jest.Mock).mock.calls[0][1];
+    const eventListenerCallback = ((document.addEventListener as unknown) as ReturnType<typeof vi.fn>).mock.calls[0][1];
     
     // Create a keyboard event
     const event = new KeyboardEvent('keydown', { key: 'Escape' });
@@ -160,19 +187,29 @@ describe('useKeyboardShortcuts', () => {
 
   it('should not exit edit mode on Escape if in composer mode', () => {
     // Change context to composer mode
-    (useMessageEditorContext as jest.Mock).mockReturnValue({
+    const mockMessageEditorContext = getMockFunction<typeof useMessageEditorContext>(useMessageEditorContext);
+    mockMessageEditorContext.mockReturnValue({
       isComposer: true,
       setIsEdit: mockSetIsEdit,
       handleSave: mockHandleSave,
       handleSaveAndSubmit: mockHandleSaveAndSubmit,
-      resetTextAreaHeight: mockResetTextAreaHeight
+      resetTextAreaHeight: mockResetTextAreaHeight,
+      // Add missing properties from MessageEditorContextType
+      editContent: '',
+      isModalOpen: false,
+      isEditing: false,
+      setEditContent: vi.fn(),
+      setIsModalOpen: vi.fn(),
+      textareaRef: { current: null },
+      messageIndex: 0,
+      focusLine: null
     });
     
     // Render the hook
     renderHook(() => useKeyboardShortcuts());
     
     // Get the event handler that was registered
-    const eventListenerCallback = (document.addEventListener as jest.Mock).mock.calls[0][1];
+    const eventListenerCallback = ((document.addEventListener as unknown) as ReturnType<typeof vi.fn>).mock.calls[0][1];
     
     // Create a keyboard event
     const event = new KeyboardEvent('keydown', { key: 'Escape' });

@@ -8,3 +8,8 @@ coverage
 backstop_data
 html_report
 .tmp
+test_output
+public
+.env
+.venv
+venv

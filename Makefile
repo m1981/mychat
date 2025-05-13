@@ -26,7 +26,7 @@ else
 endif
 
 # Add consistent container naming for run commands
-DOCKER_COMPOSE_RUN = $(DOCKER_COMPOSE) run --rm --name $(COMPOSE_PROJECT_NAME)-app-run
+DOCKER_COMPOSE_RUN = $(DOCKER_COMPOSE) run --build --rm
 
 # User/Group detection with fallbacks
 UID := $(shell id -u)
@@ -220,10 +220,13 @@ sentry-build: init-volumes ## Build production with Sentry test button
 		-e SENTRY_AUTH_TOKEN=$(SENTRY_AUTH_TOKEN) \
 		-e SENTRY_ORG=pixelcrate \
 		-e SENTRY_PROJECT=chatai \
-		app sh -c "pnpm install && NODE_ENV=production pnpm build:vite && pnpm postbuild"
+		app sh -c "pnpm install && NODE_ENV=production pnpm build:vite && node scripts/analyze-maps.js --validate && pnpm postbuild"
 	@echo "$(GREEN)Sentry test build completed in ./dist directory$(RESET)"
 	@echo "Use 'make sentry-serve' to serve the Sentry test build"
 
+# Add a new target for just checking maps
+check-maps: ## Check source maps against allowed missing files
+	$(DOCKER_COMPOSE_RUN) app node scripts/analyze-maps.js --validate
 
 sentry-serve: ensure-pnpm-dirs ## Serve Sentry test build
 	$(DOCKER_COMPOSE_RUN) \

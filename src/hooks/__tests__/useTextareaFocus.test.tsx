@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
 import { useTextareaFocus } from '../useTextareaFocus';
 import { debug } from '@utils/debug';
 
@@ -150,27 +150,35 @@ describe('useTextareaFocus', () => {
     renderHook(() => useTextareaFocus(mockRef));
     
     // Get the mousedown handler
-    const mousedownHandler = (document.addEventListener as jest.Mock).mock.calls.find(
-      call => call[0] === 'mousedown'
-    )[1];
+    const mousedownCall = (document.addEventListener as Mock).mock.calls.find(
+      (call: any[]) => call[0] === 'mousedown'
+    );
+    const mousedownHandler = mousedownCall ? mousedownCall[1] : null;
+    
+    // Make sure we found the handler
+    expect(mousedownHandler).not.toBeNull();
     
     // Reset focus mock to check if it gets called again
-    mockTextarea.focus.mockReset();
+    (mockTextarea.focus as Mock).mockReset();
     
     // Simulate mousedown event
     act(() => {
-      mousedownHandler();
+      if (mousedownHandler) mousedownHandler();
     });
     
     // Try to focus during user interaction
     act(() => {
       // Get the blur handler
-      const blurHandler = (mockTextarea.addEventListener as jest.Mock).mock.calls.find(
-        call => call[0] === 'blur'
-      )[1];
+      const blurCall = (mockTextarea.addEventListener as Mock).mock.calls.find(
+        (call: any[]) => call[0] === 'blur'
+      );
+      const blurHandler = blurCall ? blurCall[1] : null;
+      
+      // Make sure we found the handler
+      expect(blurHandler).not.toBeNull();
       
       // Simulate blur event with no related target
-      blurHandler({ relatedTarget: null });
+      if (blurHandler) blurHandler({ relatedTarget: null });
       
       // Fast-forward a bit, but not enough to reset userInteracting
       vi.advanceTimersByTime(50);
@@ -186,11 +194,15 @@ describe('useTextareaFocus', () => {
     
     // Simulate another blur event after userInteracting is reset
     act(() => {
-      const blurHandler = (mockTextarea.addEventListener as jest.Mock).mock.calls.find(
-        call => call[0] === 'blur'
-      )[1];
+      const blurCall = (mockTextarea.addEventListener as Mock).mock.calls.find(
+        (call: any[]) => call[0] === 'blur'
+      );
+      const blurHandler = blurCall ? blurCall[1] : null;
       
-      blurHandler({ relatedTarget: null });
+      // Make sure we found the handler
+      expect(blurHandler).not.toBeNull();
+      
+      if (blurHandler) blurHandler({ relatedTarget: null });
       
       // Fast-forward to trigger the setTimeout in handleBlur
       vi.advanceTimersByTime(100);
@@ -204,16 +216,20 @@ describe('useTextareaFocus', () => {
     renderHook(() => useTextareaFocus(mockRef));
     
     // Get the blur handler
-    const blurHandler = (mockTextarea.addEventListener as jest.Mock).mock.calls.find(
-      call => call[0] === 'blur'
-    )[1];
+    const blurCall = (mockTextarea.addEventListener as Mock).mock.calls.find(
+      (call: any[]) => call[0] === 'blur'
+    );
+    const blurHandler = blurCall ? blurCall[1] : null;
+    
+    // Make sure we found the handler
+    expect(blurHandler).not.toBeNull();
     
     // Reset focus mock
-    mockTextarea.focus.mockReset();
+    (mockTextarea.focus as Mock).mockReset();
     
     // Simulate blur event with a related target
     act(() => {
-      blurHandler({ relatedTarget: { tagName: 'BUTTON' } });
+      if (blurHandler) blurHandler({ relatedTarget: { tagName: 'BUTTON' } });
       
       // Fast-forward to trigger the setTimeout in handleBlur
       vi.advanceTimersByTime(100);

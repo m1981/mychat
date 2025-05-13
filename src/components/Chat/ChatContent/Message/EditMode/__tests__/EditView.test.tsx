@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi, it, expect, describe } from 'vitest';
 import EditView from '../EditView';
 import { MessageEditorProvider } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
 
@@ -31,6 +31,13 @@ vi.mock('@hooks/useTextSelection', () => ({
   useTextSelection: () => ({
     selectionStart: 0,
     selectionEnd: 0,
+  }),
+}));
+
+// Mock the useSubmit hook
+vi.mock('@hooks/useSubmit', () => ({
+  default: () => ({
+    handleSubmit: vi.fn(),
   }),
 }));
 
