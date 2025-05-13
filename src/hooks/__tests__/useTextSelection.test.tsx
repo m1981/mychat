@@ -1,35 +1,26 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-
 import { useTextSelection } from '../useTextSelection';
-
+import { mockDocumentListeners, createMockTextarea } from '@utils/test-utils';
 
 describe('useTextSelection', () => {
   beforeEach(() => {
-    // Setup specific to this test
+    mockDocumentListeners();
   });
 
   afterEach(() => {
-    // Cleanup specific to this test
+    vi.clearAllMocks();
   });
 
-  test('should add selectionchange event listener on mount', () => {
-    // Setup
-    vi.spyOn(document, 'addEventListener');
-    
-    // Create a mock textarea element
-    const textareaElement = document.createElement('textarea');
-    const textareaRef = { current: textareaElement };
+  it('should add selectionchange event listener on mount', () => {
+    // Create a mock textarea element using our utility
+    const textareaRef = { current: createMockTextarea() };
     
     // Act
     renderHook(() => useTextSelection({ textareaRef }));
     
-    // Assert
+    // Assert - check only the first argument is 'selectionchange'
     expect(document.addEventListener).toHaveBeenCalled();
-    const calls = vi.mocked(document.addEventListener).mock.calls;
-    const hasMouseupOrSelectionChange = calls.some(call => 
-      call[0] === 'mouseup' || call[0] === 'selectionchange'
-    );
-    expect(hasMouseupOrSelectionChange).toBe(true);
+    expect(document.addEventListener.mock.calls[0][0]).toBe('selectionchange');
   });
 });
