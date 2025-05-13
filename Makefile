@@ -107,7 +107,10 @@ logs: ## Show container logs
 	$(DOCKER_COMPOSE) logs -f
 
 ##@ Package Management Workflow
-.PHONY: pkg-add pkg-add-dev pkg-remove pkg-check pkg-update pkg-sync
+.PHONY: pkg-add pkg-add-dev pkg-remove pkg-check pkg-update pkg-sync install
+
+install: ensure-pnpm-dirs ## Install dependencies
+	$(DOCKER_COMPOSE_RUN) app pnpm install
 
 pkg-add: ## Add production package(s) with auto-sync
 	@if [ -z "$(p)" ]; then \
@@ -143,24 +146,24 @@ pkg-check: ## Check for outdated dependencies
 ##@ Testing
 .PHONY: test test-watch test-coverage test-file
 
-test: init-volumes ensure-pnpm-dirs ## Run tests
+test: init-volumes ensure-pnpm-dirs install ## Run tests
 	$(DOCKER_COMPOSE_RUN) \
 		-e NODE_ENV=test \
 		-e PLATFORM=$(PLATFORM) \
-		app sh -c "pnpm install && pnpm test:coverage && pnpm type:check"
+		app sh -c "pnpm test:coverage && pnpm type:check"
 
-test-watch: ensure-pnpm-dirs ## Run tests in watch mode
-	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm test:watch"
+test-watch: ensure-pnpm-dirs install ## Run tests in watch mode
+	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) app sh -c "pnpm test:watch"
 
-test-coverage: ensure-pnpm-dirs ## Run tests with coverage report
-	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm test:coverage"
+test-coverage: ensure-pnpm-dirs install ## Run tests with coverage report
+	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) app sh -c "pnpm test:coverage"
 
-test-file: ensure-pnpm-dirs ## Run specific test file. Usage: make test-file f=path/to/test.ts
+test-file: ensure-pnpm-dirs install ## Run specific test file. Usage: make test-file f=path/to/test.ts
 	@if [ -z "$(f)" ]; then \
 		echo "Error: File path required. Usage: make test-file f=path/to/test.ts"; \
 		exit 1; \
 	fi
-	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) app sh -c "pnpm install && pnpm test $(f)"
+	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) app sh -c "pnpm test $(f)"
 
 ##@ Quality Checks
 .PHONY: lint type-check
