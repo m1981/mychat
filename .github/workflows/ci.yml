@@ -124,29 +124,58 @@ jobs:
           pnpm backstop test || true
           echo "status=$?" >> $GITHUB_OUTPUT
 
-      # Prepare report with images for GitHub Pages
+      # Download existing pages content if available
+      - name: Download existing pages content
+        id: download_pages
+        continue-on-error: true
+        run: |
+          # Try to download the existing pages content
+          mkdir -p existing-pages
+          curl -L https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html -o existing-pages/index.html || true
+          if [ -f existing-pages/index.html ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Prepare report with branch-specific path
       - name: Prepare report for GitHub Pages
         if: always()
         run: |
+          # Get branch name or use PR number
+          if [[ $GITHUB_REF == refs/pull/* ]]; then
+            BRANCH_PATH="pr-$(echo $GITHUB_REF | sed 's/refs\/pull\///' | sed 's/\/merge//')"
+          else
+            BRANCH_PATH=$(echo $GITHUB_REF | sed 's/refs\/heads\///' | sed 's/\//-/g')
+          fi
+          
+          echo "Publishing to branch path: $BRANCH_PATH"
+          
           # Create a directory for the complete report
-          mkdir -p gh-pages-report
+          mkdir -p gh-pages-report/$BRANCH_PATH
           
           # Copy the HTML report
-          cp -r backstop_data/html_report/* gh-pages-report/
+          cp -r backstop_data/html_report/* gh-pages-report/$BRANCH_PATH/
           
           # Create directories for images
-          mkdir -p gh-pages-report/bitmaps_reference
-          mkdir -p gh-pages-report/bitmaps_test
+          mkdir -p gh-pages-report/$BRANCH_PATH/bitmaps_reference
+          mkdir -p gh-pages-report/$BRANCH_PATH/bitmaps_test
           
           # Copy reference images
-          cp -r backstop_data/bitmaps_reference/* gh-pages-report/bitmaps_reference/ || true
+          cp -r backstop_data/bitmaps_reference/* gh-pages-report/$BRANCH_PATH/bitmaps_reference/ || true
           
           # Copy test images and diffs
-          cp -r backstop_data/bitmaps_test/* gh-pages-report/bitmaps_test/ || true
+          cp -r backstop_data/bitmaps_test/* gh-pages-report/$BRANCH_PATH/bitmaps_test/ || true
           
           # Fix paths in config.js
-          sed -i 's/\.\.\/bitmaps_reference/\.\/bitmaps_reference/g' gh-pages-report/config.js
-          sed -i 's/\.\.\/bitmaps_test/\.\/bitmaps_test/g' gh-pages-report/config.js
+          sed -i "s/\.\.\/bitmaps_reference/\.\/bitmaps_reference/g" gh-pages-report/$BRANCH_PATH/config.js
+          sed -i "s/\.\.\/bitmaps_test/\.\/bitmaps_test/g" gh-pages-report/$BRANCH_PATH/config.js
+          
+          # Create an index page that links to all reports
+          echo "<html><head><title>Visual Test Reports</title><style>body{font-family:sans-serif;max-width:800px;margin:0 auto;padding:20px}</style></head><body>" > gh-pages-report/index.html
+          echo "<h1>Visual Test Reports</h1><ul>" >> gh-pages-report/index.html
+          echo "<li><a href='./$BRANCH_PATH/'>$BRANCH_PATH (Latest - $(date))</a></li>" >> gh-pages-report/index.html
+          echo "</ul></body></html>" >> gh-pages-report/index.html
 
       # Upload Pages artifact with complete report
       - name: Upload Pages artifact
@@ -161,22 +190,27 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      # Update PR comment with new URL format
+      # Update PR comment with branch-specific URL
       - name: Comment PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
         with:
           script: |
-            const reportUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/reports/${context.sha}`;
-            const acceptUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/workflows/visual-testing.yml`;
+            // Get PR number for the path
+            const prNumber = context.issue.number;
+            const branchPath = `pr-${prNumber}`;
+            
+            const reportUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/${branchPath}`;
+            const acceptUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/workflows/ci.yml`;
             
             const comment = `
             ## Visual Regression Test Results
             
             📊 [View Full Report](${reportUrl})
+            📑 [View All Reports](https://${context.repo.owner}.github.io/${context.repo.repo}/)
       
             If the changes are intentional, you can accept them as new references:
-            1. Go to [Visual Testing Workflow](${acceptUrl})
+            1. Go to [CI Workflow](${acceptUrl})
             2. Click "Run workflow"
             3. Select "accept-references" from the dropdown
             4. Click "Run workflow"

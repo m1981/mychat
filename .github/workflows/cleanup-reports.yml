@@ -1,0 +1,93 @@
+name: Cleanup Old Reports
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Run weekly on Sunday
+  workflow_dispatch:  # Manual trigger
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Download current pages content
+        run: |
+          mkdir -p current-pages
+          curl -L https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }} -o current-pages/index.html || true
+          
+      - name: Clean up old reports
+        run: |
+          # Keep only the 10 most recent reports
+          mkdir -p cleaned-pages
+          cp -r current-pages/* cleaned-pages/ || true
+          
+          # Create a simple script to clean the index.html
+          cat > clean.py << 'EOF'
+          import re
+          import datetime
+
+          # Read the index.html file
+          with open('cleaned-pages/index.html', 'r') as f:
+              content = f.read()
+
+          # Extract all report links
+          pattern = r'<li><a href=\'\./(.*?)/\'>(.*?)</a></li>'
+          matches = re.findall(pattern, content)
+
+          # Sort by date if available, otherwise keep the 10 most recent
+          reports = []
+          for path, title in matches:
+              date_match = re.search(r'\(Latest - (.*?)\)', title)
+              if date_match:
+                  try:
+                      date = datetime.datetime.strptime(date_match.group(1), '%a %b %d %H:%M:%S %Z %Y')
+                      reports.append((path, title, date))
+                  except:
+                      reports.append((path, title, datetime.datetime.now()))
+              else:
+                  reports.append((path, title, datetime.datetime.now()))
+
+          # Sort by date, newest first
+          reports.sort(key=lambda x: x[2], reverse=True)
+
+          # Keep only the 10 most recent
+          keep_reports = reports[:10]
+          keep_paths = [r[0] for r in keep_reports]
+
+          # Create new index.html
+          new_content = """<html><head><title>Visual Test Reports</title><style>body{font-family:sans-serif;max-width:800px;margin:0 auto;padding:20px}</style></head><body>
+          <h1>Visual Test Reports</h1><ul>"""
+          
+          for path, title, _ in keep_reports:
+              new_content += f"<li><a href='./{path}/'>{title}</a></li>\n"
+              
+          new_content += "</ul></body></html>"
+
+          # Write the new index.html
+          with open('cleaned-pages/index.html', 'w') as f:
+              f.write(new_content)
+
+          # Print the paths to keep
+          print("Keeping reports:", keep_paths)
+          EOF
+          
+          python3 clean.py
+          
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'cleaned-pages'
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

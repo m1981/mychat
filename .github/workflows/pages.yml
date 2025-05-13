@@ -1,0 +1,86 @@
+name: Deploy GitHub Pages
+
+on:
+  workflow_dispatch:  # Manual trigger
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Download artifact
+        if: github.event_name == 'workflow_run'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{ github.event.workflow_run.id }}
+            });
+            
+            const matchArtifact = artifacts.data.artifacts.find(
+              artifact => artifact.name === "github-pages"
+            );
+            
+            if (!matchArtifact) {
+              core.setFailed('No Pages artifact found');
+              return;
+            }
+            
+            const download = await github.rest.actions.downloadArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: matchArtifact.id,
+              archive_format: 'zip'
+            });
+            
+            const fs = require('fs');
+            fs.writeFileSync('artifact.zip', Buffer.from(download.data));
+            
+      - name: Extract artifact
+        if: github.event_name == 'workflow_run'
+        run: |
+          mkdir -p gh-pages-content
+          unzip artifact.zip -d gh-pages-content
+          
+      - name: Build Pages content
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          mkdir -p gh-pages-content
+          echo "<html><head><title>Visual Test Reports</title></head><body>" > gh-pages-content/index.html
+          echo "<h1>Visual Test Reports</h1>" >> gh-pages-content/index.html
+          echo "<p>No reports available. Run the CI pipeline to generate reports.</p>" >> gh-pages-content/index.html
+          echo "</body></html>" >> gh-pages-content/index.html
+          
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'gh-pages-content'
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
