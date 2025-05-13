@@ -1,6 +1,16 @@
 // api/anthropic.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Anthropic from '@anthropic-ai/sdk';
+import type { 
+  MessageParam, 
+  MessageCreateParams,
+  MessageStreamEvent,
+  ContentBlockStartEvent,
+  ContentBlockDeltaEvent,
+  ContentBlockStopEvent,
+  MessageDeltaEvent,
+  MessageStopEvent
+} from '@anthropic-ai/sdk';
 
 export const config = {
   maxDuration: 60,
@@ -40,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const streamMode = chatConfig?.stream ?? false;
     if (streamMode) {
       // Format messages for Anthropic API
-      const formattedMessages = messages.map(msg => ({
+      const formattedMessages = messages.map((msg: MessageInterface) => ({
         role: msg.role === 'assistant' ? 'assistant' : 'user',
         content: msg.content,
       }));
@@ -85,15 +95,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               delta: chunk.delta,
             })}\n\n`);
           } else if (chunk.type === 'signature_delta') {
-            // Add handling for thinking block signatures
+            // Fix type comparison issue
             res.write(`data: ${JSON.stringify({
               type: 'signature_delta',
-              signature: chunk.signature,
+              signature: (chunk as any).signature, // Type assertion as a workaround
             })}\n\n`);
           } else if (chunk.type === 'content_block_stop') {
             res.write(`data: ${JSON.stringify({
               type: 'content_block_stop',
-              content_block: chunk.content_block,
+              content_block: (chunk as ContentBlockStopEvent).content_block,
             })}\n\n`);
           } else if (chunk.type === 'message_delta') {
             res.write(`data: ${JSON.stringify({
@@ -103,7 +113,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           } else if (chunk.type === 'message_stop') {
             res.write(`data: ${JSON.stringify({
               type: 'message_stop',
-              message: chunk.message,
+              message: (chunk as MessageStopEvent).message,
             })}\n\n`);
           }
         }
@@ -115,7 +125,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       // Non-streaming response
       const response = await anthropic.messages.create({
-        messages: messages.map(msg => ({
+        messages: messages.map((msg: MessageInterface) => ({
           role: msg.role === 'assistant' ? 'assistant' : 'user',
           content: msg.content,
         })),
