@@ -218,18 +218,11 @@ sentry-build: init-volumes ## Build production with Sentry test button
 		exit 1; \
 	fi
 	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) \
-		-e NODE_ENV=production \
 		-e VITE_ENABLE_SENTRY_TEST=true \
 		-e SENTRY_AUTH_TOKEN=$(SENTRY_AUTH_TOKEN) \
 		-e SENTRY_ORG=pixelcrate \
 		-e SENTRY_PROJECT=chatai \
-		app sh -c "pnpm install && NODE_ENV=production pnpm build:vite && node scripts/analyze-maps.js --validate && pnpm postbuild"
-	@echo "$(GREEN)Sentry test build completed in ./dist directory$(RESET)"
-	@echo "Use 'make sentry-serve' to serve the Sentry test build"
-
-# Add a new target for just checking maps
-check-maps: ## Check source maps against allowed missing files
-	$(DOCKER_COMPOSE_RUN) app node scripts/analyze-maps.js --validate
+		app sh -c "pnpm install && pnpm build && node scripts/analyze-maps.js --validate"
 
 sentry-serve: ensure-pnpm-dirs ## Serve Sentry test build
 	$(DOCKER_COMPOSE_RUN) \
