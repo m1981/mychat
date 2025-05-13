@@ -1,9 +1,9 @@
+
 import { renderHook, act } from '@testing-library/react';
 import * as contentProcessing from '@utils/contentProcessing';
-import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 import { useFileDropHandler } from '../useFileDropHandler';
-
 
 // Mock the formatDroppedContent utility
 vi.mock('@utils/contentProcessing', () => ({
@@ -61,9 +61,13 @@ describe('useFileDropHandler', () => {
     document.execCommand = vi.fn().mockReturnValue(true);
     
     // Reset the mock implementation of formatDroppedContent
-    (contentProcessing.formatDroppedContent as unknown as Mock).mockImplementation(
-      (content: string, path: string) => `Formatted: ${content} (${path})`
+    vi.mocked(contentProcessing.formatDroppedContent).mockImplementation(
+      (content: string, filePath?: string) => `Formatted: ${content} (${filePath || 'unknown'})`
     );
+  });
+  
+  afterEach(() => {
+    vi.clearAllMocks();
   });
   
   it('should handle dragOver event correctly', () => {

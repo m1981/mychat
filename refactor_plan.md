@@ -57,6 +57,9 @@
 - [ ] Use `createMockEvent()` for test events
 - [ ] Standardize Vitest import pattern
 - [ ] Use consistent test patterns
+- [ ] Add proper cleanup in `afterEach`
+- [x] Improve type safety with `vi.mocked()` - Fixed parameter type in mock implementation
+- [ ] Use proper type assertions for mock events
 
 ### 7. `src/components/Menu/__tests__/NewChat.test.tsx`
 - [ ] Use `mockStore()` for store mocking
