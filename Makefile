@@ -172,7 +172,7 @@ dead: ## Find unsed code
 	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint:deadcode | ./add-todos.sh
 
 lint-fix: ## Run all linters
-	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint:fix
+	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint:fix:all
 
 format: ## Format all files
 	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) format:all
@@ -185,15 +185,6 @@ type-watch: ## Run type checking
 
 ##@ Infrastructure Management
 .PHONY: colima-start colima-stop colima-status colima-list colima-delete
-
-colima-start: ## Start Colima development environment
-	colima start --cpu $(COLIMA_CPU) --memory $(COLIMA_MEMORY) --disk $(COLIMA_DISK) --profile $(COLIMA_PROFILE)
-
-colima-stop: ## Stop Colima development environment
-	colima stop --profile $(COLIMA_PROFILE)
-
-colima-list: ## List all Colima profiles
-	colima list
 
 ##@ Visual Testing
 .PHONY: backstop-init backstop-test backstop-approve
