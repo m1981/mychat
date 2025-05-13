@@ -73,6 +73,7 @@ jobs:
           SENTRY_ORG: pixelcrate
           SENTRY_PROJECT: chatai
           SENTRY_ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
         run: pnpm sentry:upload
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
