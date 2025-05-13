@@ -40,16 +40,18 @@
 - [x] Fix type issues with mocked functions
 
 ### 4. `src/hooks/__tests__/useSSE.test.ts`
-- [ ] Standardize Vitest import pattern
-- [ ] Use consistent test patterns
-- [ ] Extract common mock setup to reusable functions
-- [ ] Use `setupTimers()` for timer management
-- [ ] Use proper type safety with `vi.mocked()`
+- [x] Standardize Vitest import pattern
+- [x] Use consistent test patterns
+- [x] Extract common mock setup to reusable functions
+- [x] Use `setupTimers()` for timer management
+- [x] Use proper type safety with `vi.mocked()`
 
 ### 5. `src/hooks/__tests__/usePasteHandler.test.tsx`
-- [ ] Use `createMockEvent()` for test events
-- [ ] Standardize Vitest import pattern
-- [ ] Use consistent test patterns
+- [x] Use `createMockEvent()` for test events
+- [x] Standardize Vitest import pattern
+- [x] Use consistent test patterns
+- [x] Add proper cleanup in `afterEach`
+- [x] Improve type safety with `vi.mocked()`
 
 ### 6. `src/hooks/__tests__/useFileDropHandler.test.tsx`
 - [ ] Use `createMockEvent()` for test events
@@ -88,8 +90,8 @@
 - [x] File 1: `useKeyboardShortcuts.test.tsx`
 - [x] File 2: `useTextareaFocus.test.tsx`
 - [x] File 3: `useTextSelection.test.tsx`
-- [ ] File 4: `useSSE.test.ts`
-- [ ] File 5: `usePasteHandler.test.tsx`
+- [x] File 4: `useSSE.test.ts`
+- [x] File 5: `usePasteHandler.test.tsx`
 - [ ] File 6: `useFileDropHandler.test.tsx`
 - [ ] File 7: `NewChat.test.tsx`
 - [ ] File 8: `ContentView.test.tsx`

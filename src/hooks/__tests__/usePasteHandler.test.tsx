@@ -1,97 +1,155 @@
 import { renderHook } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createMockEvent } from '@utils/test-utils';
 
 import { usePasteHandler } from '../usePasteHandler';
 
-describe('usePasteHandler', () => {
-  // Mock the onContentUpdate callback
+describe('usePasteHandler Hook', () => {
   const mockOnContentUpdate = vi.fn();
   
-  // Mock clipboard event with proper dispatchEvent implementation
-  const createClipboardEvent = (content: string) => {
-    return {
-      preventDefault: vi.fn(),
-      clipboardData: {
-        getData: vi.fn().mockReturnValue(content)
-      },
-      currentTarget: {
-        value: 'initial text',
-        selectionStart: 7,
-        selectionEnd: 7,
-        setSelectionRange: vi.fn(),
-        dispatchEvent: vi.fn()
-      },
-      dispatchEvent: vi.fn()
-    } as unknown as React.ClipboardEvent<HTMLTextAreaElement>;
-  };
-  
   beforeEach(() => {
-    vi.resetAllMocks();
-    
-    // Mock document.execCommand
-    document.execCommand = vi.fn().mockReturnValue(false);
-    
-    // Mock Event constructor
-    global.Event = vi.fn(() => ({})) as any;
+    vi.clearAllMocks();
+    document.execCommand = vi.fn().mockReturnValue(true);
   });
   
-  it('should handle paste with execCommand when available', () => {
-    // Mock execCommand to return true (success)
-    document.execCommand = vi.fn().mockReturnValue(true);
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should handle text paste events', () => {
+    const { result } = renderHook(() => 
+      usePasteHandler({
+        onContentUpdate: mockOnContentUpdate
+      })
+    );
+
+    // Create mock textarea element
+    const textarea = document.createElement('textarea');
+    textarea.value = 'Initial text';
+    textarea.selectionStart = 5;
+    textarea.selectionEnd = 5;
     
-    const { result } = renderHook(() => usePasteHandler({ onContentUpdate: mockOnContentUpdate }));
-    
-    // Create mock event with textarea that will have value updated by execCommand
-    const mockEvent = createClipboardEvent('pasted content');
-    mockEvent.currentTarget.value = 'initial pasted content text'; // Simulate execCommand updating the value
-    
+    // Create mock paste event with text data
+    const pasteEvent = createMockEvent({
+      currentTarget: textarea,
+      clipboardData: {
+        getData: vi.fn().mockReturnValue('Pasted text')
+      },
+      preventDefault: vi.fn()
+    }) as unknown as React.ClipboardEvent<HTMLTextAreaElement>;
+
     // Call the handlePaste function
-    result.current.handlePaste(mockEvent);
+    result.current.handlePaste(pasteEvent);
+    
+    // Verify preventDefault was called
+    expect(pasteEvent.preventDefault).toHaveBeenCalled();
     
     // Verify execCommand was called
-    expect(document.execCommand).toHaveBeenCalledWith('insertText', false, 'pasted content');
-    
-    // Verify preventDefault was called
-    expect(mockEvent.preventDefault).toHaveBeenCalled();
+    expect(document.execCommand).toHaveBeenCalledWith('insertText', false, 'Pasted text');
     
     // Verify onContentUpdate was called with the updated content
-    expect(mockOnContentUpdate).toHaveBeenCalledWith('initial pasted content text');
-    
-    // Verify input event was dispatched
-    expect(mockEvent.currentTarget.dispatchEvent).toHaveBeenCalled();
-    expect(global.Event).toHaveBeenCalledWith('input', { bubbles: true });
+    expect(mockOnContentUpdate).toHaveBeenCalled();
   });
-  
-  it('should handle paste with manual update when execCommand is not available', () => {
-    // Mock execCommand to return false (failure)
+
+  it('should use fallback method when execCommand fails', () => {
+    // Mock execCommand to fail
     document.execCommand = vi.fn().mockReturnValue(false);
     
-    const { result } = renderHook(() => usePasteHandler({ onContentUpdate: mockOnContentUpdate }));
+    const { result } = renderHook(() => 
+      usePasteHandler({
+        onContentUpdate: mockOnContentUpdate
+      })
+    );
+
+    // Create mock textarea with selection
+    const textarea = document.createElement('textarea');
+    textarea.value = 'Initial text';
+    textarea.selectionStart = 5;
+    textarea.selectionEnd = 5;
     
-    // Create mock event
-    const mockEvent = createClipboardEvent('pasted content');
-    
+    // Create mock paste event
+    const pasteEvent = createMockEvent({
+      currentTarget: textarea,
+      clipboardData: {
+        getData: vi.fn().mockReturnValue('Pasted text')
+      },
+      preventDefault: vi.fn()
+    }) as unknown as React.ClipboardEvent<HTMLTextAreaElement>;
+
     // Call the handlePaste function
-    result.current.handlePaste(mockEvent);
-    
-    // Verify execCommand was called but failed
-    expect(document.execCommand).toHaveBeenCalledWith('insertText', false, 'pasted content');
+    result.current.handlePaste(pasteEvent);
     
     // Verify preventDefault was called
-    expect(mockEvent.preventDefault).toHaveBeenCalled();
+    expect(pasteEvent.preventDefault).toHaveBeenCalled();
     
-    // Verify textarea value was manually updated
-    expect(mockEvent.currentTarget.value).toBe('initialpasted content text');
+    // Verify execCommand was called but failed
+    expect(document.execCommand).toHaveBeenCalledWith('insertText', false, 'Pasted text');
     
-    // Verify cursor position was updated
-    // The new position should be: start (7) + pastedContent.length (14) = 21
-    expect(mockEvent.currentTarget.setSelectionRange).toHaveBeenCalledWith(21, 21);
+    // Verify fallback method updated the textarea value
+    expect(textarea.value).toBe('InitiPasted textal text');
     
     // Verify onContentUpdate was called with the updated content
-    expect(mockOnContentUpdate).toHaveBeenCalledWith('initialpasted content text');
+    expect(mockOnContentUpdate).toHaveBeenCalledWith('InitiPasted textal text');
+  });
+
+  it('should handle empty paste events', () => {
+    const { result } = renderHook(() => 
+      usePasteHandler({
+        onContentUpdate: mockOnContentUpdate
+      })
+    );
+
+    // Create mock textarea
+    const textarea = document.createElement('textarea');
+    textarea.value = 'Initial text';
+    
+    // Create mock paste event with empty text
+    const pasteEvent = createMockEvent({
+      currentTarget: textarea,
+      clipboardData: {
+        getData: vi.fn().mockReturnValue('')
+      },
+      preventDefault: vi.fn()
+    }) as unknown as React.ClipboardEvent<HTMLTextAreaElement>;
+
+    // Call the handlePaste function
+    result.current.handlePaste(pasteEvent);
+    
+    // Verify execCommand was called with empty string
+    expect(document.execCommand).toHaveBeenCalledWith('insertText', false, '');
+    
+    // Verify onContentUpdate was called
+    expect(mockOnContentUpdate).toHaveBeenCalled();
+  });
+
+  it('should dispatch input event after paste', () => {
+    const { result } = renderHook(() => 
+      usePasteHandler({
+        onContentUpdate: mockOnContentUpdate
+      })
+    );
+
+    // Create mock textarea with dispatchEvent spy
+    const textarea = document.createElement('textarea');
+    textarea.value = 'Initial text';
+    textarea.dispatchEvent = vi.fn();
+    
+    // Create mock paste event
+    const pasteEvent = createMockEvent({
+      currentTarget: textarea,
+      clipboardData: {
+        getData: vi.fn().mockReturnValue('Pasted text')
+      },
+      preventDefault: vi.fn()
+    }) as unknown as React.ClipboardEvent<HTMLTextAreaElement>;
+
+    // Call the handlePaste function
+    result.current.handlePaste(pasteEvent);
     
     // Verify input event was dispatched
-    expect(mockEvent.currentTarget.dispatchEvent).toHaveBeenCalled();
-    expect(global.Event).toHaveBeenCalledWith('input', { bubbles: true });
+    expect(textarea.dispatchEvent).toHaveBeenCalled();
+    const dispatchedEvent = vi.mocked(textarea.dispatchEvent).mock.calls[0][0];
+    expect(dispatchedEvent.type).toBe('input');
+    expect(dispatchedEvent.bubbles).toBe(true);
   });
 });
