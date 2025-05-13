@@ -66,6 +66,62 @@ process_file() {
         echo "$components"
     fi
 
+    # Vitest Test Suites
+    local test_suites=$(grep -E "^describe\(.*" "$file")
+    if [ ! -z "$test_suites" ]; then
+        echo "Test Suites:"
+        echo "$test_suites"
+    fi
+
+    # Vitest Test Cases
+    local test_cases=$(grep -E "^(test|it)\(.*" "$file")
+    if [ ! -z "$test_cases" ]; then
+        echo "Test Cases:"
+        echo "$test_cases"
+    fi
+
+    # Vitest Mocks
+    local mocks=$(grep -E "(vi\.fn|vi\.mock|vi\.spyOn)" "$file" | sort | uniq)
+    if [ ! -z "$mocks" ]; then
+        echo "Mocks:"
+        echo "$mocks"
+    fi
+
+    # Vitest Hooks
+    local test_hooks=$(grep -E "(beforeAll|afterAll|beforeEach|afterEach)\(" "$file" | sort | uniq)
+    if [ ! -z "$test_hooks" ]; then
+        echo "Test Hooks:"
+        echo "$test_hooks"
+    fi
+
+    # Vitest Assertions
+    local assertions=$(grep -E "expect\(.*\)\.(to|not)\." "$file" | sort | uniq)
+    if [ ! -z "$assertions" ]; then
+        echo "Assertions:"
+        echo "$assertions"
+    fi
+
+    # Testing Library Utilities
+    local test_utils=$(grep -E "(render|screen|fireEvent|waitFor|within)" "$file" | sort | uniq)
+    if [ ! -z "$test_utils" ]; then
+        echo "Testing Library Usage:"
+        echo "$test_utils"
+    fi
+
+    # Test Environment Setup
+    local test_env=$(grep -E "(vi\.useFakeTimers|vi\.useRealTimers)" "$file" | sort | uniq)
+    if [ ! -z "$test_env" ]; then
+        echo "Test Environment Setup:"
+        echo "$test_env"
+    fi
+
+    # Snapshot Testing
+    local snapshots=$(grep -E "toMatchSnapshot|toMatchInlineSnapshot" "$file" | sort | uniq)
+    if [ ! -z "$snapshots" ]; then
+        echo "Snapshot Tests:"
+        echo "$snapshots"
+    fi
+
     echo -e "\n"
 }
 
