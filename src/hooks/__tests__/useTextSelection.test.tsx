@@ -21,6 +21,6 @@ describe('useTextSelection', () => {
     
     // Assert - check only the first argument is 'selectionchange'
     expect(document.addEventListener).toHaveBeenCalled();
-    expect(document.addEventListener.mock.calls[0][0]).toBe('selectionchange');
+    expect(vi.mocked(document.addEventListener).mock.calls[0][0]).toBe('selectionchange');
   });
 });
