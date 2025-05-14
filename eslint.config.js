@@ -129,5 +129,27 @@ export default [
         // Add any other globals you need
       }
     }
+  },
+  {
+    // Node.js files configuration
+    files: ['**/electron/**/*.{js,cjs}', '**/scripts/**/*.js'],
+    languageOptions: {
+      globals: {
+        // Node.js globals
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        process: 'readonly',
+        console: 'readonly',
+        module: 'readonly',
+        require: 'readonly',
+        exports: 'readonly',
+        Buffer: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        global: 'readonly'
+      }
+    }
   }
 ];
