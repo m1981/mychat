@@ -74,89 +74,36 @@ sequenceDiagram
             end
         end
     else Keyboard Shortcuts
-        alt 3. Composer Mode with "Enter to Submit" enabled
+        Note over KeyboardHandler: Keyboard actions trigger the same flows as buttons
+        
+        alt Composer Mode
             rect rgb(240,255,240)
-                User->>KeyboardHandler: Press Enter
-                KeyboardHandler->>MessageEditorContext: Call handleSaveAndSubmit()
-                MessageEditorContext->>Store: Add message to chat
+                User->>KeyboardHandler: Press key combination
                 
-                rect rgb(230,245,255)
-                    Note over Store: AI Response Phase
-                    Store->>APIService: Submit conversation context
-                    APIService-->>Store: Stream AI response
-                    
-                    loop For each token
-                        Store->>Store: Update AI message content
-                        Store-->>EditView: Render updated content
-                    end
+                alt "Enter to Submit" enabled
+                    KeyboardHandler->>MessageEditorContext: Enter → handleSaveAndSubmit()
+                    KeyboardHandler->>EditView: Shift+Enter → Insert newline
+                else "Enter to Submit" disabled
+                    KeyboardHandler->>EditView: Enter → Insert newline
+                    KeyboardHandler->>MessageEditorContext: Ctrl+Enter/Shift+Enter → handleSaveAndSubmit()
                 end
                 
-                MessageEditorContext->>Store: Clear input
-                MessageEditorContext->>EditView: Reset textarea height
+                Note right of KeyboardHandler: handleSaveAndSubmit() triggers same flow as "Save & Submit" button
             end
-
-            rect rgb(255,240,255)
-                User->>KeyboardHandler: Press Shift+Enter
-                KeyboardHandler->>EditView: Insert newline
-            end
-        else 4. Composer Mode with "Enter to Submit" disabled
-            rect rgb(230,255,230)
-                User->>KeyboardHandler: Press Enter
-                KeyboardHandler->>EditView: Insert newline
-            end
-
-            rect rgb(255,230,255)
-                User->>KeyboardHandler: Press Ctrl+Enter or Shift+Enter
-                KeyboardHandler->>MessageEditorContext: Call handleSaveAndSubmit()
-                MessageEditorContext->>Store: Add message to chat
-                
-                rect rgb(230,245,255)
-                    Note over Store: AI Response Phase
-                    Store->>APIService: Submit conversation context
-                    APIService-->>Store: Stream AI response
-                    
-                    loop For each token
-                        Store->>Store: Update AI message content
-                        Store-->>EditView: Render updated content
-                    end
-                end
-                
-                MessageEditorContext->>Store: Clear input
-                MessageEditorContext->>EditView: Reset textarea height
-            end
-        else 5. Non-Composer Mode (Edit)
+        else Non-Composer Mode (Edit)
             rect rgb(240,240,255)
-                User->>KeyboardHandler: Press Escape
-                KeyboardHandler->>MessageEditorContext: Call setIsEdit(false)
-                MessageEditorContext->>EditView: Exit edit mode without saving
-            end
-
-            rect rgb(255,240,240)
-                User->>KeyboardHandler: Press Ctrl+Shift+Enter
-                KeyboardHandler->>MessageEditorContext: Call handleSaveAndSubmit()
-                MessageEditorContext->>Store: Update message content
-                MessageEditorContext->>Store: Remove subsequent messages
-                MessageEditorContext->>Store: Trigger regeneration
+                User->>KeyboardHandler: Press key combination
                 
-                rect rgb(230,245,255)
-                    Note over Store: AI Response Phase
-                    Store->>APIService: Submit updated conversation context
-                    APIService-->>Store: Stream AI response
-                    
-                    loop For each token
-                        Store->>Store: Update AI message content
-                        Store-->>EditView: Render updated content
-                    end
+                alt Escape key
+                    KeyboardHandler->>MessageEditorContext: setIsEdit(false)
+                    MessageEditorContext->>EditView: Exit edit mode without saving
+                else Ctrl+Shift+Enter
+                    KeyboardHandler->>MessageEditorContext: handleSaveAndSubmit()
+                    Note right of KeyboardHandler: Same flow as "Save & Submit" button in edit mode
+                else Ctrl+Enter/Shift+Enter
+                    KeyboardHandler->>MessageEditorContext: handleSave()
+                    Note right of KeyboardHandler: Same flow as "Save" button in edit mode
                 end
-                
-                MessageEditorContext->>EditView: Exit edit mode
-            end
-
-            rect rgb(240,255,255)
-                User->>KeyboardHandler: Press Ctrl+Enter or Shift+Enter
-                KeyboardHandler->>MessageEditorContext: Call handleSave()
-                MessageEditorContext->>Store: Update message content
-                MessageEditorContext->>EditView: Exit edit mode
             end
         end
     end
