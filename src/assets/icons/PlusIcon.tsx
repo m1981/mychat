@@ -1,5 +1,3 @@
-import React from 'react';
-
 const PlusIcon = ({ className }: { className?: string }) => {
   return (
     <svg

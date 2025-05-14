@@ -1,5 +1,3 @@
-import React from 'react';
-
 const EditIcon2 = () => {
   return (
     <div className="p-1.5 rounded-md

@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-
+import { useEffect, useState } from 'react';
 
 import Toggle from '@components/Toggle';
 import useStore from '@store/store';

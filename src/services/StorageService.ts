@@ -18,7 +18,7 @@ export class StorageService {
 
   private readonly finalConfig: QuotaConfig;
 
-  constructor(private config: Partial<QuotaConfig> = {}) {
+  constructor(config: Partial<QuotaConfig> = {}) {
     this.finalConfig = { ...this.defaultConfig, ...config };
   }
 
@@ -62,7 +62,7 @@ export class StorageService {
     }
   }
 
-  async clearOldData(threshold: Date): Promise<void> {
+  async clearOldData(_: Date): Promise<void> {
     // Implementation for clearing old data
     // This would be implemented based on your specific storage structure
   }

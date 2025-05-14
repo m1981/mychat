@@ -23,6 +23,7 @@ declare global {
 
 import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
+
 import i18n from './src/utils/i18n-test-config';
 
 // Add custom matchers

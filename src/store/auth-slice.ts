@@ -14,7 +14,7 @@ export interface AuthSlice {
   setFirstVisit: (firstVisit: boolean) => void;
 }
 
-export const createAuthSlice: StoreSlice<AuthSlice> = (set, get) => ({
+export const createAuthSlice: StoreSlice<AuthSlice> = (set) => ({
   apiKeys: {
     openai: getEnvVar('VITE_OPENAI_API_KEY', ''),
     anthropic: getEnvVar('VITE_ANTHROPIC_API_KEY', ''),

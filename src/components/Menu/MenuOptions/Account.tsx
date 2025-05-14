@@ -1,5 +1,3 @@
-import React from 'react';
-
 import PersonIcon from '@icon/PersonIcon';
 
 const Account = () => {

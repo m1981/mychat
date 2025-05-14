@@ -1,5 +1,3 @@
-import React from 'react';
-
 const DeleteIcon = () => {
   return (
     <div className="p-1.5 rounded-md
@@ -25,7 +23,7 @@ const DeleteIcon = () => {
         <line x1='14' y1='11' x2='14' y2='17'></line>
       </svg>
     </div>
-      );
-      };
+  );
+};
 
-      export default DeleteIcon;
+export default DeleteIcon;

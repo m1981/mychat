@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
-
+import { useState } from 'react';
 
 import ApiMenu from '@components/ApiMenu';
 import PersonIcon from '@icon/PersonIcon';
 import { useTranslation } from 'react-i18next';
-
 
 const Config = () => {
   const { t } = useTranslation();

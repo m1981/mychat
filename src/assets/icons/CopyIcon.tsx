@@ -1,5 +1,3 @@
-import React from 'react';
-
 const CopyIcon = () => {
   return (
     <div className="p-1.5 rounded-md
@@ -23,7 +21,7 @@ const CopyIcon = () => {
         <rect x='8' y='2' width='8' height='4' rx='1' ry='1'></rect>
       </svg>
     </div>
-      );
-      };
+  );
+};
 
-      export default CopyIcon;
+export default CopyIcon;

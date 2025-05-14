@@ -1,5 +1,3 @@
-import React from 'react';
-
 import useSubmit from '@hooks/useSubmit';
 import useStore from '@store/store';
 

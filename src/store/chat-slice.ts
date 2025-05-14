@@ -20,7 +20,7 @@ export interface ChatSlice {
   setCurrentChatTokenCount: (tokenCount: number) => void;
 }
 
-export const createChatSlice: StoreSlice<ChatSlice> = (set, get) => ({
+export const createChatSlice: StoreSlice<ChatSlice> = (set) => ({
   folders: {},
   messages: [],
   chats: DEFAULT_CHATS,

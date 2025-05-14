@@ -1,5 +1,3 @@
-import React from 'react';
-
 const NewFolderIcon = ({ className }: { className?: string }) => {
   return (
     <svg

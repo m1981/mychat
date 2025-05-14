@@ -1,5 +1,3 @@
-import React from 'react';
-
 const CancelIcon = () => {
   return (
     <span className="px-2 py-1 text-xs

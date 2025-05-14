@@ -100,7 +100,7 @@ const useStore = create<StoreState>()(
         enterToSubmit: state.enterToSubmit,
         layoutWidth: state.layoutWidth,
       }),
-      onRehydrateStorage: () => (state) => {
+      onRehydrateStorage: () => () => {
         // Optional: Log when storage is rehydrated
         console.log('Storage rehydrated');
       },
