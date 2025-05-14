@@ -25,8 +25,8 @@
     "lint:styles:fix": "stylelint src/**/*.{js,jsx,ts,tsx,css} --fix",
     "lint:format": "prettier --check '**/*.{js,jsx,ts,tsx,css}'",
     "lint:format:fix": "prettier '**/*.{js,jsx,ts,tsx,css}' --write",
-    "lint:all": "pnpm lint:js && pnpm lint:styles && pnpm lint:format && pnpm lint:deadcode",
-    "lint:fix:all": "pnpm lint:js:fix && pnpm lint:styles:fix && pnpm lint:format:fix",
+    "lint:all": "NODE_ENV=test pnpm lint:js && pnpm lint:styles && pnpm lint:format && pnpm lint:deadcode",
+    "lint:fix:all": "NODE_ENV=test pnpm lint:js:fix && pnpm lint:styles:fix && pnpm lint:format:fix",
     "format": "pnpm lint:format:fix",
     "vercel-build": "pnpm build"
   },
