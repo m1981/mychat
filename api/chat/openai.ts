@@ -73,9 +73,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         content: response.choices[0]?.message?.content || ''
       });
     }
-  } catch (error: unknown) { // Replace any with unknown
+  } catch (error: unknown) {
     console.error('OpenAI API Error:', error);
-    res.status(error instanceof Error && 'status' in error ? (error as any).status : 500).json({
+    
+    // Create a type for OpenAI errors
+    interface OpenAIError extends Error {
+      status?: number;
+    }
+    
+    // Use type guard to safely access status
+    const errorStatus = error instanceof Error && 'status' in error 
+      ? (error as OpenAIError).status 
+      : 500;
+    
+    res.status(errorStatus).json({
       error: error instanceof Error ? error.message : 'An error occurred during the API request'
     });
   }

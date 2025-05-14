@@ -133,13 +133,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       res.status(200).json(response);
     }
-  } catch (error: unknown) { // Replace any with unknown
+  } catch (error: unknown) {
     console.error('Anthropic API Error:', error);
+    
+    // Create a more specific type for the error
+    interface AnthropicError {
+      status?: number;
+      type?: string;
+      error?: {
+        details?: unknown;
+      };
+    }
+    
+    // Use type guards to safely access properties
+    const errorStatus = error instanceof Error && 'status' in error 
+      ? (error as AnthropicError).status 
+      : undefined;
+      
+    const errorType = error instanceof Error && 'type' in error 
+      ? (error as AnthropicError).type 
+      : undefined;
+      
+    const errorDetails = error instanceof Error && 'error' in error && (error as AnthropicError).error?.details
+      ? (error as AnthropicError).error.details
+      : undefined;
+    
     res.status(500).json({
       error: error instanceof Error ? error.message : 'An error occurred during the API request',
-      status: (error as any)?.status,
-      type: (error as any)?.type,
-      details: (error as any)?.error?.details || undefined,
+      status: errorStatus,
+      type: errorType,
+      details: errorDetails,
     });
   }
 }
