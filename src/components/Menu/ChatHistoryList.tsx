@@ -17,8 +17,7 @@ import ChatHistory from './ChatHistory';
 // Separate filtering logic
 const filterChatsByTitle = (
   chats: ChatInterface[] | undefined,
-  filterText: string,
-  currentChatIndex: number
+  filterText: string
 ): { chat: ChatInterface; originalIndex: number }[] => {
   if (!chats) return [];
   if (!filterText.trim()) return chats.map((chat, idx) => ({ chat, originalIndex: idx }));

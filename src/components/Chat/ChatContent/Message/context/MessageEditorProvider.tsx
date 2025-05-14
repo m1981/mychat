@@ -1,5 +1,4 @@
-import React from 'react';
-import { createContext } from 'react'; // Import createContext
+import { createContext } from 'react'; // Import createContext only
 
 import { useMessageEditor } from '@hooks/useMessageEditor';
 

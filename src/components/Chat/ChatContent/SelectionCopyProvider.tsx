@@ -11,7 +11,8 @@ interface SelectionCopyProviderProps {
 export const SelectionCopyProvider: React.FC<SelectionCopyProviderProps> = ({
   children
 }) => {
-  const [copiedText, setCopiedText] = useState<string | null>(null);
+  // Use _ to indicate intentionally unused variable
+  const [_, setCopiedText] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
