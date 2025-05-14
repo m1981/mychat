@@ -3,6 +3,7 @@ sequenceDiagram
     participant EditView
     participant KeyboardHandler
     participant MessageEditorContext
+    participant SubmissionState
     participant Store
     participant Modal
     participant APIService
@@ -10,8 +11,8 @@ sequenceDiagram
 
     Note over EditView: Component renders based on isComposer
 
-    alt Button Interactions
-        alt 1. Composer Mode
+    alt 1. Button Interactions
+        alt 1.1. Composer Mode
             rect rgb(240,230,255)
                 User->>EditView: Click "Save & Submit"
                 EditView->>MessageEditorContext: Call handleSaveAndSubmit()
@@ -19,13 +20,38 @@ sequenceDiagram
                 
                 rect rgb(230,245,255)
                     Note over Store: AI Response Phase
+                    
+                    Store->>SubmissionState: dispatch({ type: 'SUBMIT_START' })
+                    Note over SubmissionState: status: 'preparing'
+                    
+                    Store->>SubmissionState: dispatch({ type: 'PREPARING' })
+                    Note over SubmissionState: status: 'preparing'
+                    
+                    Store->>SubmissionState: dispatch({ type: 'SUBMITTING' })
+                    Note over SubmissionState: status: 'submitting'
+                    
                     Store->>APIService: Submit conversation context
+                    
+                    Store->>SubmissionState: dispatch({ type: 'STREAMING' })
+                    Note over SubmissionState: status: 'streaming'
+                    
                     APIService-->>Store: Stream AI response
                     
                     loop For each token
                         Store->>Store: Update AI message content
+                        Store->>SubmissionState: dispatch({ type: 'CONTENT_RECEIVED' })
+                        Note over SubmissionState: status: 'streaming'
                         Store-->>EditView: Render updated content
                     end
+                    
+                    Store->>SubmissionState: dispatch({ type: 'STREAM_COMPLETE' })
+                    Note over SubmissionState: status: 'completing'
+                    
+                    Store->>SubmissionState: dispatch({ type: 'GENERATING_TITLE' })
+                    Note over SubmissionState: status: 'completing'
+                    
+                    Store->>SubmissionState: dispatch({ type: 'COMPLETE' })
+                    Note over SubmissionState: status: 'success'
                 end
                 
                 MessageEditorContext->>Store: Clear input
@@ -37,7 +63,7 @@ sequenceDiagram
                 EditView->>MessageEditorContext: Call handleSave()
                 MessageEditorContext->>Store: Store draft content
             end
-        else 2. Non-Composer Mode (Edit)
+        else 1.2. Non-Composer Mode (Edit)
             rect rgb(255,255,230)
                 User->>EditView: Click "Save"
                 EditView->>MessageEditorContext: Call handleSave()
@@ -48,24 +74,31 @@ sequenceDiagram
             rect rgb(255,230,230)
                 User->>EditView: Click "Save & Submit"
                 EditView->>Modal: Open confirmation modal
-                User->>Modal: Confirm
-                Modal->>MessageEditorContext: Call handleSaveAndSubmit()
-                MessageEditorContext->>Store: Update message content
-                MessageEditorContext->>Store: Remove subsequent messages
-                MessageEditorContext->>Store: Trigger regeneration
                 
-                rect rgb(230,245,255)
-                    Note over Store: AI Response Phase
-                    Store->>APIService: Submit updated conversation context
-                    APIService-->>Store: Stream AI response
+                alt User confirms
+                    User->>Modal: Confirm
+                    Modal->>MessageEditorContext: Call handleSaveAndSubmit()
+                    MessageEditorContext->>Store: Update message content
+                    MessageEditorContext->>Store: Remove subsequent messages
+                    MessageEditorContext->>Store: Trigger regeneration
                     
-                    loop For each token
-                        Store->>Store: Update AI message content
-                        Store-->>EditView: Render updated content
+                    rect rgb(230,245,255)
+                        Note over Store: AI Response Phase
+                        Store->>APIService: Submit updated conversation context
+                        APIService-->>Store: Stream AI response
+                        
+                        loop For each token
+                            Store->>Store: Update AI message content
+                            Store-->>EditView: Render updated content
+                        end
                     end
+                    
+                    MessageEditorContext->>EditView: Exit edit mode
+                else User cancels
+                    User->>Modal: Cancel
+                    Modal->>EditView: Close modal
+                    Note over EditView: Remain in edit mode
                 end
-                
-                MessageEditorContext->>EditView: Exit edit mode
             end
 
             rect rgb(230,230,255)
@@ -74,43 +107,43 @@ sequenceDiagram
                 MessageEditorContext->>EditView: Exit edit mode without saving
             end
         end
-    else Keyboard Shortcuts
-        Note over KeyboardHandler: Global setting affects keyboard behavior
+    else 2. Keyboard Shortcuts
+        Note over KeyboardHandler: Keyboard shortcuts map to button actions
         
         rect rgb(255,240,240)
             Note over UserSettings: "Enter to Submit" is a global user preference
             KeyboardHandler->>UserSettings: Check "Enter to Submit" setting
         end
         
-        alt Composer Mode
+        alt 2.1. Composer Mode
             rect rgb(240,255,240)
                 User->>KeyboardHandler: Press key combination
                 
                 alt "Enter to Submit" enabled (global setting)
                     KeyboardHandler->>MessageEditorContext: Enter → handleSaveAndSubmit()
-                    Note right of KeyboardHandler: Triggers full "Save & Submit" flow with AI response
+                    Note right of KeyboardHandler: Same as clicking "Save & Submit" button
                     
                     KeyboardHandler->>EditView: Shift+Enter → Insert newline
                 else "Enter to Submit" disabled (global setting)
                     KeyboardHandler->>EditView: Enter → Insert newline
                     
                     KeyboardHandler->>MessageEditorContext: Ctrl+Enter/Shift+Enter → handleSaveAndSubmit()
-                    Note right of KeyboardHandler: Triggers full "Save & Submit" flow with AI response
+                    Note right of KeyboardHandler: Same as clicking "Save & Submit" button
                 end
             end
-        else Non-Composer Mode (Edit)
+        else 2.2. Non-Composer Mode (Edit)
             rect rgb(240,240,255)
                 User->>KeyboardHandler: Press key combination
                 
                 alt Escape key
                     KeyboardHandler->>MessageEditorContext: setIsEdit(false)
-                    MessageEditorContext->>EditView: Exit edit mode without saving
+                    Note right of KeyboardHandler: Same as clicking "Cancel" button
                 else Ctrl+Shift+Enter
                     KeyboardHandler->>MessageEditorContext: handleSaveAndSubmit()
-                    Note right of KeyboardHandler: Triggers full edit "Save & Submit" flow with AI response
+                    Note right of KeyboardHandler: Same as clicking "Save & Submit" button
                 else Ctrl+Enter/Shift+Enter
                     KeyboardHandler->>MessageEditorContext: handleSave()
-                    Note right of KeyboardHandler: Triggers "Save" flow without AI response
+                    Note right of KeyboardHandler: Same as clicking "Save" button
                 end
                 
                 Note over KeyboardHandler: "Enter to Submit" setting does not affect Edit mode
@@ -120,12 +153,12 @@ sequenceDiagram
 
     Note over EditView: Buttons disabled during generation
 
-    alt 6. Regeneration Flow
+    alt 3. Regeneration Flow
         User->>EditView: Click "Regenerate" button
         EditView->>Store: regenerateMessage()
         
         rect rgb(240,240,240)
-            Note over Store: State Update Phase
+            Note over Store: 3.1. State Update Phase
             Store->>Store: Clone current chat
             Store->>Store: Find last message
             Store->>Store: Mark last message as outdated
@@ -134,14 +167,14 @@ sequenceDiagram
         end
         
         rect rgb(230,240,255)
-            Note over EditView: UI Update Phase
+            Note over EditView: 3.2. UI Update Phase
             Store-->>EditView: State changes
             EditView->>EditView: Render outdated message (dimmed)
             EditView->>EditView: Show loading state for new message
         end
         
         rect rgb(255,240,230)
-            Note over Store: API Phase
+            Note over Store: 3.3. API Phase
             Store->>APIService: Submit conversation context
             APIService-->>Store: Stream new response
             
@@ -152,7 +185,7 @@ sequenceDiagram
         end
         
         rect rgb(230,255,240)
-            Note over EditView: Final State
+            Note over EditView: 3.4. Final State
             EditView->>EditView: Show both messages:
             Note over EditView: 1. Previous (dimmed, marked as outdated)
             Note over EditView: 2. New (normal, marked as current)
