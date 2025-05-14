@@ -11,6 +11,7 @@ import { useKeyboardShortcuts } from '../useKeyboardShortcuts';
 vi.mock('@components/Chat/ChatContent/Message/context/MessageEditorContext', () => {
   const mockHandleSave = vi.fn();
   const mockHandleSaveAndSubmit = vi.fn();
+  const mockHandleSaveAndSubmitWithTruncation = vi.fn();
   const mockSetIsEdit = vi.fn();
   const mockResetTextAreaHeight = vi.fn();
   
@@ -18,6 +19,7 @@ vi.mock('@components/Chat/ChatContent/Message/context/MessageEditorContext', () 
     useMessageEditorContext: vi.fn().mockReturnValue({
       handleSave: mockHandleSave,
       handleSaveAndSubmit: mockHandleSaveAndSubmit,
+      handleSaveAndSubmitWithTruncation: mockHandleSaveAndSubmitWithTruncation,
       setIsEdit: mockSetIsEdit,
       resetTextAreaHeight: mockResetTextAreaHeight,
       isComposer: false
@@ -58,12 +60,12 @@ describe('useKeyboardShortcuts', () => {
   });
 
   it('should register keyboard event handlers', () => {
-    renderHook(() => useKeyboardShortcuts());
+    renderHook(() => useKeyboardShortcuts({}));
     expect(document.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
   });
 
   it('should clean up event listeners on unmount', () => {
-    const { unmount } = renderHook(() => useKeyboardShortcuts());
+    const { unmount } = renderHook(() => useKeyboardShortcuts({}));
     unmount();
     expect(document.removeEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
   });
@@ -73,7 +75,7 @@ describe('useKeyboardShortcuts', () => {
     const mockContext = useMessageEditorContext();
     
     // Render the hook to get the handleKeyDown function
-    const { result } = renderHook(() => useKeyboardShortcuts());
+    const { result } = renderHook(() => useKeyboardShortcuts({}));
     
     // Create a mock keyboard event
     const mockKeyEvent = {
@@ -92,7 +94,7 @@ describe('useKeyboardShortcuts', () => {
     expect(mockKeyEvent.preventDefault).toHaveBeenCalled();
     
     // Verify the context function was called
-    expect(mockContext.handleSaveAndSubmit).toHaveBeenCalled();
+    expect(mockContext.handleSaveAndSubmitWithTruncation).toHaveBeenCalled();
   });
   
   it('should handle Escape key to exit edit mode', () => {
@@ -100,7 +102,7 @@ describe('useKeyboardShortcuts', () => {
     const mockContext = useMessageEditorContext();
     
     // Render the hook
-    renderHook(() => useKeyboardShortcuts());
+    renderHook(() => useKeyboardShortcuts({}));
     
     // Get the global keydown handler
     const keydownHandler = vi.mocked(document.addEventListener).mock.calls[0][1] as EventListener;
