@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
-const RECONNECT_INTERVAL = 3000; // 3 seconds
+// Remove unused constant
+// const RECONNECT_INTERVAL = 3000; // 3 seconds
 
 interface ReconnectConfig {
   enabled?: boolean;

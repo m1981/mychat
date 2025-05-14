@@ -4,7 +4,7 @@ import CrossIcon2 from '@icon/CrossIcon2';
 import DownArrow from '@icon/DownArrow';
 import MenuIcon from '@icon/MenuIcon';
 import useStore from '@store/store';
-import { debug } from '@utils/debug';
+// import { debug } from '@utils/debug';
 
 import ChatHistoryList from './ChatHistoryList';
 import ChatSearch from './ChatSearch';
@@ -17,10 +17,11 @@ const Menu: React.FC = () => {
   const hideSideMenu = useStore((state) => state.hideSideMenu);
   const setHideSideMenu = useStore((state) => state.setHideSideMenu);
 
-  const handleSearchFilterChange = (newFilter: string) => {
-    debug.log('ui', '[Menu] Setting new search filter:', newFilter);
-    setSearchFilter(newFilter);
-  };
+  // Remove the unused function
+  // const handleSearchFilterChange = (newFilter: string) => {
+  //   debug.log('ui', '[Menu] Setting new search filter:', newFilter);
+  //   setSearchFilter(newFilter);
+  // };
 
   return (
     <>
@@ -43,7 +44,7 @@ const Menu: React.FC = () => {
               />
               <ChatHistoryList 
                 searchFilter={searchFilter}
-                onSearchChange={handleSearchFilterChange}
+                // Remove the onSearchChange prop as it's no longer in the interface
               />
               <MenuOptions />
             </nav>

@@ -102,19 +102,38 @@ const ChatContent: React.FC = () => {
 
   // Effects
   useEffect(() => {
-    if (generating) {
-      setError('');
-    }
-  }, [generating, setError]); // TypeScript will infer the return type
-
+    // Effect function
+    const handleGeneratingChange = () => {
+      if (generating) {
+        setError('');
+      }
+    };
+    
+    // Call it immediately
+    handleGeneratingChange();
+    
+    // No cleanup needed
+    return undefined;
+  }, [generating, setError]);
 
   // Setup scroll listener
   useEffect(() => {
     const container = chatContainerRef.current;
+    
+    // Define cleanup function
+    const cleanup = () => {
+      if (container) {
+        container.removeEventListener('scroll', handleScroll);
+      }
+    };
+    
+    // Add event listener if container exists
     if (container) {
       container.addEventListener('scroll', handleScroll);
-      return () => container.removeEventListener('scroll', handleScroll);
     }
+    
+    // Always return the cleanup function
+    return cleanup;
   }, [handleScroll]);
 
   return (

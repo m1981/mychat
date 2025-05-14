@@ -7,7 +7,7 @@ import WidthSelector from '@components/Menu/MenuOptions/WidthSelector';
 import PopupModal from '@components/PopupModal';
 import PromptLibraryMenu from '@components/PromptLibraryMenu';
 import SettingIcon from '@icon/SettingIcon';
-import useStore from '@store/store';
+// import useStore from '@store/store';
 import { useTranslation } from 'react-i18next';
 
 import AutoTitleToggle from './AutoTitleToggle';
@@ -15,7 +15,6 @@ import EnterToSubmitToggle from './EnterToSubmitToggle';
 
 const SettingsMenu = () => {
   const { t } = useTranslation();
-  const theme = useStore.getState().theme;
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   return (
