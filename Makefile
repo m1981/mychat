@@ -150,7 +150,7 @@ test: init-volumes ensure-pnpm-dirs install ## Run tests
 	$(DOCKER_COMPOSE_RUN) \
 		-e NODE_ENV=test \
 		-e PLATFORM=$(PLATFORM) \
-		app sh -c "pnpm test"
+		app sh -c "pnpm test && pnpm type:check:all"
 
 test-watch: ensure-pnpm-dirs install ## Run tests in watch mode
 	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) app sh -c "pnpm test:watch"
@@ -178,7 +178,7 @@ lint-fix: ## Run all linters and fix
 	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint:fix:all
 
 format: ## Format all files
-	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) format:all
+	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) format
 
 type: ## Run type checking
 	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) type:check
