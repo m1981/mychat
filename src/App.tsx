@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import Chat from '@components/Chat';
 import Debug from '@components/Debug';
 import Menu from '@components/Menu';
+import Debug from '@components/Debug';
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
 import * as Sentry from '@sentry/react';
 import useStore from '@store/store';
@@ -196,12 +197,15 @@ function App() {
         <Toaster />
         {process.env.NODE_ENV === 'development' && <Debug />}
         {showTestButton && (
-          <button 
-            className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded"
-            onClick={handleErrorClick}
-          >
-            Test Sentry
-          </button>
+          <>
+            <Debug />
+            <button 
+              className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded"
+              onClick={handleErrorClick}
+            >
+              Test Sentry
+            </button>
+          </>
         )}
       </div>
     </Sentry.ErrorBoundary>
