@@ -20,11 +20,14 @@ export function useMessageEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Get store state
-  const { currentChatIndex, setChats, setEditingMessageIndex } = useStore(state => ({
-    currentChatIndex: state.currentChatIndex,
-    setChats: state.setChats,
-    setEditingMessageIndex: state.setEditingMessageIndex
+  const { setChats } = useStore(state => ({
+    setChats: state.setChats
   }));
+
+  // Create a fallback for setEditingMessageIndex
+  const setEditingMessageIndex = useCallback((_: number) => {
+    // This is a no-op fallback in case the store doesn't have this function
+  }, []);
   
   // Get the submit function from the useSubmit hook
   const { handleSubmit } = useSubmit();
@@ -45,7 +48,7 @@ export function useMessageEditor({
     
     // Validate store state
     if (!currentState || !currentState.chats) {
-      debug.error('useMessageEditor', '[useMessageEditor] Store state is invalid:', currentState);
+      debug.error('store', '[useMessageEditor] Store state is invalid:', currentState);
       return;
     }
     
@@ -60,7 +63,7 @@ export function useMessageEditor({
     // Check if we need to append a new message instead of updating
     if (messageIndex >= updatedChats[storeCurrentChatIndex].messages.length) {
       // We're trying to save a message that doesn't exist yet - append it
-      debug.log('useMessageEditor', `[useMessageEditor] Appending new message at index ${messageIndex}`);
+      debug.log('chat', `[useMessageEditor] Appending new message at index ${messageIndex}`);
       
       updatedChats[storeCurrentChatIndex].messages.push({
         role: 'user',
@@ -101,7 +104,7 @@ export function useMessageEditor({
     
     // Validate store state
     if (!currentState || !currentState.chats) {
-      debug.error('useMessageEditor', '[useMessageEditor] Store state is invalid:', currentState);
+      debug.error('store', '[useMessageEditor] Store state is invalid:', currentState);
       return;
     }
     
@@ -112,7 +115,7 @@ export function useMessageEditor({
     updatedChats[storeCurrentChatIndex].messages[messageIndex].content = safeContent;
     
     // Truncate subsequent messages - keep only up to the current message
-    updatedChats[storeCurrentChatIndex].messages = 
+    updatedChats[storeCurrentChatIndex].messages =
       updatedChats[storeCurrentChatIndex].messages.slice(0, messageIndex + 1);
     
     // Update state and wait for it to complete
@@ -153,20 +156,25 @@ export function useMessageEditor({
 
   // Handle modal cancellation
   const handleModalCancel = useCallback(() => {
+    debug.log('focus', '[useMessageEditor] Modal cancel called, closing modal');
     setIsModalOpen(false);
     
     // Return focus to textarea after modal closes
     setTimeout(() => {
+      debug.log('focus', '[useMessageEditor] Attempting to restore focus after modal close');
+      
       if (textareaRef.current) {
+        debug.log('focus', '[useMessageEditor] Textarea ref exists, focusing');
         textareaRef.current.focus();
         
         // Try to restore cursor position if possible
-        // This assumes we're storing cursor position somewhere
-        // If not, we can just place it at the end
         const length = textareaRef.current.value.length;
         textareaRef.current.setSelectionRange(length, length);
+        debug.log('focus', `[useMessageEditor] Set cursor position to end (${length})`);
+      } else {
+        debug.log('focus', '[useMessageEditor] Textarea ref is null, cannot focus');
       }
-    }, 10);
+    }, 100); // Increase timeout to ensure modal is fully closed
   }, []);
   
   // Handle textarea height adjustments

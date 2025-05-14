@@ -9,6 +9,7 @@ import { usePasteHandler } from '@hooks/usePasteHandler';
 import { useTextareaFocus } from '@hooks/useTextareaFocus';
 import { useTextSelection } from '@hooks/useTextSelection';
 import { useTranslation } from 'react-i18next';
+import { debug } from '@utils/debug';
 
 import EditViewButtons from './EditViewButtons';
 
@@ -89,10 +90,13 @@ const EditView: React.FC<EditViewProps> = ({ customKeyHandler }) => {
       {isModalOpen && (
         <PopupModal
           setIsModalOpen={setIsModalOpen}
-          title={t('warning')}
-          message={t('clearMessageWarning')}
+          title={t('warning') || 'Warning'}
+          message={t('clearMessageWarning') || 'This will clear all subsequent messages. Continue?'}
           handleConfirm={handleSaveAndSubmitWithTruncation}
-          handleClose={handleModalCancel}
+          handleClose={() => {
+            debug.log('focus', '[EditView] Modal close handler called');
+            handleModalCancel();
+          }}
         />
       )}
     </div>

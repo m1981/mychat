@@ -36,6 +36,7 @@ export const MessageEditorProvider: React.FC<MessageEditorProviderProps> = ({
     handleSave,
     handleSaveAndSubmit,
     handleSaveAndSubmitWithTruncation,
+    handleModalCancel,
     resetTextAreaHeight,
   } = useMessageEditor({
     initialContent,
@@ -64,6 +65,7 @@ export const MessageEditorProvider: React.FC<MessageEditorProviderProps> = ({
     handleSave,
     handleSaveAndSubmit,
     handleSaveAndSubmitWithTruncation,
+    handleModalCancel,
     resetTextAreaHeight,
     
     // Metadata

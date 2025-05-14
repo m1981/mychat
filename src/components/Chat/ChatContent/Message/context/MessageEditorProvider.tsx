@@ -26,6 +26,8 @@ export function MessageEditorProvider({
     textareaRef,
     handleSave,
     handleSaveAndSubmit,
+    handleSaveAndSubmitWithTruncation,
+    handleModalCancel,
     resetTextAreaHeight
   } = useMessageEditor({
     initialContent,
@@ -53,6 +55,8 @@ export function MessageEditorProvider({
     // Actions
     handleSave,
     handleSaveAndSubmit,
+    handleSaveAndSubmitWithTruncation,
+    handleModalCancel,
     resetTextAreaHeight,
     
     // Metadata

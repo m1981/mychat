@@ -55,6 +55,7 @@ export interface MessageEditorContextType {
   handleSave: () => void;
   handleSaveAndSubmit: () => Promise<void>;
   handleSaveAndSubmitWithTruncation: () => Promise<void>;
+  handleModalCancel: () => void;
   resetTextAreaHeight: () => void;
   
   // Metadata

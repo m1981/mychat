@@ -34,9 +34,11 @@ export function useTextareaFocus(
   // Focus logic
   const focusTextarea = () => {
     if (!textareaRef.current || !isMounted.current || userInteracting.current) {
+      debug.log('focus', `[${debugId}] Not focusing: ref=${!!textareaRef.current}, mounted=${isMounted.current}, userInteracting=${userInteracting.current}`);
       return;
     }
     
+    debug.log('focus', `[${debugId}] Focusing textarea`);
     textareaRef.current.focus();
     
     // Set cursor position only if cursorAtEnd is true or focusLine is provided
