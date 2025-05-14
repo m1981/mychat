@@ -1,7 +1,9 @@
-import { debug } from '@utils/debug';
 import { renderHook } from '@testing-library/react';
-import { useTextareaFocus } from '../useTextareaFocus';
+import { debug } from '@utils/debug';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+
+import { useTextareaFocus } from '../useTextareaFocus';
+
 
 // Mock debug utility
 vi.mock('@utils/debug', () => ({

@@ -1,10 +1,11 @@
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
-import { useKeyboardShortcuts } from '../useKeyboardShortcuts';
-import { mockDocumentListeners } from '@utils/test-utils';
 import { useMessageEditorContext } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
-import useStore from '@store/store';
+import { renderHook } from '@testing-library/react';
+import { mockDocumentListeners } from '@utils/test-utils';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+import { useKeyboardShortcuts } from '../useKeyboardShortcuts';
+
 
 // Mock dependencies
 vi.mock('@components/Chat/ChatContent/Message/context/MessageEditorContext', () => {

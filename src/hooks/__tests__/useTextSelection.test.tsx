@@ -1,7 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useTextSelection } from '../useTextSelection';
 import { mockDocumentListeners, createMockTextarea } from '@utils/test-utils';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+import { useTextSelection } from '../useTextSelection';
+
 
 describe('useTextSelection', () => {
   beforeEach(() => {

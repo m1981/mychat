@@ -1,11 +1,13 @@
 import React, { ReactElement } from 'react';
+
+import { MessageEditorProvider } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
+import { StoreState } from '@store/store';
 import { render, RenderOptions } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
 import { vi } from 'vitest';
+
 import i18n from './i18n-test-config';
-import { MessageEditorProvider } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
-import { StoreState } from '@store/store';
 
 // React component providers
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {

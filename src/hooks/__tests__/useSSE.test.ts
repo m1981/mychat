@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setupTimers } from '@utils/test-utils';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { useSSE } from '../useSSE';
 
