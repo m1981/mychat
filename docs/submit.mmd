@@ -84,13 +84,38 @@ sequenceDiagram
                     
                     rect rgb(230,245,255)
                         Note over Store: AI Response Phase
+                        
+                        Store->>SubmissionState: dispatch({ type: 'SUBMIT_START' })
+                        Note over SubmissionState: status: 'preparing'
+                        
+                        Store->>SubmissionState: dispatch({ type: 'PREPARING' })
+                        Note over SubmissionState: status: 'preparing'
+                        
+                        Store->>SubmissionState: dispatch({ type: 'SUBMITTING' })
+                        Note over SubmissionState: status: 'submitting'
+                        
                         Store->>APIService: Submit updated conversation context
+                        
+                        Store->>SubmissionState: dispatch({ type: 'STREAMING' })
+                        Note over SubmissionState: status: 'streaming'
+                        
                         APIService-->>Store: Stream AI response
                         
                         loop For each token
                             Store->>Store: Update AI message content
+                            Store->>SubmissionState: dispatch({ type: 'CONTENT_RECEIVED' })
+                            Note over SubmissionState: status: 'streaming'
                             Store-->>EditView: Render updated content
                         end
+                        
+                        Store->>SubmissionState: dispatch({ type: 'STREAM_COMPLETE' })
+                        Note over SubmissionState: status: 'completing'
+                        
+                        Store->>SubmissionState: dispatch({ type: 'GENERATING_TITLE' })
+                        Note over SubmissionState: status: 'completing'
+                        
+                        Store->>SubmissionState: dispatch({ type: 'COMPLETE' })
+                        Note over SubmissionState: status: 'success'
                     end
                     
                     MessageEditorContext->>EditView: Exit edit mode
@@ -175,6 +200,7 @@ sequenceDiagram
         
         rect rgb(255,240,230)
             Note over Store: 3.3. API Phase
+            Store->>SubmissionState: Follow same submission state flow as in 1.1
             Store->>APIService: Submit conversation context
             APIService-->>Store: Stream new response
             
@@ -189,5 +215,34 @@ sequenceDiagram
             EditView->>EditView: Show both messages:
             Note over EditView: 1. Previous (dimmed, marked as outdated)
             Note over EditView: 2. New (normal, marked as current)
+        end
+    end
+    
+    alt 4. Error Handling
+        rect rgb(255,220,220)
+            Note over Store: Error can occur during any API interaction
+            
+            alt API Error
+                APIService-->>Store: Return error response
+                Store->>SubmissionState: dispatch({ type: 'ERROR', payload: error })
+                Note over SubmissionState: status: 'error', error: Error
+                Store->>EditView: Display error message
+            else Storage Quota Error
+                Store->>Store: Check storage quota
+                Store->>SubmissionState: dispatch({ type: 'ERROR', payload: StorageQuotaError })
+                Note over SubmissionState: status: 'error', error: StorageQuotaError
+                Store->>EditView: Display "Not enough storage space" message
+            end
+        end
+    end
+    
+    alt 5. User Cancellation
+        rect rgb(220,220,255)
+            User->>EditView: Click "Stop Generation" button
+            EditView->>Store: stopGeneration()
+            Store->>SubmissionState: dispatch({ type: 'ABORT' })
+            Note over SubmissionState: status: 'idle', aborted: true
+            Store->>APIService: Abort fetch request
+            Store->>EditView: Update UI (hide loading indicators)
         end
     end

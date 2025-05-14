@@ -140,6 +140,55 @@ const useSubmit = () => {
     // Check if API key exists
     if (!providerSetup.apiKey) {
       debug.error('useSubmit', '[useSubmit] No API key found for provider:', providerSetup.providerKey);
+      
+      // For development mode, provide a mock response instead of showing an error
+      if (import.meta.env.DEV) {
+        debug.log('useSubmit', '[useSubmit] Using mock response in development mode');
+        
+        // Start global submission
+        globalSubmissionManager.startSubmission();
+        
+        try {
+          // Set generating state
+          setGenerating(true);
+          setError(null);
+          
+          // Get current state and prepare messages
+          const currentState = messageManager.getStoreState();
+          const updatedChats = messageManager.appendAssistantMessage(
+            currentState.chats,
+            currentState.currentChatIndex
+          );
+          messageManager.setChats(updatedChats);
+          
+          // Simulate streaming response
+          const mockResponse = "This is a mock response for development mode. No API key is required.";
+          
+          // Stream the mock response character by character
+          for (let i = 0; i < mockResponse.length; i++) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            const latestState = messageManager.getStoreState();
+            const updatedChats = messageManager.updateMessageContent(
+              latestState.chats,
+              latestState.currentChatIndex,
+              mockResponse[i]
+            );
+            messageManager.setChats(updatedChats);
+          }
+          
+          // Complete the response
+          setGenerating(false);
+          globalSubmissionManager.endSubmission();
+          return;
+        } catch (error) {
+          setGenerating(false);
+          globalSubmissionManager.endSubmission();
+          return;
+        }
+      }
+      
+      // For production, show the error
       setError(`No API key found for ${providerSetup.providerKey}. Please add your API key in settings.`);
       return;
     }
