@@ -1,5 +1,3 @@
-import React from 'react';
-
 import StopGeneratingButton from '@components/StopGeneratingButton/StopGeneratingButton';
 import useStore from '@store/store';
 

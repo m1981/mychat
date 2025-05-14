@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 import PopupModal from '@components/PopupModal';
 import AnthropicIcon from '@icon/AnthropicIcon';
@@ -23,10 +23,8 @@ const ApiMenu = ({
   setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>
 }) => {
   const { t } = useTranslation(['main', 'api']);
-  // Prefix unused variables with underscore
-  const _currentProvider = useStore((state) => state.defaultChatConfig.provider);
-  const _setProvider = useStore((state) => state.setProvider);
-
+  // Remove unused variables
+  
   const apiKeys = useStore((state) => state.apiKeys);
   const setApiKey = useStore((state) => state.setApiKey);
   const apiEndpoints = useStore((state) => state.apiEndpoints);
