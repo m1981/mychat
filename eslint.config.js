@@ -26,7 +26,7 @@ export default [
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {
-        project: ['./tsconfig.json', './tsconfig.node.json'],
+``        project: ['./tsconfig.json', './tsconfig.node.json', './tsconfig.test.json'],
         tsconfigRootDir: '.',
       },
     },
@@ -77,10 +77,13 @@ export default [
       ]
     }
   },
-  // Add test-specific configuration
+  // Test-specific configuration
   {
     files: ['**/*.test.{ts,tsx}', '**/vitest.setup.ts', '**/*.spec.{ts,tsx}'],
     languageOptions: {
+      parserOptions: {
+        project: './tsconfig.test.json',
+      },
       globals: {
         // Add browser and Node.js globals
         window: 'readonly',

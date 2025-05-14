@@ -1,8 +1,22 @@
 {
+  /**
+   * Node.js TypeScript Configuration
+   * Responsibilities:
+   * - Configuration for build scripts and tools
+   * - Node.js-specific compiler options
+   * 
+   * Contracts:
+   * - Must extend base configuration
+   * - Must include only build-related files
+   * - Must support Node.js module resolution
+   */
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "noEmit": false
   },
-  "include": ["vite.config.prod.ts", "vitest.config.ts"]
+  "include": ["vite.config.ts", "vitest.config.ts", "scripts/**/*.ts"]
 }

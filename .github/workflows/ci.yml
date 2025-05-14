@@ -34,7 +34,10 @@ jobs:
         with:
           version: 10.4.1
       - run: pnpm install
-      - run: pnpm lint:all
+      - name: Lint code
+        run: pnpm lint:all
+      - name: Type check
+        run: pnpm type:check:all
 
   unit-tests:
     runs-on: ubuntu-latest

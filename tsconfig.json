@@ -1,18 +1,32 @@
 {
+  /**
+   * Main TypeScript Configuration
+   * Responsibilities:
+   * - Application source code type checking
+   * - React JSX configuration
+   * - Main compiler options
+   * 
+   * Contracts:
+   * - Extends base configuration
+   * - Includes all application source files
+   * - Excludes test files (handled by tsconfig.test.json)
+   * - Excludes build configuration files (handled by tsconfig.node.json)
+   */
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "jsx": "react-jsx",
-    "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "noImplicitThis": true,
-    "alwaysStrict": true
+    "jsx": "react-jsx"
   },
   "include": [
     "src/**/*.ts",
-    "src/**/*.tsx",
-    "vitest.setup.ts"
+    "src/**/*.tsx"
   ],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx"
+  ]
 }

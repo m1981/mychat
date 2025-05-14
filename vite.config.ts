@@ -1,10 +1,13 @@
+import fs from 'fs';
+import path from 'path';
+
 import react from '@vitejs/plugin-react-swc';
 import { defineConfig } from 'vite';
 import type { UserConfig } from 'vite';
-import wasm from 'vite-plugin-wasm';
+import checker from 'vite-plugin-checker';
 import topLevelAwait from 'vite-plugin-top-level-await';
-import fs from 'fs';
-import path from 'path';
+import wasm from 'vite-plugin-wasm';
+
 
 // Shared aliases for all configurations
 const sharedAliases = {
@@ -28,7 +31,14 @@ function createBaseConfig(): UserConfig {
     plugins: [
       react(),
       wasm(),
-      topLevelAwait()
+      topLevelAwait(),
+      // Add TypeScript checking during development
+      checker({
+        typescript: true,
+        eslint: {
+          lintCommand: 'eslint "./src/**/*.{ts,tsx}"',
+        },
+      }),
     ],
     resolve: {
       alias: sharedAliases

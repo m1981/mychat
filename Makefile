@@ -150,7 +150,7 @@ test: init-volumes ensure-pnpm-dirs install ## Run tests
 	$(DOCKER_COMPOSE_RUN) \
 		-e NODE_ENV=test \
 		-e PLATFORM=$(PLATFORM) \
-		app sh -c "pnpm test:coverage && pnpm type:check"
+		app sh -c "pnpm test"
 
 test-watch: ensure-pnpm-dirs install ## Run tests in watch mode
 	UID=$(UID) GID=$(GID) PLATFORM=$(PLATFORM) $(DOCKER_COMPOSE_RUN) app sh -c "pnpm test:watch"

@@ -16,6 +16,9 @@
     "test:watch": "NODE_ENV=test vitest watch",
     "test:coverage": "NODE_ENV=test vitest run --coverage",
     "type:check": "tsc --noEmit",
+    "type:check:tests": "tsc --noEmit -p tsconfig.test.json",
+    "type:check:node": "tsc --noEmit -p tsconfig.node.json",
+    "type:check:all": "pnpm type:check && pnpm type:check:tests && pnpm type:check:node",
     "type:watch": "tsc --noEmit --watch",
     "deps:check": "depcheck",
     "lint:js": "eslint --ext .ts,.tsx,.js,.jsx .",
@@ -25,9 +28,12 @@
     "lint:styles:fix": "stylelint src/**/*.{js,jsx,ts,tsx,css} --fix",
     "lint:format": "prettier --check '**/*.{js,jsx,ts,tsx,css}'",
     "lint:format:fix": "prettier '**/*.{js,jsx,ts,tsx,css}' --write",
-    "lint:all": "NODE_ENV=test pnpm lint:js && pnpm lint:styles && pnpm lint:format && pnpm lint:deadcode",
+    "lint:js:tests": "eslint --config .eslintrc.test.json \"**/*.test.{ts,tsx}\" \"!**/!(*!vitest!setup!)*!\"",
+    "lint:all": "NODE_ENV=test pnpm lint:js && pnpm lint:js:tests && pnpm lint:styles && pnpm lint:format && pnpm lint:deadcode",
     "lint:fix:all": "NODE_ENV=test pnpm lint:js:fix && pnpm lint:styles:fix && pnpm lint:format:fix",
     "format": "pnpm lint:format:fix",
+    "validate": "pnpm type:check:all && pnpm lint:all",
+    "precommit": "pnpm lint-staged",
     "vercel-build": "pnpm build"
   },
   "build": {
