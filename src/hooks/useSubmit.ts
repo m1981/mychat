@@ -1,3 +1,5 @@
+declare const setTimeout: (callback: () => void, ms: number) => number;
+
 import { useRef, useCallback, useMemo } from 'react';
 
 import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';

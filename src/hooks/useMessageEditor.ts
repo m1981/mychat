@@ -7,6 +7,10 @@ import { UseMessageEditorProps, UseMessageEditorReturn } from '../components/Cha
 
 import useSubmit from './useSubmit';
 
+// Declare setTimeout for ESLint
+declare const setTimeout: (callback: () => void, ms: number) => number;
+// Declare navigator for ESLint if needed in this file
+
 export function useMessageEditor({
   initialContent,
   messageIndex,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 
 import { useMessageEditorContext } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
 import useStore from '@store/store';

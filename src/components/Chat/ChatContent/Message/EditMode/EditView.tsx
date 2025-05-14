@@ -1,15 +1,15 @@
 import React, { useEffect } from 'react';
 
-import PopupModal from '@components/PopupModal';
 import { useMessageEditorContext } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
 import { EditViewProps } from '@components/Chat/ChatContent/Message/interfaces';
+import PopupModal from '@components/PopupModal';
 import { useFileDropHandler } from '@hooks/useFileDropHandler';
 import { useKeyboardShortcuts } from '@hooks/useKeyboardShortcuts';
 import { usePasteHandler } from '@hooks/usePasteHandler';
 import { useTextareaFocus } from '@hooks/useTextareaFocus';
 import { useTextSelection } from '@hooks/useTextSelection';
-import { useTranslation } from 'react-i18next';
 import { debug } from '@utils/debug';
+import { useTranslation } from 'react-i18next';
 
 import EditViewButtons from './EditViewButtons';
 

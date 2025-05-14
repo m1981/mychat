@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 
 import Chat from '@components/Chat';
-import Menu from '@components/Menu';
 import Debug from '@components/Debug';
+import Menu from '@components/Menu';
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
 import * as Sentry from '@sentry/react';
 import useStore from '@store/store';

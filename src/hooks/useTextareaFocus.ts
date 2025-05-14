@@ -2,6 +2,10 @@ import { useEffect, useRef } from 'react';
 
 import { debug } from '@utils/debug';
 
+// Add declarations for globals
+declare const setTimeout: (callback: () => void, ms: number) => number;
+declare const navigator: Navigator;
+
 interface UseTextareaFocusOptions {
   scrollIntoView?: boolean;
   cursorAtEnd?: boolean;

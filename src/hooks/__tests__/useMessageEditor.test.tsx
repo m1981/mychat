@@ -1,7 +1,8 @@
+import useStore from '@store/store';
 import { renderHook, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+
 import { useMessageEditor } from '../useMessageEditor';
-import useStore from '@store/store';
 import useSubmit from '../useSubmit';
 
 // Mock dependencies
