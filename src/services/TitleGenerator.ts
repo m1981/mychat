@@ -1,3 +1,5 @@
+/* eslint-env browser */
+
 import { MessageInterface, ModelConfig } from '@type/chat';
 
 type TitleGeneratorResponse = {

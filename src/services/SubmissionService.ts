@@ -2,19 +2,18 @@ import useStore from '@store/store';
 import { MessageInterface, ModelConfig } from '@type/chat';
 import { providers } from '@type/providers';
 
-
-type Provider = (typeof providers)[keyof typeof providers];
-
 export interface SubmissionService {
   submit(messages: MessageInterface[], config: ModelConfig): Promise<void>;
 }
 
 export class ChatSubmissionService implements SubmissionService {
   constructor(
-    private provider: any,
+    private provider: typeof providers[keyof typeof providers],
     private apiKey: string,
     private contentCallback: (content: string) => void,
-    private streamHandler: any
+    private streamHandler: {
+      processStream: (reader: ReadableStreamDefaultReader<Uint8Array>, callback: (content: string) => void) => Promise<void>
+    }
   ) {
     // Add validation for API key
     if (!this.apiKey) {
@@ -22,7 +21,7 @@ export class ChatSubmissionService implements SubmissionService {
     }
   }
 
-  async submit(messages: any[], modelConfig: any) {
+  async submit(messages: MessageInterface[], modelConfig: ModelConfig): Promise<void> {
     console.log('🔐 Submitting with API key:', this.apiKey ? 'Key exists' : 'Key missing');
     
     if (!this.apiKey) {
@@ -59,13 +58,13 @@ export class ChatSubmissionService implements SubmissionService {
           if (errorData.error) {
             errorMessage = `API Error: ${errorData.error}`;
           }
-        } catch (e) {
+        } catch (_) {
           try {
             const errorText = await response.text();
             if (errorText) {
               errorMessage = `API Error: ${errorText}`;
             }
-          } catch (textError) {
+          } catch (_) {
             // Use default message
           }
         }

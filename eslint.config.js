@@ -115,5 +115,19 @@ export default [
         __dirname: 'readonly'
       }
     }
+  },
+  {
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      globals: {
+        // Browser globals
+        window: 'readonly',
+        document: 'readonly',
+        localStorage: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        // Add any other globals you need
+      }
+    }
   }
 ];
