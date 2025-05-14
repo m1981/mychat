@@ -151,5 +151,45 @@ export default [
         global: 'readonly'
       }
     }
+  },
+  {
+    // Next.js API routes configuration
+    files: ['**/api/**/*.{ts,tsx}'],
+    languageOptions: {
+      parser: typescriptParser,
+      parserOptions: {
+        // Don't require tsconfig for API routes
+        project: null,
+        ecmaVersion: 2021,
+        sourceType: 'module'
+      },
+      globals: {
+        // Next.js and Node.js globals
+        process: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        Response: 'readonly',
+        Request: 'readonly',
+        Headers: 'readonly',
+        FormData: 'readonly',
+        Buffer: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly'
+      }
+    },
+    rules: {
+      // Disable TypeScript-specific rules that require type checking
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
+      '@typescript-eslint/await-thenable': 'off',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/restrict-plus-operands': 'off',
+      '@typescript-eslint/restrict-template-expressions': 'off',
+      '@typescript-eslint/unbound-method': 'off'
+    }
   }
 ];

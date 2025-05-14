@@ -1,4 +1,5 @@
 // api/openai.ts
+/* eslint-env node */
 import type { NextApiRequest, NextApiResponse } from 'next';
 import OpenAI from 'openai';
 
@@ -72,10 +73,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         content: response.choices[0]?.message?.content || ''
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) { // Replace any with unknown
     console.error('OpenAI API Error:', error);
-    res.status(error.status || 500).json({
-      error: error.message || 'An error occurred during the API request'
+    res.status(error instanceof Error && 'status' in error ? (error as any).status : 500).json({
+      error: error instanceof Error ? error.message : 'An error occurred during the API request'
     });
   }
 }

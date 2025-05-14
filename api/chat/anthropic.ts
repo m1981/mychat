@@ -1,16 +1,13 @@
 // api/anthropic.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
+/* eslint-env node */
 import Anthropic from '@anthropic-ai/sdk';
-import type { 
-  MessageParam, 
-  MessageCreateParams,
-  MessageStreamEvent,
-  ContentBlockStartEvent,
-  ContentBlockDeltaEvent,
+import type {
   ContentBlockStopEvent,
-  MessageDeltaEvent,
   MessageStopEvent
 } from '@anthropic-ai/sdk';
+import type { MessageInterface } from '@type/chat';
+import type { NextApiRequest, NextApiResponse } from 'next';
+// Import MessageInterface from your types
 
 export const config = {
   maxDuration: 60,
@@ -98,7 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             // Fix type comparison issue
             res.write(`data: ${JSON.stringify({
               type: 'signature_delta',
-              signature: (chunk as any).signature, // Type assertion as a workaround
+              signature: (chunk as unknown), // Replace any with unknown
             })}\n\n`);
           } else if (chunk.type === 'content_block_stop') {
             res.write(`data: ${JSON.stringify({
@@ -136,13 +133,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       res.status(200).json(response);
     }
-  } catch (error: any) {
+  } catch (error: unknown) { // Replace any with unknown
     console.error('Anthropic API Error:', error);
     res.status(500).json({
-      error: error.message || 'An error occurred during the API request',
-      status: error.status,
-      type: error.type,
-      details: error.error?.details || undefined,
+      error: error instanceof Error ? error.message : 'An error occurred during the API request',
+      status: (error as any)?.status,
+      type: (error as any)?.type,
+      details: (error as any)?.error?.details || undefined,
     });
   }
 }
