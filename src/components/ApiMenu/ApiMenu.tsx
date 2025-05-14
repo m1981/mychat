@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 
-
 import PopupModal from '@components/PopupModal';
 import AnthropicIcon from '@icon/AnthropicIcon';
 import OpenAIIcon from '@icon/OpenAIIcon';
@@ -24,8 +23,9 @@ const ApiMenu = ({
   setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>
 }) => {
   const { t } = useTranslation(['main', 'api']);
-  const currentProvider = useStore((state) => state.defaultChatConfig.provider);
-  const setProvider = useStore((state) => state.setProvider);
+  // Prefix unused variables with underscore
+  const _currentProvider = useStore((state) => state.defaultChatConfig.provider);
+  const _setProvider = useStore((state) => state.setProvider);
 
   const apiKeys = useStore((state) => state.apiKeys);
   const setApiKey = useStore((state) => state.setApiKey);
@@ -33,7 +33,7 @@ const ApiMenu = ({
   const setApiEndpoint = useStore((state) => state.setApiEndpoint);
 
   const [tempApiKeys, setTempApiKeys] = useState<Record<ProviderKey, string>>(apiKeys);
-  const [tempEndpoints, setTempEndpoints] = useState<Record<ProviderKey, string>>(apiEndpoints);
+  const [tempEndpoints, _setTempEndpoints] = useState<Record<ProviderKey, string>>(apiEndpoints);
 
   const handleSave = () => {
     Object.entries(tempApiKeys).forEach(([provider, key]) => {

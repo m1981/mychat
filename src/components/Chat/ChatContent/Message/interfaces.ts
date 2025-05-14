@@ -1,3 +1,5 @@
+import React from 'react';
+
 import { Role } from '@type/chat';
 
 export interface MessageContentProps {
