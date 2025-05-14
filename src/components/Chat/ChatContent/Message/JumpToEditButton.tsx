@@ -45,7 +45,7 @@ const JumpToEditButton: React.FC<JumpToEditButtonProps> = ({ editAreaId, visible
     };
   }, [editAreaId]);
   
-  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleClick = () => {
     // Don't prevent default - let the browser handle the anchor navigation
     
     // After navigation, find the textarea and focus it

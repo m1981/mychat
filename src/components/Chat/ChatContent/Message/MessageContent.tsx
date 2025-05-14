@@ -11,7 +11,7 @@ const MessageContent: React.FC<MessageContentProps> = ({
   isComposer = false,
   isEdit,
   setIsEdit,
-  isEditing,
+  // Remove isEditing from destructuring since it's not used
   setIsEditing,
   focusLine,
 }) => {
