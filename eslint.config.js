@@ -26,7 +26,7 @@ export default [
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {
-``        project: ['./tsconfig.json', './tsconfig.node.json', './tsconfig.test.json'],
+        project: ['./tsconfig.json', './tsconfig.node.json', './tsconfig.test.json'],
         tsconfigRootDir: '.',
       },
     },
