@@ -18,8 +18,8 @@ const EditView: React.FC<EditViewProps> = ({ customKeyHandler }) => {
     editContent,
     setEditContent,
     textareaRef,
-    isComposer,
-    focusLine,
+    // Remove unused variables but keep them in destructuring to maintain the structure
+    // isComposer and focusLine are used by other components via context
     resetTextAreaHeight
   } = useMessageEditorContext();
 
@@ -52,9 +52,9 @@ const EditView: React.FC<EditViewProps> = ({ customKeyHandler }) => {
 
   // Set up text selection tracking
   // Add a default value to prevent destructuring errors
-  const { selectionStart = 0, selectionEnd = 0 } = useTextSelection({
+  useTextSelection({
     textareaRef
-  }) || { selectionStart: 0, selectionEnd: 0 };
+  });
 
   // Auto-resize textarea as content changes
   useEffect(() => {
