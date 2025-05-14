@@ -48,10 +48,10 @@ interface ChatHistoryFolderMap {
 
 interface ChatHistoryListProps {
   searchFilter: string;
-  onSearchChange: (filter: string) => void;
+  // Remove onSearchChange if it's not being used
 }
 
-const ChatHistoryList = ({ searchFilter, onSearchChange }: ChatHistoryListProps) => {
+const ChatHistoryList = ({ searchFilter }: ChatHistoryListProps) => {
   debug.log('ui', '[ChatHistoryList] Rendering with:', {
     searchFilter,
     currentChatIndex: useStore.getState().currentChatIndex,
@@ -97,7 +97,7 @@ const ChatHistoryList = ({ searchFilter, onSearchChange }: ChatHistoryListProps)
       }
 
       // First, filter the chats with original indices
-      const filteredChatsWithIndices = filterChatsByTitle(chats, filterRef.current, currentChatIndex);
+      const filteredChatsWithIndices = filterChatsByTitle(chats, filterRef.current);
 
       // Initialize folders
       if (folders) {
@@ -107,7 +107,7 @@ const ChatHistoryList = ({ searchFilter, onSearchChange }: ChatHistoryListProps)
       }
 
       // Organize filtered chats into folders
-      filteredChatsWithIndices.forEach(({ chat, originalIndex }, filteredIndex) => {
+      filteredChatsWithIndices.forEach(({ chat, originalIndex }) => {
         const item = {
           title: chat.title,
           index: originalIndex, // Use the original index here
@@ -291,14 +291,6 @@ const ChatHistoryList = ({ searchFilter, onSearchChange }: ChatHistoryListProps)
       )}
       <div className="w-full h-10" />
     </div>
-  );
-};
-
-const ShowMoreButton = () => {
-  return (
-    <button className='btn relative btn-dark btn-small m-auto mb-2'>
-      <div className='flex items-center justify-center gap-2'>Show more</div>
-    </button>
   );
 };
 

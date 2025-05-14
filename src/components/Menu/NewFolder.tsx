@@ -1,11 +1,10 @@
 import NewFolderIcon from '@icon/NewFolderIcon';
 import useStore from '@store/store';
-import { Folder, FolderCollection } from '@type/chat';
-import { useTranslation } from 'react-i18next';
+// import { useTranslation } from 'react-i18next';
 import { v4 as uuidv4 } from 'uuid';
 
 const NewFolder = () => {
-  const { t } = useTranslation();
+  // const { t } = useTranslation();
   const generating = useStore((state) => state.generating);
   const setFolders = useStore((state) => state.setFolders);
 

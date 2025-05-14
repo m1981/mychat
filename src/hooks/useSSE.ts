@@ -15,10 +15,6 @@ interface SSEOptions {
   reconnect?: ReconnectConfig;
 }
 
-function createEventSource(url: string, attempt: number = 0): EventSource {
-  return new EventSource(url);
-}
-
 export function useSSE(url: string, options: SSEOptions) {
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();

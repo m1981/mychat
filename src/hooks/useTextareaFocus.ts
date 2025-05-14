@@ -6,7 +6,7 @@ interface UseTextareaFocusOptions {
   scrollIntoView?: boolean;
   cursorAtEnd?: boolean;
   debugId?: string;
-  refocusOnScroll?: boolean;
+  // Remove unused option or use it in the implementation
   focusLine?: number | null;
 }
 
@@ -19,7 +19,7 @@ export function useTextareaFocus(
     cursorAtEnd = true,
     scrollIntoView = false,
     debugId = '',
-    refocusOnScroll = true,
+    // Remove unused option
     focusLine = null
   } = options || {};
 
