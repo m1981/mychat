@@ -1,7 +1,4 @@
 // src/components/Menu/MenuOptions/WidthSelector.tsx
-import React from 'react';
-
-
 import { LayoutWidth } from '@store/config-slice';
 import useStore from '@store/store';
 import { useTranslation } from 'react-i18next';

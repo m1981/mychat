@@ -1,5 +1,5 @@
 //src/components/ImportExportChat/ImportExportChat.tsx
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import PopupModal from '@components/PopupModal';
 import { ProviderRegistry } from '@config/providers/provider.registry';

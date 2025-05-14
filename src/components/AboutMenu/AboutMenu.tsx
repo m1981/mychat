@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-
+import { useState } from 'react';
 
 import PopupModal from '@components/PopupModal';
 import AboutIcon from '@icon/AboutIcon';

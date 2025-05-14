@@ -1,5 +1,3 @@
-import React from 'react';
-
 import ImportExportChat from '@components/ImportExportChat';
 import SettingsMenu from '@components/SettingsMenu';
 import useStore from '@store/store';

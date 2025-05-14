@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-
+import { useState } from 'react';
 
 import ChatConfigMenu from '@components/ChatConfigMenu';
 import LanguageSelector from '@components/LanguageSelector';
@@ -11,19 +10,13 @@ import SettingIcon from '@icon/SettingIcon';
 import useStore from '@store/store';
 import { useTranslation } from 'react-i18next';
 
-
 import AutoTitleToggle from './AutoTitleToggle';
 import EnterToSubmitToggle from './EnterToSubmitToggle';
-
 
 const SettingsMenu = () => {
   const { t } = useTranslation();
   const theme = useStore.getState().theme;
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-
-  useEffect(() => {
-    document.documentElement.className = theme;
-  }, [theme]);
 
   return (
     <>

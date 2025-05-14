@@ -1,5 +1,3 @@
-import React from 'react';
-
 const TickIcon = () => {
   return (
     <div className="p-0.5 rounded-md

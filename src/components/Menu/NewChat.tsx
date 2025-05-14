@@ -1,6 +1,3 @@
-import React from 'react';
-
-
 import useAddChat from '@hooks/useAddChat';
 import PlusIcon from '@icon/PlusIcon';
 import useStore from '@store/store';

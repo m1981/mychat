@@ -1,5 +1,4 @@
-import React, { useEffect } from 'react';
-
+import { useEffect } from 'react';
 
 import MoonIcon from '@icon/MoonIcon';
 import SunIcon from '@icon/SunIcon';

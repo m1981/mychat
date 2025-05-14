@@ -1,9 +1,5 @@
-import React from 'react';
-
 import HeartIcon from '@icon/HeartIcon';
 import { useTranslation } from 'react-i18next';
-
-
 
 const Me = () => {
   const { t } = useTranslation();
