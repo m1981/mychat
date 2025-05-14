@@ -103,5 +103,17 @@ export default [
       '@typescript-eslint/no-explicit-any': 'off',
       'no-undef': 'off'
     }
+  },
+  // Config files (vite.config.ts, etc.)
+  {
+    files: ['**/vite.config.ts', '**/vitest.config.ts'],
+    languageOptions: {
+      parserOptions: {
+        project: './tsconfig.node.json',
+      },
+      globals: {
+        __dirname: 'readonly'
+      }
+    }
   }
 ];
