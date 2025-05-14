@@ -38,9 +38,25 @@ export function useMessageEditor({
   const handleSave = useCallback((content: string) => {
     debug.log('useSubmit', `[useMessageEditor] Saving message at index ${messageIndex}`);
     
+    // Ensure content is never undefined
+    const safeContent = content || '';
+    
     const currentState = getStoreState();
+    
+    // Validate store state
+    if (!currentState || !currentState.chats) {
+      debug.error('useMessageEditor', '[useMessageEditor] Store state is invalid:', currentState);
+      return;
+    }
+    
     const updatedChats = JSON.parse(JSON.stringify(currentState.chats));
     const storeCurrentChatIndex = currentState.currentChatIndex;
+    
+    // Validate chat index
+    if (storeCurrentChatIndex === undefined || storeCurrentChatIndex < 0 || !updatedChats[storeCurrentChatIndex]) {
+      debug.error('useMessageEditor', `[useMessageEditor] Invalid chat index: ${storeCurrentChatIndex}`);
+      return;
+    }
     
     debug.log('useSubmit', {
       messageIndex,
@@ -50,18 +66,19 @@ export function useMessageEditor({
       messagesLength: updatedChats[storeCurrentChatIndex]?.messages?.length || 0
     });
     
+    // Ensure messages array exists
+    if (!updatedChats[storeCurrentChatIndex].messages) {
+      updatedChats[storeCurrentChatIndex].messages = [];
+    }
+    
     // Check if we need to append a new message instead of updating
-    if (messageIndex >= (updatedChats[storeCurrentChatIndex]?.messages?.length || 0)) {
+    if (messageIndex >= updatedChats[storeCurrentChatIndex].messages.length) {
       // We're trying to save a message that doesn't exist yet - append it
       debug.log('useMessageEditor', `[useMessageEditor] Appending new message at index ${messageIndex}`);
       
-      if (!updatedChats[storeCurrentChatIndex].messages) {
-        updatedChats[storeCurrentChatIndex].messages = [];
-      }
-      
       updatedChats[storeCurrentChatIndex].messages.push({
         role: 'user',
-        content: content
+        content: safeContent
       });
       
       setChats(updatedChats);
@@ -75,7 +92,7 @@ export function useMessageEditor({
     }
     
     // Now it's safe to update an existing message
-    updatedChats[storeCurrentChatIndex].messages[messageIndex].content = content;
+    updatedChats[storeCurrentChatIndex].messages[messageIndex].content = safeContent;
     setChats(updatedChats);
     
     // Exit edit mode if possible
