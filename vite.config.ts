@@ -37,8 +37,13 @@ function createBaseConfig(): UserConfig {
     },
     optimizeDeps: {
       exclude: ['@webassembly/*'],
-      force: true
+      force: false, // Change to false to avoid forcing re-optimization on every start
+      entries: [
+        'src/main.tsx' // Explicitly define entry point
+      ],
+      cacheDir: '/app/node_modules/.vite/deps' // Explicitly set deps cache location
     },
+    cacheDir: '/app/node_modules/.vite', // Explicitly set cache directory
     define: {
       'process.cwd': 'function() { return "/" }',
       'process.env': JSON.stringify({
@@ -63,8 +68,9 @@ function createDevConfig(): UserConfig {
         path: 'hmr'
       },
       watch: {
-        usePolling: true,
-        interval: 100
+        usePolling: false,  // Change to false for better performance
+        interval: 100,
+        ignored: ['**/node_modules/**', '**/.git/**']  // Explicitly ignore large directories
       },
       host: '0.0.0.0',
       port: 5173,
@@ -79,7 +85,11 @@ function createDevConfig(): UserConfig {
       }
     },
     optimizeDeps: {
-      exclude: ['@webassembly/*']
+      exclude: ['@webassembly/*'],
+      disabled: false,
+      esbuildOptions: {
+        target: 'esnext'
+      }
     },
     logLevel: 'info'
   };

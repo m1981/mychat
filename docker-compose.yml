@@ -17,6 +17,7 @@ services:
         target: /app
         bind:
           create_host_path: true
+        consistency: cached
       - type: volume
         source: node_modules
         target: /app/node_modules
