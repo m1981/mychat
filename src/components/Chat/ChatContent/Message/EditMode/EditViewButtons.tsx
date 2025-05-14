@@ -42,13 +42,21 @@ const EditViewButtons: React.FC<EditViewButtonsProps> = ({ customSaveHandler }) 
         Save
       </button>
       
-      {isComposer && (
+      {isComposer ? (
         <button
           className="px-3 py-1 text-sm rounded bg-green-500 text-white hover:bg-green-600"
           onClick={handleSaveAndSubmit}
           data-testid="save-submit-button"
         >
           Save & Submit
+        </button>
+      ) : (
+        <button
+          className="px-3 py-1 text-sm rounded bg-green-500 text-white hover:bg-green-600"
+          onClick={handleSaveAndSubmit}
+          data-testid="regenerate-button"
+        >
+          Save & Regenerate
         </button>
       )}
     </div>

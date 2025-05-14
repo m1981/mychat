@@ -54,6 +54,7 @@ export interface MessageEditorContextType {
   // Actions
   handleSave: () => void;
   handleSaveAndSubmit: () => Promise<void>;
+  handleSaveAndSubmitWithTruncation: () => Promise<void>;
   resetTextAreaHeight: () => void;
   
   // Metadata
@@ -89,6 +90,8 @@ export interface UseMessageEditorReturn {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   handleSave: () => void;
   handleSaveAndSubmit: () => Promise<void>;
+  handleSaveAndSubmitWithTruncation: () => Promise<void>;
+  handleModalCancel: () => void;
   resetTextAreaHeight: () => void;
 }
 

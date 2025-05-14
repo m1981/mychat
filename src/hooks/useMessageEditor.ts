@@ -35,11 +35,11 @@ export function useMessageEditor({
   }, []);
   
   // Handle saving content
-  const handleSave = useCallback((content: string) => {
+  const handleSave = useCallback(() => {
     debug.log('useSubmit', `[useMessageEditor] Saving message at index ${messageIndex}`);
     
     // Ensure content is never undefined
-    const safeContent = content || '';
+    const safeContent = editContent || '';
     
     const currentState = getStoreState();
     
@@ -49,22 +49,8 @@ export function useMessageEditor({
       return;
     }
     
-    const updatedChats = JSON.parse(JSON.stringify(currentState.chats));
     const storeCurrentChatIndex = currentState.currentChatIndex;
-    
-    // Validate chat index
-    if (storeCurrentChatIndex === undefined || storeCurrentChatIndex < 0 || !updatedChats[storeCurrentChatIndex]) {
-      debug.error('useMessageEditor', `[useMessageEditor] Invalid chat index: ${storeCurrentChatIndex}`);
-      return;
-    }
-    
-    debug.log('useSubmit', {
-      messageIndex,
-      storeCurrentChatIndex,
-      chatExists: Boolean(updatedChats[storeCurrentChatIndex]),
-      messagesExist: Boolean(updatedChats[storeCurrentChatIndex]?.messages),
-      messagesLength: updatedChats[storeCurrentChatIndex]?.messages?.length || 0
-    });
+    const updatedChats = JSON.parse(JSON.stringify(currentState.chats));
     
     // Ensure messages array exists
     if (!updatedChats[storeCurrentChatIndex].messages) {
@@ -99,23 +85,89 @@ export function useMessageEditor({
     if (typeof setEditingMessageIndex === 'function') {
       setEditingMessageIndex(-1);
     }
-  }, [messageIndex, setChats, setEditingMessageIndex, getStoreState, isComposer]);
+    
+    // Close edit mode
+    setIsEdit(false);
+  }, [messageIndex, setChats, setEditingMessageIndex, getStoreState, isComposer, editContent, setIsEdit]);
+  
+  // Handle save and submit with truncation of subsequent messages
+  const handleSaveAndSubmitWithTruncation = useCallback(async () => {
+    debug.log('useSubmit', `[useMessageEditor] Saving and submitting with truncation at index ${messageIndex}`);
+    
+    // Ensure content is never undefined
+    const safeContent = editContent || '';
+    
+    const currentState = getStoreState();
+    
+    // Validate store state
+    if (!currentState || !currentState.chats) {
+      debug.error('useMessageEditor', '[useMessageEditor] Store state is invalid:', currentState);
+      return;
+    }
+    
+    const storeCurrentChatIndex = currentState.currentChatIndex;
+    const updatedChats = JSON.parse(JSON.stringify(currentState.chats));
+    
+    // Update the message content
+    updatedChats[storeCurrentChatIndex].messages[messageIndex].content = safeContent;
+    
+    // Truncate subsequent messages - keep only up to the current message
+    updatedChats[storeCurrentChatIndex].messages = 
+      updatedChats[storeCurrentChatIndex].messages.slice(0, messageIndex + 1);
+    
+    // Update state and wait for it to complete
+    await new Promise<void>(resolve => {
+      setChats(updatedChats);
+      // Use a small timeout to ensure state is updated
+      setTimeout(resolve, 50);
+    });
+    
+    // Exit edit mode
+    setIsEdit(false);
+    setIsEditing(false);
+    
+    // Close the modal
+    setIsModalOpen(false);
+    
+    // Now submit with updated state to regenerate AI response
+    await handleSubmit();
+  }, [messageIndex, setChats, getStoreState, editContent, setIsEdit, setIsEditing, handleSubmit]);
   
   // Handle save and submit
   const handleSaveAndSubmit = useCallback(async () => {
-    // Save the content first
-    handleSave(editContent);
-    
-    // Clear the content immediately after saving
+    // If we're in composer mode, just save and submit
     if (isComposer) {
+      // Save the content first
+      handleSave();
+      
+      // Clear the content immediately after saving
       setEditContent('');
-    }
-    
-    // Submit the message if we're in the composer
-    if (isComposer) {
+      
+      // Submit the message
       await handleSubmit();
+    } else {
+      // If we're editing an existing message, show confirmation modal
+      setIsModalOpen(true);
     }
-  }, [handleSave, handleSubmit, isComposer, setEditContent, editContent]);
+  }, [handleSave, handleSubmit, isComposer, setEditContent]);
+
+  // Handle modal cancellation
+  const handleModalCancel = useCallback(() => {
+    setIsModalOpen(false);
+    
+    // Return focus to textarea after modal closes
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        
+        // Try to restore cursor position if possible
+        // This assumes we're storing cursor position somewhere
+        // If not, we can just place it at the end
+        const length = textareaRef.current.value.length;
+        textareaRef.current.setSelectionRange(length, length);
+      }
+    }, 10);
+  }, []);
   
   // Handle textarea height adjustments
   const resetTextAreaHeight = useCallback(() => {
@@ -135,6 +187,8 @@ export function useMessageEditor({
     textareaRef,
     handleSave,
     handleSaveAndSubmit,
-    resetTextAreaHeight
+    handleSaveAndSubmitWithTruncation,
+    resetTextAreaHeight,
+    handleModalCancel
   };
 }

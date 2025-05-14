@@ -3,50 +3,65 @@ import { useCallback, useEffect } from 'react';
 import { useMessageEditorContext } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
 import useStore from '@store/store';
 
+export function useKeyboardShortcuts({ customKeyHandler }: { customKeyHandler?: (e: React.KeyboardEvent) => void }) {
+  const {
+    handleSave,
+    handleSaveAndSubmit,
+    handleSaveAndSubmitWithTruncation,
+    setIsEdit,
+    isComposer
+  } = useMessageEditorContext();
 
-interface UseKeyboardShortcutsProps {
-  customKeyHandler?: (e: React.KeyboardEvent) => void;
-}
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Allow custom handler to override default behavior
+      if (customKeyHandler) {
+        customKeyHandler(e);
+        if (e.defaultPrevented) return;
+      }
 
-export const useKeyboardShortcuts = ({ customKeyHandler }: UseKeyboardShortcutsProps = {}) => {
-  const { handleSave, handleSaveAndSubmit, isComposer, setIsEdit, resetTextAreaHeight } = useMessageEditorContext();
-  
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (customKeyHandler) {
-      customKeyHandler(e);
-    }
-    
-    const isMobile =
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|playbook|silk/i.test(
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|playbook|silk/i.test(
         navigator.userAgent
       );
 
-    if (e.key === 'Escape' && !isComposer) {
-      e.preventDefault();
-      setIsEdit(false);
-      return;
-    }
-
-    if (e.key === 'Enter' && !isMobile && !e.nativeEvent.isComposing) {
-      const enterToSubmit = useStore.getState().enterToSubmit;
-      if (isComposer) {
-        if (
-          (enterToSubmit && !e.shiftKey) ||
-          (!enterToSubmit && (e.ctrlKey || e.shiftKey))
-        ) {
-          e.preventDefault();
-          handleSaveAndSubmit();
-          resetTextAreaHeight();
-        }
-      } else {
-        if (e.ctrlKey && e.shiftKey) {
-          e.preventDefault();
-          handleSaveAndSubmit();
-          resetTextAreaHeight();
-        } else if (e.ctrlKey || e.shiftKey) handleSave();
+      // Handle Escape key to exit edit mode
+      if (e.key === 'Escape' && !isComposer) {
+        e.preventDefault();
+        setIsEdit(false);
+        return;
       }
-    }
-  }, [isComposer, setIsEdit, handleSave, handleSaveAndSubmit, resetTextAreaHeight, customKeyHandler]);
+
+      // Handle Enter key for submission
+      if (e.key === 'Enter' && !isMobile && !e.nativeEvent.isComposing) {
+        const enterToSubmit = useStore.getState().enterToSubmit;
+
+        // For composer mode
+        if (isComposer) {
+          if (
+            (enterToSubmit && !e.shiftKey) ||
+            (!enterToSubmit && (e.ctrlKey || e.shiftKey))
+          ) {
+            e.preventDefault();
+            handleSaveAndSubmit();
+          }
+        } 
+        // For edit mode
+        else {
+          // Ctrl+Shift+Enter for Save & Regenerate
+          if (e.ctrlKey && e.shiftKey) {
+            e.preventDefault();
+            handleSaveAndSubmitWithTruncation();
+          } 
+          // Ctrl+Enter or Shift+Enter for Save only
+          else if (e.ctrlKey || e.shiftKey) {
+            e.preventDefault();
+            handleSave();
+          }
+        }
+      }
+    },
+    [customKeyHandler, handleSave, handleSaveAndSubmit, handleSaveAndSubmitWithTruncation, setIsEdit, isComposer]
+  );
 
   // Add global keyboard event listener for Escape key
   useEffect(() => {

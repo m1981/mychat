@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 
+import PopupModal from '@components/PopupModal';
 import { useMessageEditorContext } from '@components/Chat/ChatContent/Message/context/MessageEditorContext';
 import { EditViewProps } from '@components/Chat/ChatContent/Message/interfaces';
 import { useFileDropHandler } from '@hooks/useFileDropHandler';
@@ -7,6 +8,7 @@ import { useKeyboardShortcuts } from '@hooks/useKeyboardShortcuts';
 import { usePasteHandler } from '@hooks/usePasteHandler';
 import { useTextareaFocus } from '@hooks/useTextareaFocus';
 import { useTextSelection } from '@hooks/useTextSelection';
+import { useTranslation } from 'react-i18next';
 
 import EditViewButtons from './EditViewButtons';
 
@@ -14,12 +16,16 @@ import EditViewButtons from './EditViewButtons';
  * EditView component - Provides the editing interface for message content
  */
 const EditView: React.FC<EditViewProps> = ({ customKeyHandler }) => {
+  const { t } = useTranslation();
+  
   const {
     editContent,
     setEditContent,
     textareaRef,
-    // Remove unused variables but keep them in destructuring to maintain the structure
-    // isComposer and focusLine are used by other components via context
+    isModalOpen,
+    setIsModalOpen,
+    handleSaveAndSubmitWithTruncation,
+    handleModalCancel,
     resetTextAreaHeight
   } = useMessageEditorContext();
 
@@ -44,13 +50,12 @@ const EditView: React.FC<EditViewProps> = ({ customKeyHandler }) => {
     textareaRef,
     {
       scrollIntoView: true,
-      cursorAtEnd: false, // Set to false to use end of first line
+      cursorAtEnd: false,
       debugId: 'edit-view-textarea'
     }
   );
 
   // Set up text selection tracking
-  // Add a default value to prevent destructuring errors
   useTextSelection({
     textareaRef
   });
@@ -80,6 +85,16 @@ const EditView: React.FC<EditViewProps> = ({ customKeyHandler }) => {
       />
       
       <EditViewButtons />
+      
+      {isModalOpen && (
+        <PopupModal
+          setIsModalOpen={setIsModalOpen}
+          title={t('warning')}
+          message={t('clearMessageWarning')}
+          handleConfirm={handleSaveAndSubmitWithTruncation}
+          handleClose={handleModalCancel}
+        />
+      )}
     </div>
   );
 };
