@@ -1,13 +1,12 @@
-import { vi, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
+import * as matchers from '@testing-library/jest-dom/matchers';
+import { cleanup } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, expect, vi } from 'vitest';
+
+import i18n from './src/utils/i18n-test-config';
 
 // Add Jest compatibility
 (global as any).jest = vi;
-
-// Extend Window interface for mocks
-type MockableFunction = Function & {
-  mockImplementation?: typeof vi.fn;
-};
 
 // Augment the Window interface instead of redeclaring it
 declare global {
@@ -20,11 +19,6 @@ declare global {
     };
   }
 }
-
-import { cleanup } from '@testing-library/react';
-import * as matchers from '@testing-library/jest-dom/matchers';
-
-import i18n from './src/utils/i18n-test-config';
 
 // Add custom matchers
 expect.extend(matchers);
