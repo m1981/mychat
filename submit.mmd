@@ -6,6 +6,7 @@ sequenceDiagram
     participant Store
     participant Modal
     participant APIService
+    participant UserSettings
 
     Note over EditView: Component renders based on isComposer
 
@@ -74,21 +75,28 @@ sequenceDiagram
             end
         end
     else Keyboard Shortcuts
-        Note over KeyboardHandler: Keyboard actions trigger the same flows as buttons
+        Note over KeyboardHandler: Global setting affects keyboard behavior
+        
+        rect rgb(255,240,240)
+            Note over UserSettings: "Enter to Submit" is a global user preference
+            KeyboardHandler->>UserSettings: Check "Enter to Submit" setting
+        end
         
         alt Composer Mode
             rect rgb(240,255,240)
                 User->>KeyboardHandler: Press key combination
                 
-                alt "Enter to Submit" enabled
+                alt "Enter to Submit" enabled (global setting)
                     KeyboardHandler->>MessageEditorContext: Enter → handleSaveAndSubmit()
+                    Note right of KeyboardHandler: Triggers full "Save & Submit" flow with AI response
+                    
                     KeyboardHandler->>EditView: Shift+Enter → Insert newline
-                else "Enter to Submit" disabled
+                else "Enter to Submit" disabled (global setting)
                     KeyboardHandler->>EditView: Enter → Insert newline
+                    
                     KeyboardHandler->>MessageEditorContext: Ctrl+Enter/Shift+Enter → handleSaveAndSubmit()
+                    Note right of KeyboardHandler: Triggers full "Save & Submit" flow with AI response
                 end
-                
-                Note right of KeyboardHandler: handleSaveAndSubmit() triggers same flow as "Save & Submit" button
             end
         else Non-Composer Mode (Edit)
             rect rgb(240,240,255)
@@ -99,11 +107,13 @@ sequenceDiagram
                     MessageEditorContext->>EditView: Exit edit mode without saving
                 else Ctrl+Shift+Enter
                     KeyboardHandler->>MessageEditorContext: handleSaveAndSubmit()
-                    Note right of KeyboardHandler: Same flow as "Save & Submit" button in edit mode
+                    Note right of KeyboardHandler: Triggers full edit "Save & Submit" flow with AI response
                 else Ctrl+Enter/Shift+Enter
                     KeyboardHandler->>MessageEditorContext: handleSave()
-                    Note right of KeyboardHandler: Same flow as "Save" button in edit mode
+                    Note right of KeyboardHandler: Triggers "Save" flow without AI response
                 end
+                
+                Note over KeyboardHandler: "Enter to Submit" setting does not affect Edit mode
             end
         end
     end
