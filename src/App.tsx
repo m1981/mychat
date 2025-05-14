@@ -1,25 +1,26 @@
 import React, { useEffect } from 'react';
 
-
 import Chat from '@components/Chat';
 import Menu from '@components/Menu';
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
-import * as Sentry from '@sentry/react'; // Remove duplicate import
+import * as Sentry from '@sentry/react';
 import useStore from '@store/store';
 import { ChatInterface } from '@type/chat';
 import { Theme } from '@type/theme';
+import { getEnvVar } from '@utils/env';
 import { Toaster } from 'react-hot-toast';
 
 import i18n from './i18n';
 
 // Initialize Sentry with better production configuration
-const release = `v${process.env.npm_package_version}`;
+const release = `v${getEnvVar('npm_package_version', '1.0.0')}`;
+const nodeEnv = getEnvVar('NODE_ENV', 'development');
 
 Sentry.init({
   dsn: "https://b246997c418bfddd2af1194a62c39fe1@o4506736184721408.ingest.us.sentry.io/4509238037446656",
-  environment: process.env.NODE_ENV,
-  enabled: process.env.NODE_ENV === 'production',
-  debug: process.env.NODE_ENV !== 'production',
+  environment: nodeEnv,
+  enabled: nodeEnv === 'production',
+  debug: nodeEnv !== 'production',
 
   // Release tracking - important for source maps
   release,
@@ -32,7 +33,7 @@ Sentry.init({
   ],
 
   // Performance monitoring
-  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+  tracesSampleRate: nodeEnv === 'production' ? 0.1 : 1.0,
   tracePropagationTargets: [
     "localhost",
     /^https:\/\/mychat-silk\.vercel\.app/
@@ -63,16 +64,16 @@ Sentry.init({
 
 // Optional: Add global tags
 Sentry.setTags({
-  'app.version': process.env.VITE_APP_VERSION,
-  'app.environment': process.env.NODE_ENV,
+  'app.version': getEnvVar('VITE_APP_VERSION', ''),
+  'app.environment': nodeEnv,
 });
 
 interface ErrorFallbackProps {
   error: Error;
-  resetError: () => void;
+  resetError: () => void; // Renamed to _resetError to match unused var pattern
 }
 
-const ErrorFallback: React.FC<ErrorFallbackProps> = ({error, resetError}) => (
+const ErrorFallback: React.FC<ErrorFallbackProps> = ({error, resetError: _resetError}) => (
   <div className="flex items-center justify-center h-screen">
     <div className="text-center p-6 bg-gray-100 rounded-lg">
       <h2 className="text-xl font-bold mb-4">Oops! Something went wrong</h2>
@@ -169,6 +170,9 @@ function App() {
     }
   }, []);
 
+  // Use a variable for the test button visibility
+  const showTestButton = true;
+
   return (
     <Sentry.ErrorBoundary 
       fallback={({ error, resetError }) => (
@@ -189,7 +193,7 @@ function App() {
         <Menu />
         <Chat />
         <Toaster />
-        {(1) && (
+        {showTestButton && (
           <button 
             className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded"
             onClick={handleErrorClick}

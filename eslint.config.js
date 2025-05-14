@@ -126,6 +126,9 @@ export default [
         localStorage: 'readonly',
         console: 'readonly',
         fetch: 'readonly',
+        // Vite-specific globals
+        process: 'readonly',
+        import: 'readonly',
         // Add any other globals you need
       }
     }
