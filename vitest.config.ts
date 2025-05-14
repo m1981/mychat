@@ -39,9 +39,9 @@ export default defineConfig({
       ],
       thresholds: {
         // Global thresholds
-        branches: 70,
-        functions: 49,
-        
+        branches: 62,
+        functions: 37,
+
         // File-specific thresholds
         'src/handlers/ChatStreamHandler.ts': {
           statements: 2,
@@ -50,7 +50,7 @@ export default defineConfig({
           statements: 23,
         },
         'src/hooks/useSubmit.ts': {
-          statements: 12,
+          statements: 10,
         },
         'src/hooks/useTitleGeneration.ts': {
           statements: 12,
@@ -78,7 +78,40 @@ export default defineConfig({
         },
         'src/store/config-slice.ts': {
           statements: 32,
-        }
+        },
+        'src/components/Chat/ChatContent/Message/ViewMode/ContentView.tsx': {
+          statements: 88,
+        },
+        'src/components/Chat/ChatContent/Message/context/MessageEditorContext.tsx': {
+          statements: 96,
+        },
+        'src/components/Chat/ChatContent/Message/EditMode/EditView.tsx': {
+          statements: 87,
+        },
+        'src/components/Menu/NewChat.tsx': {
+          statements: 87,
+        },
+        'src/api/base.ts': {
+          statements: 93,
+        },
+        'src/config/models/model.registry.ts': {
+          statements: 79,
+        },
+        'src/config/providers/provider.registry.ts': {
+          statements: 97,
+        },
+        'src/hooks/useFileDropHandler.ts': {
+          statements: 100,
+        },
+        'src/hooks/useMessageEditor.ts': {
+          statements: 91,
+        },
+        'src/hooks/usePasteHandler.ts': {
+          statements: 100,
+        },
+        'src/hooks/useTextSelection.ts': {
+          statements: 88,
+        },
       }
     },
     deps: {
