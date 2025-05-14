@@ -105,7 +105,7 @@ const ChatContent: React.FC = () => {
     if (generating) {
       setError('');
     }
-    // Return a no-op cleanup function to satisfy TypeScript
+    // Return an empty function to satisfy TypeScript
     return () => {};
   }, [generating, setError]);
 

@@ -10,8 +10,8 @@ export interface RoleSelectorProps {
   isComposer?: boolean;
 }
 
-const RoleSelector = React.memo(({ role, messageIndex, isComposer }: RoleSelectorProps) => {
-  const { t } = useTranslation();
+const RoleSelector = React.memo(({  }: RoleSelectorProps) => {
+  // Remove unused translation since we're not using it yet
 
   return (
     <div className='prose dark:prose-invert'>
