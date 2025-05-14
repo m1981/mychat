@@ -1,7 +1,6 @@
 //src/components/ImportExportChat/ImportExportChat.tsx
 import React, { useRef, useState } from 'react';
 
-
 import PopupModal from '@components/PopupModal';
 import { ProviderRegistry } from '@config/providers/provider.registry';
 import ExportIcon from '@icon/ExportIcon';
@@ -15,6 +14,51 @@ import { useTranslation } from 'react-i18next';
 interface ImportAlert {
   message: string;
   success: boolean;
+}
+
+// Define types for validation
+interface ImportMessage {
+  role: string;
+  content: string | null;
+}
+
+interface ImportModelConfig {
+  model: string;
+  max_tokens: number;
+  temperature: number;
+  presence_penalty: number;
+  top_p: number;
+  frequency_penalty: number;
+  enableThinking?: boolean;
+  thinkingConfig?: {
+    budget_tokens: number;
+  };
+}
+
+interface ImportChatConfig {
+  provider: ProviderKey;
+  modelConfig: ImportModelConfig;
+}
+
+interface ImportChat {
+  id: string;
+  title: string;
+  messages: ImportMessage[];
+  config: ImportChatConfig;
+  folder?: string;
+}
+
+interface ImportFolder {
+  id: string;
+  name: string;
+  expanded: boolean;
+  order: number;
+}
+
+interface ImportData {
+  version?: number;
+  chats: ImportChat[];
+  folders?: Record<string, ImportFolder>;
 }
 
 const ImportExportChat = () => {
@@ -54,7 +98,7 @@ const ImportChat = () => {
   const setChats = useStore((state) => state.setChats);
   const setFolders = useStore((state) => state.setFolders);
 
-  const validateMessage = (msg: any, chatId: string, index: number) => {
+  const validateMessage = (msg: ImportMessage, chatId: string, index: number): boolean => {
     if (!msg) {
       throw new Error(`Chat ${chatId}: Message at index ${index} is null or undefined`);
     }
@@ -70,7 +114,7 @@ const ImportChat = () => {
       // If content exists but isn't a string, try to convert it
       try {
         msg.content = String(msg.content);
-      } catch (e) {
+      } catch (_error) {
         throw new Error(`Chat ${chatId}: Message at index ${index} has invalid 'content' that cannot be converted to string`);
       }
     }
@@ -92,7 +136,7 @@ const ImportChat = () => {
     return true;
   };
 
-  const validateModelConfig = (provider: ProviderKey, modelConfig: any, chatId: string) => {
+  const validateModelConfig = (provider: ProviderKey, modelConfig: ImportModelConfig, chatId: string): ImportModelConfig => {
     // Get provider capabilities
     const capabilities = ProviderRegistry.getProviderCapabilities(provider);
     
@@ -112,7 +156,7 @@ const ImportChat = () => {
     // Validate numeric fields
     const numericFields = ['max_tokens', 'temperature', 'presence_penalty', 'top_p', 'frequency_penalty'];
     numericFields.forEach(field => {
-      if (typeof modelConfig[field] !== 'number') {
+      if (typeof modelConfig[field as keyof typeof modelConfig] !== 'number') {
         throw new Error(`Chat ${chatId}: modelConfig.${field} must be a number`);
       }
     });
@@ -148,7 +192,7 @@ const ImportChat = () => {
     return modelConfig;
   };
 
-  const validateChat = (chat: any, index: number) => {
+  const validateChat = (chat: ImportChat, index: number): boolean => {
     if (!chat.id) {
       throw new Error(`Chat at index ${index}: Missing required field 'id'`);
     }
@@ -162,7 +206,7 @@ const ImportChat = () => {
     }
 
     // Validate messages
-    chat.messages.forEach((msg: any, msgIndex: number) => {
+    chat.messages.forEach((msg: ImportMessage, msgIndex: number) => {
       validateMessage(msg, chat.id, msgIndex);
     });
 
@@ -190,7 +234,7 @@ const ImportChat = () => {
     return true;
   };
 
-  const validateFolder = (folder: any, id: string) => {
+  const validateFolder = (folder: ImportFolder, id: string): boolean => {
     if (!folder.id) {
       throw new Error(`Folder ${id}: Missing required field 'id'`);
     }
@@ -224,11 +268,11 @@ const ImportChat = () => {
 
     try {
       const fileContent = await file.text();
-      let importData: any;
+      let importData: ImportData;
       
       try {
         importData = JSON.parse(fileContent);
-      } catch (e) {
+      } catch (_error) {
         throw new Error('Failed to parse JSON file. Please ensure the file contains valid JSON.');
       }
 
@@ -238,9 +282,9 @@ const ImportChat = () => {
 
       if (Array.isArray(importData)) {
         // Single chat or array of chats format
-        processedChats = importData.map((chat: any, index: number) => {
+        processedChats = importData.map((chat: ImportChat, index: number) => {
           validateChat(chat, index);
-          return chat as ChatInterface;
+          return chat as unknown as ChatInterface;
         });
       } else {
         // Full export format
@@ -252,9 +296,9 @@ const ImportChat = () => {
           throw new Error("Invalid format: 'chats' must be an array");
         }
 
-        processedChats = importData.chats.map((chat: any, index: number) => {
+        processedChats = importData.chats.map((chat: ImportChat, index: number) => {
           validateChat(chat, index);
-          return chat as ChatInterface;
+          return chat as unknown as ChatInterface;
         });
 
         // Validate folders if present
@@ -263,9 +307,9 @@ const ImportChat = () => {
             throw new Error("Invalid format: 'folders' must be an object");
           }
 
-          Object.entries(importData.folders).forEach(([id, folder]: [string, any]) => {
+          Object.entries(importData.folders).forEach(([id, folder]: [string, ImportFolder]) => {
             validateFolder(folder, id);
-            processedFolders[id] = folder;
+            processedFolders[id] = folder as unknown as FolderCollection[string];
           });
         }
       }
