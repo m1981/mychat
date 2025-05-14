@@ -45,8 +45,7 @@ const EditView: React.FC<EditViewProps> = ({ customKeyHandler }) => {
     {
       scrollIntoView: true,
       cursorAtEnd: false, // Set to false to use end of first line
-      debugId: 'edit-view-textarea',
-      refocusOnScroll: false
+      debugId: 'edit-view-textarea'
     }
   );
 

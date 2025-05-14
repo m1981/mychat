@@ -105,8 +105,7 @@ const ChatContent: React.FC = () => {
     if (generating) {
       setError('');
     }
-    return undefined; // Explicitly return undefined
-  }, [generating, setError]);
+  }, [generating, setError]); // TypeScript will infer the return type
 
 
   // Setup scroll listener

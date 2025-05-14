@@ -1,6 +1,7 @@
 import NewFolderIcon from '@icon/NewFolderIcon';
 import useStore from '@store/store';
 // import { useTranslation } from 'react-i18next';
+import { Folder, FolderCollection } from '@type/chat';
 import { v4 as uuidv4 } from 'uuid';
 
 const NewFolder = () => {
