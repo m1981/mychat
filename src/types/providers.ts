@@ -2,7 +2,7 @@ import { ModelRegistry } from '@config/models/model.registry';
 import { ProviderModel } from '@config/providers/provider.config';
 import { ProviderRegistry } from '@config/providers/provider.registry';
 import { MessageInterface, ProviderKey } from '@type/chat';
-import { AIProvider, RequestConfig, FormattedRequest } from '@type/provider';
+import { AIProvider, ProviderResponse, RequestConfig, FormattedRequest } from '@type/provider';
 
 export const providers: Record<ProviderKey, AIProvider> = {
   openai: {
@@ -20,17 +20,17 @@ export const providers: Record<ProviderKey, AIProvider> = {
       frequency_penalty: config.frequency_penalty,
       stream: config.stream ?? false
     }),
-    parseResponse: (response) => {
+    parseResponse: (response: ProviderResponse): string => {
       if (response.choices?.[0]?.message?.content) {
         return response.choices[0].message.content;
       }
       // Handle direct content response ( used in tests )
-      if (response.content) {
+      if (response.content && typeof response.content === 'string') {
         return response.content;
       }
       throw new Error('Invalid response format from OpenAI');
     },
-    parseStreamingResponse: (response: any) => {
+    parseStreamingResponse: (response: ProviderResponse): string => {
       try {
         return response.choices?.[0]?.delta?.content || '';
       } catch (e) {
@@ -45,7 +45,7 @@ export const providers: Record<ProviderKey, AIProvider> = {
     endpoints: ProviderRegistry.getProvider('anthropic').endpoints,
     models: ProviderRegistry.getProvider('anthropic').models.map((m: ProviderModel) => m.id),
     formatRequest: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => ({
-     model: config.model,
+      model: config.model,
       max_tokens: config.max_tokens,
       temperature: config.temperature,
       top_p: config.top_p,
@@ -59,14 +59,18 @@ export const providers: Record<ProviderKey, AIProvider> = {
         content: m.content,
       }))
     }),
-    parseResponse: (response) => {
+    parseResponse: (response: ProviderResponse): string => {
       // Handle non-streaming response
-      if (response.content && Array.isArray(response.content)) {
+      if (response.content && Array.isArray(response.content) && response.content.length > 0 && 'text' in response.content[0]) {
         return response.content[0].text;
+      }
+      // If content is a string, return it
+      if (typeof response.content === 'string') {
+        return response.content;
       }
       return '';
     },
-    parseStreamingResponse: (response: any) => {
+    parseStreamingResponse: (response: ProviderResponse): string => {
       try {
         if (response.type === 'content_block_delta') {
           return response.delta?.text || '';

@@ -23,12 +23,27 @@ export interface FormattedRequest {
   frequency_penalty?: number;
 }
 
+// Define a generic response type
+export interface ProviderResponse {
+  content?: string | Array<{text: string}>;
+  choices?: Array<{
+    message?: { content?: string };
+    delta?: { content?: string };
+  }>;
+  type?: string;
+  delta?: { 
+    text?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 export interface AIProvider {
   id: ProviderKey;
   name: string;
   endpoints: string[];
   models: string[];
   formatRequest: (messages: MessageInterface[], config: RequestConfig) => FormattedRequest;
-  parseResponse: (response: any) => string;
-  parseStreamingResponse: (chunk: any) => string;
+  parseResponse: (response: ProviderResponse) => string;
+  parseStreamingResponse: (chunk: ProviderResponse) => string;
 }
