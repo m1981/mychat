@@ -76,18 +76,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error: unknown) {
     console.error('OpenAI API Error:', error);
     
-    // Create a type for OpenAI errors
-    interface OpenAIError extends Error {
-      status?: number;
+    // More robust error handling
+    let errorStatus = 500;
+    let errorMessage = 'An error occurred during the API request';
+    
+    // Handle plain objects with status property
+    if (error && typeof error === 'object' && 'status' in error) {
+      errorStatus = (error as { status: number }).status;
     }
     
-    // Use type guard to safely access status
-    const errorStatus = error instanceof Error && 'status' in error 
-      ? (error as OpenAIError).status 
-      : 500;
+    // Handle Error instances
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      // Check for status property on Error instances too
+      if ('status' in error) {
+        errorStatus = (error as unknown as { status: number }).status;
+      }
+    }
     
     res.status(errorStatus).json({
-      error: error instanceof Error ? error.message : 'An error occurred during the API request'
+      error: errorMessage
     });
   }
 }

@@ -79,46 +79,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         for await (const chunk of stream) {
           lastPing = Date.now();
           
-          // Handle different types of chunks
-          if (chunk.type === 'message_start') {
-            res.write(`data: ${JSON.stringify({
-              type: 'message_start',
-              message: chunk.message,
-            })}\n\n`);
-          } else if (chunk.type === 'content_block_start') {
-            // Add handling for thinking blocks
-            if (chunk.content_block.type === 'thinking' || chunk.content_block.type === 'redacted_thinking') {
+          // Use type discriminated unions for safer handling
+          switch (chunk.type) {
+            case 'message_start':
               res.write(`data: ${JSON.stringify({
-                type: 'content_block_start',
+                type: 'message_start',
+                message: chunk.message,
+              })}\n\n`);
+              break;
+              
+            case 'content_block_start':
+              // Handle thinking blocks
+              if (chunk.content_block.type === 'thinking' || chunk.content_block.type === 'redacted_thinking') {
+                res.write(`data: ${JSON.stringify({
+                  type: 'content_block_start',
+                  content_block: chunk.content_block,
+                })}\n\n`);
+              }
+              break;
+              
+            case 'content_block_delta':
+              res.write(`data: ${JSON.stringify({
+                type: 'content_block_delta',
+                delta: chunk.delta,
+              })}\n\n`);
+              break;
+              
+            case 'content_block_stop':
+              res.write(`data: ${JSON.stringify({
+                type: 'content_block_stop',
                 content_block: chunk.content_block,
               })}\n\n`);
-            }
-          } else if (chunk.type === 'content_block_delta') {
-            res.write(`data: ${JSON.stringify({
-              type: 'content_block_delta',
-              delta: chunk.delta,
-            })}\n\n`);
-          } else if (chunk.type === 'signature_delta') {
-            // Fix type comparison issue
-            res.write(`data: ${JSON.stringify({
-              type: 'signature_delta',
-              signature: (chunk as unknown), // Replace any with unknown
-            })}\n\n`);
-          } else if (chunk.type === 'content_block_stop') {
-            res.write(`data: ${JSON.stringify({
-              type: 'content_block_stop',
-              content_block: (chunk as ContentBlockStopEvent).content_block,
-            })}\n\n`);
-          } else if (chunk.type === 'message_delta') {
-            res.write(`data: ${JSON.stringify({
-              type: 'message_delta',
-              delta: chunk.delta,
-            })}\n\n`);
-          } else if (chunk.type === 'message_stop') {
-            res.write(`data: ${JSON.stringify({
-              type: 'message_stop',
-              message: (chunk as MessageStopEvent).message,
-            })}\n\n`);
+              break;
+              
+            case 'message_delta':
+              res.write(`data: ${JSON.stringify({
+                type: 'message_delta',
+                delta: chunk.delta,
+              })}\n\n`);
+              break;
+              
+            case 'message_stop':
+              res.write(`data: ${JSON.stringify({
+                type: 'message_stop',
+                message: chunk.message,
+              })}\n\n`);
+              break;
           }
         }
       } finally {
@@ -143,40 +149,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error: unknown) {
     console.error('Anthropic API Error:', error);
     
-    // More detailed error logging
-    if (error instanceof Anthropic.APIError) {
-      console.error('Anthropic API Error details:', {
-        status: error.status,
-        type: error.type,
-        message: error.message,
-        details: error.error?.details
-      });
+    // Simplified error handling with type guards
+    let errorStatus = 500;
+    let errorMessage = 'An error occurred during the API request';
+    let errorType = 'unknown_error';
+    let errorDetails = undefined;
+    
+    // Handle both Error objects and plain objects
+    if (error && typeof error === 'object') {
+      // Extract status if available
+      if ('status' in error && typeof error.status === 'number') {
+        errorStatus = error.status;
+      }
+      
+      // Extract type if available
+      if ('type' in error && typeof error.type === 'string') {
+        errorType = error.type;
+      }
+      
+      // Extract message from Error instances or plain objects
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if ('message' in error && typeof error.message === 'string') {
+        errorMessage = error.message;
+      }
+      
+      // Extract details if available
+      if ('error' in error && error.error && typeof error.error === 'object' && 'details' in error.error) {
+        errorDetails = error.error.details;
+      }
     }
     
-    // Create a more specific type for the error
-    interface AnthropicError {
-      status?: number;
-      type?: string;
-      error?: {
-        details?: unknown;
-      };
-    }
-    
-    // Use type guards to safely access properties
-    const errorStatus = error instanceof Error && 'status' in error 
-      ? (error as AnthropicError).status 
-      : 500;
-      
-    const errorType = error instanceof Error && 'type' in error 
-      ? (error as AnthropicError).type 
-      : undefined;
-      
-    const errorDetails = error instanceof Error && 'error' in error && (error as AnthropicError).error?.details
-      ? (error as AnthropicError).error.details
-      : undefined;
+    // Log detailed error information
+    console.error('Anthropic API Error details:', {
+      status: errorStatus,
+      type: errorType,
+      message: errorMessage,
+      details: errorDetails
+    });
     
     res.status(errorStatus).json({
-      error: error instanceof Error ? error.message : 'An error occurred during the API request',
+      error: errorMessage,
       status: errorStatus,
       type: errorType,
       details: errorDetails,

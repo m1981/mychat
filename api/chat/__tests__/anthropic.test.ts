@@ -27,7 +27,7 @@ vi.mock('@anthropic-ai/sdk', () => {
 describe('Anthropic API Handler', () => {
   let req: Partial<NextApiRequest>;
   let res: Partial<NextApiResponse>;
-  let mockAnthropicInstance: any;
+  let mockCreateMethod: any;
   
   beforeEach(() => {
     // Reset mocks
@@ -61,11 +61,27 @@ describe('Anthropic API Handler', () => {
       setHeader: vi.fn(),
       write: vi.fn(),
       end: vi.fn(),
-      on: vi.fn()
+      on: vi.fn().mockImplementation((event, callback) => {
+        // Mock the 'on' method to store the callback
+        return res;
+      })
     };
     
-    // Get reference to the mocked Anthropic instance
-    mockAnthropicInstance = new Anthropic({ apiKey: 'test' });
+    // Get reference to the mocked create method directly
+    mockCreateMethod = vi.fn().mockResolvedValue({
+      [Symbol.asyncIterator]: async function* () {
+        yield { type: 'message_start', message: { id: 'msg_123' } };
+        yield { type: 'content_block_delta', delta: { text: 'Hello' } };
+        yield { type: 'message_stop', message: { id: 'msg_123' } };
+      }
+    });
+    
+    // Override the implementation to use our mockCreateMethod
+    vi.mocked(Anthropic).mockImplementation(() => ({
+      messages: {
+        create: mockCreateMethod
+      }
+    } as unknown as Anthropic));
   });
   
   it('should return 405 for non-POST requests', async () => {
@@ -87,7 +103,7 @@ describe('Anthropic API Handler', () => {
   it('should pass thinking parameters to Anthropic API when enabled', async () => {
     await handler(req as NextApiRequest, res as NextApiResponse);
     
-    expect(mockAnthropicInstance.messages.create).toHaveBeenCalledWith(
+    expect(mockCreateMethod).toHaveBeenCalledWith(
       expect.objectContaining({
         thinking: {
           type: 'enabled',
@@ -99,7 +115,7 @@ describe('Anthropic API Handler', () => {
   
   it('should handle API errors gracefully', async () => {
     // Mock API error
-    mockAnthropicInstance.messages.create.mockRejectedValueOnce({
+    mockCreateMethod.mockRejectedValueOnce({
       status: 400,
       type: 'invalid_request_error',
       message: 'Invalid request',

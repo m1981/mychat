@@ -26,7 +26,7 @@ vi.mock('openai', () => {
 describe('OpenAI API Handler', () => {
   let req: Partial<NextApiRequest>;
   let res: Partial<NextApiResponse>;
-  let mockOpenAIInstance: any;
+  let mockCreateMethod: any;
   
   beforeEach(() => {
     // Reset mocks
@@ -58,8 +58,22 @@ describe('OpenAI API Handler', () => {
       end: vi.fn()
     };
     
-    // Get reference to the mocked OpenAI instance
-    mockOpenAIInstance = new OpenAI({ apiKey: 'test' });
+    // Get reference to the mocked create method directly
+    mockCreateMethod = vi.fn().mockResolvedValue({
+      [Symbol.asyncIterator]: async function* () {
+        yield { id: 'chatcmpl-123', choices: [{ delta: { content: 'Hello' } }] };
+        yield { id: 'chatcmpl-123', choices: [{ delta: { content: ' world' } }] };
+      }
+    });
+    
+    // Override the implementation to use our mockCreateMethod
+    vi.mocked(OpenAI).mockImplementation(() => ({
+      chat: {
+        completions: {
+          create: mockCreateMethod
+        }
+      }
+    } as unknown as OpenAI));
   });
   
   it('should return 405 for non-POST requests', async () => {
@@ -78,11 +92,10 @@ describe('OpenAI API Handler', () => {
   });
   
   it('should handle API errors gracefully', async () => {
-    // Mock API error
-    mockOpenAIInstance.chat.completions.create.mockRejectedValueOnce({
-      status: 400,
-      message: 'Invalid request'
-    });
+    // Mock API error - create an actual Error object with status property
+    const apiError = new Error('Invalid request');
+    Object.assign(apiError, { status: 400 });
+    mockCreateMethod.mockRejectedValueOnce(apiError);
     
     await handler(req as NextApiRequest, res as NextApiResponse);
     
