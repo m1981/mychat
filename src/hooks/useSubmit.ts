@@ -1,7 +1,4 @@
-declare const setTimeout: (callback: (value?: unknown) => void, ms: number) => number;
-
 import { useRef, useCallback, useMemo } from 'react';
-
 import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 import { StorageService, StorageQuotaError } from '@src/services/StorageService';
@@ -17,7 +14,6 @@ import { useStreamHandler } from './useStreamHandler';
 import { useSubmissionState } from './useSubmissionState';
 import { useTitleGeneration } from './useTitleGeneration';
 
-
 // Constants at the top
 const STORAGE_CONFIG = {
   maxStorageSize: 10 * 1024 * 1024, // 10MB
@@ -25,7 +21,6 @@ const STORAGE_CONFIG = {
 } as const;
 
 // Add a global submission manager outside of the hook
-// Export it properly so it can be imported by other modules
 export const globalSubmissionManager = {
   isSubmitting: false,
   
@@ -46,7 +41,30 @@ export const globalSubmissionManager = {
   }
 };
 
-const useSubmit = () => {
+// Extract pure functions to the module scope
+const createErrorMessage = (error: unknown): string => {
+  if (error instanceof StorageQuotaError) {
+    return 'Not enough storage space. Please clear some chats.';
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'An unknown error occurred';
+};
+
+// Define interfaces for dependencies
+interface SubmitDependencies {
+  store?: typeof useStore;
+  submissionLock?: SubmissionLock;
+  storageService?: StorageService;
+  messageManager?: ReturnType<typeof useMessageManager>;
+  streamHandler?: ReturnType<typeof useStreamHandler>;
+  titleGeneration?: ReturnType<typeof useTitleGeneration>;
+  submissionState?: ReturnType<typeof useSubmissionState>;
+}
+
+// The hook implementation with dependency injection
+function useSubmit(dependencies: SubmitDependencies = {}) {
   debug.log('useSubmit', '[useSubmit] useSubmit hook called');
   
   // Add component identification if possible
@@ -54,7 +72,8 @@ const useSubmit = () => {
   const callingComponent = componentStack?.split('\n')[2] || 'Unknown component';
   debug.log('useSubmit', `[useSubmit] useSubmit called from: ${callingComponent}`);
   
-  const store = useStore();
+  // Use injected dependencies or create defaults
+  const store = dependencies.store || useStore;
   
   // Store access - including request state
   const {
@@ -71,7 +90,7 @@ const useSubmit = () => {
     startRequest,
     stopRequest,
     resetRequestState
-  } = store;
+  } = store();
 
   // Create a render counter outside useMemo
   const renderCountRef = useRef(0);
@@ -102,33 +121,44 @@ const useSubmit = () => {
   }, [chats, currentChatIndex, apiKeys]);
 
   // Create refs for services that need to persist
-  const submissionLockRef = useRef(new SubmissionLock());
-  const storageServiceRef = useRef(new StorageService(STORAGE_CONFIG));
+  const submissionLockRef = useRef(dependencies.submissionLock || new SubmissionLock());
+  const storageServiceRef = useRef(dependencies.storageService || new StorageService(STORAGE_CONFIG));
   
-  // Use composable hooks
-  const streamHandler = useStreamHandler(providerSetup.providerKey);
-  const messageManager = useMessageManager();
-  const { handleTitleGeneration } = useTitleGeneration(providerSetup.providerKey);
-  const submission = useSubmissionState();
-
-  // Error message utility
-  const createErrorMessage = useCallback((error: unknown): string => {
-    if (error instanceof StorageQuotaError) {
-      return 'Not enough storage space. Please clear some chats.';
-    }
-    if (error instanceof Error) {
-      return error.message;
-    }
-    return 'An unknown error occurred';
-  }, []);
+  // Use composable hooks or injected dependencies
+  const streamHandler = dependencies.streamHandler || useStreamHandler(providerSetup.providerKey);
+  const messageManager = dependencies.messageManager || useMessageManager();
+  const titleGeneration = dependencies.titleGeneration || useTitleGeneration(providerSetup.providerKey);
+  const submission = dependencies.submissionState || useSubmissionState();
 
   const stopGeneration = useCallback(() => {
     debug.log('useSubmit', '[useSubmit] Stopping generation');
-    submission.dispatch({ type: 'ABORT' });
+    submission?.dispatch?.({ type: 'ABORT' });
     stopRequest('User stopped generation');
     globalSubmissionManager.abort('User stopped generation');
     setGenerating(false);
-  }, [stopRequest, setGenerating, submission.dispatch]);
+  }, [stopRequest, setGenerating, submission]);
+
+  // Extract submission preparation
+  const prepareSubmission = useCallback(async () => {
+    submission?.dispatch?.({ type: 'PREPARING' });
+    await storageServiceRef.current.checkQuota();
+    setGenerating(true);
+    setError(null);
+  }, [submission, setGenerating, setError]);
+
+  // Extract message handling
+  const prepareMessages = useCallback(() => {
+    const currentState = messageManager.getStoreState();
+    const updatedChats = messageManager.appendAssistantMessage(
+      currentState.chats,
+      currentState.currentChatIndex
+    );
+    messageManager.setChats(updatedChats);
+    return {
+      currentState,
+      updatedChats
+    };
+  }, [messageManager]);
 
   const handleSubmit = useCallback(async () => {
     debug.log('useSubmit', '[useSubmit] handleSubmit called');
@@ -206,31 +236,18 @@ const useSubmit = () => {
       }
       
       // Start tracking with state machine
-      submission.dispatch({ type: 'SUBMIT_START' });
+      submission?.dispatch?.({ type: 'SUBMIT_START' });
       
       // Start request in Zustand - this creates the abort controller
       debug.log('useSubmit', '[useSubmit] Starting request via Zustand');
       startRequest();
       
-      // Check storage quota
-      submission.dispatch({ type: 'PREPARING' });
-      await storageServiceRef.current.checkQuota();
-      
-      // Set generating state
-      setGenerating(true);
-      setError(null);
-      
-      // Get current state and prepare messages
-      const currentState = messageManager.getStoreState();
-      const updatedChats = messageManager.appendAssistantMessage(
-        currentState.chats,
-        currentState.currentChatIndex
-      );
-      debug.log('useSubmit', '[useSubmit] Appending assistant message');
-      messageManager.setChats(updatedChats);
+      // Use extracted functions
+      await prepareSubmission();
+      const { updatedChats, currentState } = prepareMessages();
       
       // Prepare submission
-      submission.dispatch({ type: 'SUBMITTING' });
+      submission?.dispatch?.({ type: 'SUBMITTING' });
       const currentChat = updatedChats[currentState.currentChatIndex];
       const currentMessages = currentChat.messages;
       
@@ -247,7 +264,7 @@ const useSubmit = () => {
         providerSetup.apiKey,
         (content) => {
           // Track streaming state
-          submission.dispatch({ type: 'CONTENT_RECEIVED' });
+          submission?.dispatch?.({ type: 'CONTENT_RECEIVED' });
           
           // Update content
           const latestState = messageManager.getStoreState();
@@ -263,7 +280,7 @@ const useSubmit = () => {
       
       // Submit request
       debug.log('useSubmit', '[useSubmit] Submitting request');
-      submission.dispatch({ type: 'STREAMING' });
+      submission?.dispatch?.({ type: 'STREAMING' });
       await submissionService.submit(currentMessages, {
         ...modelConfig,
         stream: true
@@ -271,20 +288,20 @@ const useSubmit = () => {
       
       // Stream complete
       debug.log('useSubmit', '[useSubmit] Stream complete');
-      submission.dispatch({ type: 'STREAM_COMPLETE' });
+      submission?.dispatch?.({ type: 'STREAM_COMPLETE' });
       
       // Generate title
       debug.log('useSubmit', '[useSubmit] Generating title');
-      submission.dispatch({ type: 'GENERATING_TITLE' });
-      await handleTitleGeneration();
+      submission?.dispatch?.({ type: 'GENERATING_TITLE' });
+      await titleGeneration();
       
       // Complete successfully
       debug.log('useSubmit', '[useSubmit] Submission complete');
-      submission.dispatch({ type: 'COMPLETE' });
+      submission?.dispatch?.({ type: 'COMPLETE' });
       
     } catch (error: unknown) {
       // Track error state
-      submission.dispatch({ type: 'ERROR', payload: error as Error });
+      submission?.dispatch?.({ type: 'ERROR', payload: error as Error });
       
       // Error handling
       if (error instanceof Error && error.name === 'AbortError') {
@@ -312,10 +329,10 @@ const useSubmit = () => {
     startRequest, 
     resetRequestState, 
     isRequesting,
-    submission.dispatch,
+    submission,
     messageManager,
     streamHandler,
-    handleTitleGeneration,
+    titleGeneration,
     createErrorMessage,
     providerSetup  // Use the entire memoized object instead of individual properties
   ]);
@@ -336,6 +353,38 @@ const useSubmit = () => {
   }, [generating, chats, currentChatIndex, messageManager, handleSubmit]);
 
   return { handleSubmit, stopGeneration, regenerateMessage, error, generating };
-};
+}
 
-export default useSubmit;
+export { useSubmit };
+
+// For testing purposes only
+export const __TEST_ONLY__ = {
+  createErrorMessage,
+  prepareSubmission: (
+    submission: { dispatch: Function },
+    storageService: { checkQuota: Function },
+    setGenerating: Function,
+    setError: Function
+  ) => {
+    return async () => {
+      submission?.dispatch?.({ type: 'PREPARING' });
+      await storageService.checkQuota();
+      setGenerating(true);
+      setError(null);
+    };
+  },
+  prepareMessages: (messageManager: any) => {
+    return () => {
+      const currentState = messageManager.getStoreState();
+      const updatedChats = messageManager.appendAssistantMessage(
+        currentState.chats,
+        currentState.currentChatIndex
+      );
+      messageManager.setChats(updatedChats);
+      return {
+        currentState,
+        updatedChats
+      };
+    };
+  }
+};
