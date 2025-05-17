@@ -11,7 +11,13 @@ export const providers: Record<ProviderKey, AIProvider> = {
     endpoints: ProviderRegistry.getProvider('openai').endpoints,
     models: ProviderRegistry.getProvider('openai').models.map((m: ProviderModel) => m.id),
     formatRequest: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => ({
-      messages,
+      messages: messages
+        // Filter out empty messages
+        .filter(m => m.content.trim() !== '')
+        .map(m => ({
+          role: m.role,
+          content: m.content
+        })),
       model: config.model,
       max_tokens: ModelRegistry.getModelCapabilities(config.model).maxResponseTokens,
       temperature: config.temperature,
@@ -48,9 +54,11 @@ export const providers: Record<ProviderKey, AIProvider> = {
       // Extract system message if present
       const systemMessage = messages.find(m => m.role === 'system');
       
-      // Filter out system messages for the regular message array
+      // Filter out system messages and empty messages for the regular message array
       const regularMessages = messages
         .filter(m => m.role !== 'system')
+        // Filter out messages with empty content
+        .filter(m => m.content.trim() !== '')
         .map(m => ({
           role: m.role === 'assistant' ? 'assistant' : 'user',
           content: m.content,

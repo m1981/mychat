@@ -151,6 +151,28 @@ describe('Providers', () => {
       const parsedResponse = openaiProvider.parseStreamingResponse(response);
       expect(parsedResponse).toBe('');
     });
+
+    it('should filter out empty messages', () => {
+      const messagesWithEmpty = [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'user', content: 'Hello!' },
+        { role: 'assistant', content: '' }, // Empty message that should be filtered
+        { role: 'user', content: '   ' }    // Whitespace-only message that should be filtered
+      ];
+      
+      const formattedRequest = openaiProvider.formatRequest(messagesWithEmpty, config);
+      
+      // Check that empty messages are filtered out
+      expect(formattedRequest.messages.length).toBe(2);
+      expect(formattedRequest.messages[0]).toEqual({
+        role: 'system',
+        content: 'You are a helpful assistant.'
+      });
+      expect(formattedRequest.messages[1]).toEqual({
+        role: 'user',
+        content: 'Hello!'
+      });
+    });
   });
 
   describe('Anthropic Provider', () => {
@@ -303,6 +325,24 @@ describe('Providers', () => {
       
       const parsedResponse = anthropicProvider.parseStreamingResponse(response);
       expect(parsedResponse).toBe('');
+    });
+
+    it('should filter out empty messages', () => {
+      const messagesWithEmpty = [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'user', content: 'Hello!' },
+        { role: 'assistant', content: '' }, // Empty message that should be filtered
+        { role: 'user', content: '   ' }    // Whitespace-only message that should be filtered
+      ];
+      
+      const formattedRequest = anthropicProvider.formatRequest(messagesWithEmpty, config);
+      
+      // Check that empty messages are filtered out
+      expect(formattedRequest.messages.length).toBe(1);
+      expect(formattedRequest.messages[0]).toEqual({
+        role: 'user',
+        content: 'Hello!'
+      });
     });
   });
 
