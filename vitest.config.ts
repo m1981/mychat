@@ -30,7 +30,6 @@ export default defineConfig({
         'node_modules/',
         'dist/',
         '**/*.d.ts',
-        '**/*.test.ts',
         '**/*.config.ts',
         'coverage/**',
         '**/*.stories.*',
@@ -112,6 +111,19 @@ export default defineConfig({
         'src/hooks/useTextSelection.ts': {
           statements: 88,
         },
+        // Add thresholds for API handlers
+        'api/chat/anthropic.ts': {
+          statements: 80,
+          branches: 80,
+          functions: 80,
+          lines: 80
+        },
+        'api/chat/openai.ts': {
+          statements: 80,
+          branches: 80,
+          functions: 80,
+          lines: 80
+        }
       }
     },
     deps: {
@@ -132,7 +144,11 @@ export default defineConfig({
     typecheck: {
       enabled: false, // Enable only in CI
     },
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Update include pattern to find tests in both src/ and api/ directories
+    include: [
+      'src/**/*.{test,spec}.{ts,tsx}',
+      'api/**/*.{test,spec}.{ts,tsx}'
+    ],
     exclude: ['**/node_modules/**', '**/dist/**'],
     retry: 0,
     isolate: true,

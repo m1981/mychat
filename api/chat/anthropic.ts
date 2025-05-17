@@ -58,6 +58,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         max_tokens: chatConfig.max_tokens,
         temperature: chatConfig.temperature,
         stream: true,
+        // Add support for thinking mode if configured
+        ...(chatConfig.enableThinking && {
+          thinking: {
+            type: 'enabled',
+            budget_tokens: chatConfig.thinkingConfig?.budget_tokens || 16000
+          }
+        })
       });
 
       let lastPing = Date.now();
@@ -136,6 +143,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error: unknown) {
     console.error('Anthropic API Error:', error);
     
+    // More detailed error logging
+    if (error instanceof Anthropic.APIError) {
+      console.error('Anthropic API Error details:', {
+        status: error.status,
+        type: error.type,
+        message: error.message,
+        details: error.error?.details
+      });
+    }
+    
     // Create a more specific type for the error
     interface AnthropicError {
       status?: number;
@@ -148,7 +165,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Use type guards to safely access properties
     const errorStatus = error instanceof Error && 'status' in error 
       ? (error as AnthropicError).status 
-      : undefined;
+      : 500;
       
     const errorType = error instanceof Error && 'type' in error 
       ? (error as AnthropicError).type 
@@ -158,7 +175,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ? (error as AnthropicError).error.details
       : undefined;
     
-    res.status(500).json({
+    res.status(errorStatus).json({
       error: error instanceof Error ? error.message : 'An error occurred during the API request',
       status: errorStatus,
       type: errorType,

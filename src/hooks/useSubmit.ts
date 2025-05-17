@@ -1,4 +1,4 @@
-declare const setTimeout: (callback: () => void, ms: number) => number;
+declare const setTimeout: (callback: (value?: unknown) => void, ms: number) => number;
 
 import { useRef, useCallback, useMemo } from 'react';
 

@@ -37,17 +37,30 @@ export class ChatSubmissionService implements SubmissionService {
       // Get the current abort controller from Zustand
       const { abortController } = useStore.getState();
       
+      // Remove messages from the formattedRequest object when sending
+      const requestBody = {
+        messages: formattedRequest.messages,
+        config: {
+          model: formattedRequest.model,
+          max_tokens: formattedRequest.max_tokens,
+          temperature: formattedRequest.temperature,
+          top_p: formattedRequest.top_p,
+          stream: true,
+          enableThinking: formattedRequest.thinking ? true : false,
+          thinkingConfig: formattedRequest.thinking ? {
+            budget_tokens: formattedRequest.thinking.budget_tokens
+          } : undefined
+        },
+        apiKey: this.apiKey,
+      };
+
       const response = await fetch(`/api/chat/${this.provider.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'text/event-stream',
         },
-        body: JSON.stringify({
-          messages: formattedRequest.messages,
-          config: formattedRequest,
-          apiKey: this.apiKey,
-        }),
+        body: JSON.stringify(requestBody),
         signal: abortController?.signal
       });
 

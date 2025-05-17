@@ -1,0 +1,120 @@
+import { NextApiRequest, NextApiResponse } from 'next';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import Anthropic from '@anthropic-ai/sdk';
+import handler from '../anthropic';
+
+// Mock Anthropic SDK
+vi.mock('@anthropic-ai/sdk', () => {
+  const mockStream = {
+    [Symbol.asyncIterator]: async function* () {
+      yield { type: 'message_start', message: { id: 'msg_123' } };
+      yield { type: 'content_block_start', content_block: { type: 'text' } };
+      yield { type: 'content_block_delta', delta: { text: 'Hello' } };
+      yield { type: 'content_block_stop', content_block: { type: 'text' } };
+      yield { type: 'message_stop', message: { id: 'msg_123' } };
+    }
+  };
+
+  return {
+    default: vi.fn().mockImplementation(() => ({
+      messages: {
+        create: vi.fn().mockResolvedValue(mockStream)
+      }
+    }))
+  };
+});
+
+describe('Anthropic API Handler', () => {
+  let req: Partial<NextApiRequest>;
+  let res: Partial<NextApiResponse>;
+  let mockAnthropicInstance: any;
+  
+  beforeEach(() => {
+    // Reset mocks
+    vi.clearAllMocks();
+    
+    // Setup request and response
+    req = {
+      method: 'POST',
+      // Mock the async iterator for req
+      [Symbol.asyncIterator]: async function* () {
+        yield Buffer.from(JSON.stringify({
+          messages: [{ role: 'user', content: 'Hello' }],
+          config: {
+            model: 'claude-3-5-sonnet-20240229',
+            max_tokens: 1000,
+            temperature: 0.7,
+            stream: true,
+            enableThinking: true,
+            thinkingConfig: {
+              budget_tokens: 10000
+            }
+          },
+          apiKey: 'test-api-key'
+        }));
+      }
+    };
+    
+    res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn(),
+      setHeader: vi.fn(),
+      write: vi.fn(),
+      end: vi.fn(),
+      on: vi.fn()
+    };
+    
+    // Get reference to the mocked Anthropic instance
+    mockAnthropicInstance = new Anthropic({ apiKey: 'test' });
+  });
+  
+  it('should return 405 for non-POST requests', async () => {
+    req.method = 'GET';
+    await handler(req as NextApiRequest, res as NextApiResponse);
+    expect(res.status).toHaveBeenCalledWith(405);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Method not allowed' });
+  });
+  
+  it('should set correct headers for streaming response', async () => {
+    await handler(req as NextApiRequest, res as NextApiResponse);
+    
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/event-stream');
+    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', 'no-cache');
+    expect(res.setHeader).toHaveBeenCalledWith('Connection', 'keep-alive');
+    expect(res.setHeader).toHaveBeenCalledWith('X-Accel-Buffering', 'no');
+  });
+  
+  it('should pass thinking parameters to Anthropic API when enabled', async () => {
+    await handler(req as NextApiRequest, res as NextApiResponse);
+    
+    expect(mockAnthropicInstance.messages.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        thinking: {
+          type: 'enabled',
+          budget_tokens: 10000
+        }
+      })
+    );
+  });
+  
+  it('should handle API errors gracefully', async () => {
+    // Mock API error
+    mockAnthropicInstance.messages.create.mockRejectedValueOnce({
+      status: 400,
+      type: 'invalid_request_error',
+      message: 'Invalid request',
+      error: { details: 'Test error details' }
+    });
+    
+    await handler(req as NextApiRequest, res as NextApiResponse);
+    
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: 'Invalid request',
+        status: 400,
+        type: 'invalid_request_error'
+      })
+    );
+  });
+});
