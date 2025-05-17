@@ -17,18 +17,37 @@ export const config = {
   },
 };
 
+/**
+ * Parses the request body from a NextApiRequest
+ * This is needed because we disabled the built-in body parser
+ */
+async function parseRequestBody(req: NextApiRequest): Promise<any> {
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(chunk);
+  }
+  return JSON.parse(Buffer.concat(chunks).toString());
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Parse the request body manually
-  const chunks = [];
-  for await (const chunk of req) {
-    chunks.push(chunk);
-  }
-  const data = JSON.parse(Buffer.concat(chunks).toString());
-  const { messages, config: chatConfig, apiKey } = data;
+  // Parse the request body
+  const data = await parseRequestBody(req);
+  const { 
+    messages, 
+    system, 
+    model, 
+    max_tokens, 
+    temperature, 
+    top_p, 
+    stream, 
+    thinking,
+    config: chatConfig, 
+    apiKey 
+  } = data;
 
   const anthropic = new Anthropic({
     apiKey: apiKey,
@@ -44,32 +63,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('X-Accel-Buffering', 'no');
     res.setHeader('Transfer-Encoding', 'chunked');
 
-    const streamMode = chatConfig?.stream ?? false;
+    const streamMode = stream ?? chatConfig?.stream ?? false;
     if (streamMode) {
-      // Format messages for Anthropic API
-      const systemMessage = messages.find((msg: MessageInterface) => msg.role === 'system');
-      const regularMessages = messages
-        .filter((msg: MessageInterface) => msg.role !== 'system')
-        .map((msg: MessageInterface) => ({
-          role: msg.role === 'assistant' ? 'assistant' : 'user',
-          content: msg.content,
-        }));
-
+      // Use the provider-formatted request parameters directly
       const requestParams = {
-        messages: regularMessages,
-        model: chatConfig.model,
-        max_tokens: chatConfig.max_tokens,
-        temperature: chatConfig.temperature,
+        messages,
+        model: model || chatConfig?.model,
+        max_tokens: max_tokens || chatConfig?.max_tokens,
+        temperature: temperature || chatConfig?.temperature,
+        top_p: top_p || chatConfig?.top_p,
         stream: true,
-        // Add system parameter if system message exists
-        ...(systemMessage && { system: systemMessage.content }),
-        // Add support for thinking mode if configured
-        ...(chatConfig.enableThinking && {
-          thinking: {
-            type: 'enabled',
-            budget_tokens: chatConfig.thinkingConfig?.budget_tokens || 16000
-          }
-        })
+        // Use system parameter if provided
+        ...(system && { system }),
+        // Add thinking configuration if provided
+        ...(thinking && { thinking })
       };
 
       const stream = await anthropic.messages.create(requestParams);

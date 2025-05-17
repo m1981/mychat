@@ -40,6 +40,15 @@ describe('Anthropic API Handler', () => {
       [Symbol.asyncIterator]: async function* () {
         yield Buffer.from(JSON.stringify({
           messages: [{ role: 'user', content: 'Hello' }],
+          system: 'You are a helpful assistant.',
+          model: 'claude-3-5-sonnet-20240229',
+          max_tokens: 1000,
+          temperature: 0.7,
+          stream: true,
+          thinking: {
+            type: 'enabled',
+            budget_tokens: 10000
+          },
           config: {
             model: 'claude-3-5-sonnet-20240229',
             max_tokens: 1000,

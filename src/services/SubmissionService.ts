@@ -37,9 +37,14 @@ export class ChatSubmissionService implements SubmissionService {
       // Get the current abort controller from Zustand
       const { abortController } = useStore.getState();
       
-      // Remove messages from the formattedRequest object when sending
+      // Preserve the provider's formatted request structure
+      // Only add API key and extract basic config for logging/tracking
       const requestBody = {
-        messages: formattedRequest.messages,
+        // Include the entire formatted request
+        ...formattedRequest,
+        // Add API key
+        apiKey: this.apiKey,
+        // Include config separately for logging/tracking purposes
         config: {
           model: formattedRequest.model,
           max_tokens: formattedRequest.max_tokens,
@@ -50,8 +55,7 @@ export class ChatSubmissionService implements SubmissionService {
           thinkingConfig: formattedRequest.thinking ? {
             budget_tokens: formattedRequest.thinking.budget_tokens
           } : undefined
-        },
-        apiKey: this.apiKey,
+        }
       };
 
       const response = await fetch(`/api/chat/${this.provider.id}`, {

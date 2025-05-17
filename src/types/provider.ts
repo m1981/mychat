@@ -9,18 +9,25 @@ export interface RequestConfig extends ModelConfig {
 }
 
 export interface FormattedRequest {
-  messages: MessageInterface[];
+  // Common fields required by all providers
+  messages: any[]; // Provider-specific message format
   model: string;
   max_tokens: number;
   temperature: number;
   top_p: number;
   stream: boolean;
-  thinking?: {
+  
+  // Optional provider-specific fields
+  system?: string;         // For providers that support system prompts
+  thinking?: {             // For providers that support thinking mode
     type: 'enabled';
     budget_tokens: number;
   };
   presence_penalty?: number;
   frequency_penalty?: number;
+  
+  // Allow additional provider-specific fields
+  [key: string]: unknown;
 }
 
 // Define a generic response type
