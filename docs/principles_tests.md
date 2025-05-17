@@ -1,63 +1,66 @@
 
-1. Addressing Complex Dependencies
-   Targeted Test Doubles: Created focused mocks that only implement what's needed
-   Dependency Factory: Added a createDependencies() function to consistently generate test dependencies
-   Explicit Injection: Clearly injected all dependencies to avoid implicit dependencies
+# Testing Principles Guide
 
-2. Handling Side Effects
-   Isolated Verification: Verified each side effect separately
-   Step-by-Step Testing: Checked state transitions in sequence
-   Mocked External Services: Used mocks for API calls and storage operations
+## Core Testing Principles
 
-3. Managing Global State
-   Reset Before Each Test: Reset global state before each test
-   Verify State Changes: Explicitly verified global state changes
-   Isolated Tests: Ensured tests don't affect each other through global state
+1. **Test Isolation**
+   - Each test must be independent and able to run in any order
+   - Reset global state before each test
+   - Use targeted test doubles that only implement what's needed
+   - Explicitly inject all dependencies to avoid implicit dependencies
+   - Clean up after each test
 
-4. Tackling Callback Nesting
-   Focused Scenarios: Broke down complex functions into smaller test scenarios
-   State Transition Testing: Verified each step in the process
-   Mocked Sub-Functions: Used mocks to isolate specific parts of the callback chain
+2. **Test Readability**
+   - Write clear, descriptive test names (e.g., "should_calculate_total_price_with_discount")
+   - Structure tests in Given-When-Then format
+   - Use meaningful variable names
+   - Make test intention obvious
 
+3. **Behavior-Focused Testing**
+   - Test public interfaces, not implementation details
+   - Focus on what, not how
+   - Write tests from user's perspective
+   - Verify outcomes rather than implementation steps
+   - Don't test private methods directly
 
-5. Dealing with Large Function Size
-   Scenario-Based Testing: Created specific test scenarios for different paths
-   Focused Test Cases: Each test verifies a specific behavior
-   Progressive Verification: Verified state at each important step
-   Key Testing Principles Applied
-   Isolation: Each test is independent and doesn't rely on other tests
-   Determinism: Tests produce the same results each time they run
-   Readability: Tests clearly show what's being tested and expected
-   Maintainability: Tests are structured to be resilient to implementation changes
-   Coverage: Tests cover happy paths, error paths, and edge cases
+4. **Maintainability**
+   - Don't duplicate test code (use setup methods)
+   - Keep test code simple and focused
+   - Update tests when requirements change
+   - Remove obsolete tests
+   - Use dependency factories to consistently generate test dependencies
 
-6. Keep Tests READABLE
-- Write clear, descriptive test names (e.g., "should_calculate_total_price_with_discount")
-- Use meaningful variable names
-- Structure tests in Given-When-Then format
-- Make test intention obvious
+5. **Comprehensive Coverage**
+   - Test happy paths, error paths, and edge cases
+   - Verify state transitions at each important step
+   - Create specific test scenarios for different paths in complex functions
+   - Test one logical assertion per test
+   - Break down complex functions into smaller test scenarios
 
-2. Keep Tests ISOLATED
-- Each test should be independent
-- No dependencies between tests
-- Tests should be able to run in any order
-- Clean up after each test
+## Strategies for Common Testing Challenges
 
-3. Test ONE THING at a time
-- One logical assertion per test
-- Test single behavior/feature
-- Avoid testing multiple scenarios in one test
-- Keep tests focused
+1. **Addressing Complex Dependencies**
+   - Create focused mocks that only implement what's needed
+   - Add dependency factories to consistently generate test dependencies
+   - Clearly inject all dependencies to avoid implicit dependencies
 
-4. Write MAINTAINABLE tests
-- Don't duplicate test code (use setup methods)
-- Keep test code simple
-- Update tests when requirements change
-- Remove obsolete tests
+2. **Handling Side Effects**
+   - Verify each side effect separately
+   - Check state transitions in sequence
+   - Use mocks for API calls and storage operations
 
-5. Test BEHAVIOR, not implementation
-- Focus on what, not how
-- Test public interfaces
-- Don't test private methods
-- Write tests from user's perspective
+3. **Managing Global State**
+   - Reset global state before each test
+   - Explicitly verify global state changes
+   - Ensure tests don't affect each other through global state
+
+4. **Tackling Callback Nesting**
+   - Break down complex functions into smaller test scenarios
+   - Verify each step in the process
+   - Use mocks to isolate specific parts of the callback chain
+
+5. **Dealing with Large Function Size**
+   - Create specific test scenarios for different paths
+   - Verify state at each important step
+   - Focus each test on a specific behavior
 
