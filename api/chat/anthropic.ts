@@ -47,17 +47,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const streamMode = chatConfig?.stream ?? false;
     if (streamMode) {
       // Format messages for Anthropic API
-      const formattedMessages = messages.map((msg: MessageInterface) => ({
-        role: msg.role === 'assistant' ? 'assistant' : 'user',
-        content: msg.content,
-      }));
+      const systemMessage = messages.find((msg: MessageInterface) => msg.role === 'system');
+      const regularMessages = messages
+        .filter((msg: MessageInterface) => msg.role !== 'system')
+        .map((msg: MessageInterface) => ({
+          role: msg.role === 'assistant' ? 'assistant' : 'user',
+          content: msg.content,
+        }));
 
-      const stream = await anthropic.messages.create({
-        messages: formattedMessages,
+      const requestParams = {
+        messages: regularMessages,
         model: chatConfig.model,
         max_tokens: chatConfig.max_tokens,
         temperature: chatConfig.temperature,
         stream: true,
+        // Add system parameter if system message exists
+        ...(systemMessage && { system: systemMessage.content }),
         // Add support for thinking mode if configured
         ...(chatConfig.enableThinking && {
           thinking: {
@@ -65,7 +70,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             budget_tokens: chatConfig.thinkingConfig?.budget_tokens || 16000
           }
         })
-      });
+      };
+
+      const stream = await anthropic.messages.create(requestParams);
 
       let lastPing = Date.now();
       const keepAliveInterval = setInterval(() => {

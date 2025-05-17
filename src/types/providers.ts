@@ -44,21 +44,33 @@ export const providers: Record<ProviderKey, AIProvider> = {
     name: ProviderRegistry.getProvider('anthropic').name,
     endpoints: ProviderRegistry.getProvider('anthropic').endpoints,
     models: ProviderRegistry.getProvider('anthropic').models.map((m: ProviderModel) => m.id),
-    formatRequest: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => ({
-      model: config.model,
-      max_tokens: config.max_tokens,
-      temperature: config.temperature,
-      top_p: config.top_p,
-      stream: config.stream ?? false,
-      thinking: config.enableThinking ? {
-        type: 'enabled',
-        budget_tokens: config.thinkingConfig.budget_tokens
-      } : undefined,
-      messages: messages.map(m => ({
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content,
-      }))
-    }),
+    formatRequest: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => {
+      // Extract system message if present
+      const systemMessage = messages.find(m => m.role === 'system');
+      
+      // Filter out system messages for the regular message array
+      const regularMessages = messages
+        .filter(m => m.role !== 'system')
+        .map(m => ({
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: m.content,
+        }));
+      
+      return {
+        model: config.model,
+        max_tokens: config.max_tokens,
+        temperature: config.temperature,
+        top_p: config.top_p,
+        stream: config.stream ?? false,
+        thinking: config.enableThinking ? {
+          type: 'enabled',
+          budget_tokens: config.thinkingConfig.budget_tokens
+        } : undefined,
+        // Add system parameter if system message exists
+        ...(systemMessage && { system: systemMessage.content }),
+        messages: regularMessages
+      };
+    },
     parseResponse: (response: ProviderResponse): string => {
       // Handle non-streaming response
       if (response.content && Array.isArray(response.content) && response.content.length > 0 && 'text' in response.content[0]) {
