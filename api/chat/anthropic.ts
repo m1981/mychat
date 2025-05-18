@@ -78,27 +78,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const streamMode = stream ?? chatConfig?.stream ?? false;
     if (streamMode) {
-      // Use the provider-formatted request parameters directly
       const requestParams = {
         messages,
         model: model || chatConfig?.model,
         max_tokens: max_tokens || chatConfig?.max_tokens,
-        system: system,
-        stream: true
+        temperature: temperature || chatConfig?.temperature,
+        top_p: top_p || chatConfig?.top_p,
+        stream: true,
+        // Use system parameter if provided
+        ...(system && { system }),
+        // Add thinking configuration if provided
+        ...(thinking && { thinking })
       };
-
-      // const requestParams = {
-      //   messages,
-      //   model: model || chatConfig?.model,
-      //   max_tokens: max_tokens || chatConfig?.max_tokens,
-      //   temperature: temperature || chatConfig?.temperature,
-      //   top_p: top_p || chatConfig?.top_p,
-      //   stream: true,
-      //   // Use system parameter if provided
-      //   ...(system && { system }),
-      //   // Add thinking configuration if provided
-      //   ...(thinking && { thinking })
-      // };
 
       console.log('[Anthropic API] Sending request to Anthropic:', JSON.stringify(requestParams, null, 2));
       

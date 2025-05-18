@@ -1,4 +1,4 @@
-// api/openai.ts
+
 /* eslint-env node */
 import type { NextApiRequest, NextApiResponse } from 'next';
 import OpenAI from 'openai';
@@ -35,12 +35,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      const streamResponse = await openai.chat.completions.create({
+      const requestParams = {
         ...chatConfig,
         messages,
         model: chatConfig.model || 'gpt-3.5-turbo',
         stream: true,
-      } as OpenAI.ChatCompletionCreateParamsStreaming);
+      };
+
+      const streamResponse = await openai.chat.completions.create(
+        requestParams as OpenAI.ChatCompletionCreateParamsStreaming
+      );
 
       let lastPing = Date.now();
       const keepAliveInterval = setInterval(() => {

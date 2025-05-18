@@ -20,7 +20,7 @@ export interface FormattedRequest {
   // Optional provider-specific fields
   system?: string;         // For providers that support system prompts
   thinking?: {             // For providers that support thinking mode
-    type: 'enabled';
+    type: string;          // Changed from "enabled" to string
     budget_tokens: number;
   };
   presence_penalty?: number;

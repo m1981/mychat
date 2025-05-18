@@ -1,3 +1,4 @@
+
 import { ModelRegistry } from '@config/models/model.registry';
 import { ProviderModel } from '@config/providers/provider.config';
 import { ProviderRegistry } from '@config/providers/provider.registry';
@@ -10,22 +11,26 @@ export const providers: Record<ProviderKey, AIProvider> = {
     name: ProviderRegistry.getProvider('openai').name,
     endpoints: ProviderRegistry.getProvider('openai').endpoints,
     models: ProviderRegistry.getProvider('openai').models.map((m: ProviderModel) => m.id),
-    formatRequest: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => ({
-      messages: messages
-        // Filter out empty messages
-        .filter(m => m.content.trim() !== '')
-        .map(m => ({
-          role: m.role,
-          content: m.content
-        })),
-      model: config.model,
-      max_tokens: ModelRegistry.getModelCapabilities(config.model).maxResponseTokens,
-      temperature: config.temperature,
-      presence_penalty: config.presence_penalty,
-      top_p: config.top_p,
-      frequency_penalty: config.frequency_penalty,
-      stream: config.stream ?? false
-    }),
+    formatRequest: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => {
+      const formattedRequest = {
+        messages: messages
+          // Filter out empty messages
+          .filter(m => m.content.trim() !== '')
+          .map(m => ({
+            role: m.role,
+            content: m.content
+          })),
+        model: config.model,
+        max_tokens: ModelRegistry.getModelCapabilities(config.model).maxResponseTokens,
+        temperature: config.temperature,
+        presence_penalty: config.presence_penalty,
+        top_p: config.top_p,
+        frequency_penalty: config.frequency_penalty,
+        stream: config.stream ?? false
+      };
+
+      return formattedRequest;
+    },
     parseResponse: (response: ProviderResponse): string => {
       if (response.choices?.[0]?.message?.content) {
         return response.choices[0].message.content;
@@ -64,20 +69,22 @@ export const providers: Record<ProviderKey, AIProvider> = {
           content: m.content,
         }));
       
-      return {
+      const formattedRequest = {
         model: config.model,
         max_tokens: config.max_tokens,
         temperature: config.temperature,
         top_p: config.top_p,
         stream: config.stream ?? false,
         thinking: config.enableThinking ? {
-          type: 'enabled',
+          type: "enabled" as const, // Use a literal type with 'as const'
           budget_tokens: config.thinkingConfig.budget_tokens
         } : undefined,
         // Add system parameter if system message exists
         ...(systemMessage && { system: systemMessage.content }),
         messages: regularMessages
       };
+
+      return formattedRequest;
     },
     parseResponse: (response: ProviderResponse): string => {
       // Handle non-streaming response

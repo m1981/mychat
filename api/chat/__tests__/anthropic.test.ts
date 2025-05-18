@@ -142,4 +142,77 @@ describe('Anthropic API Handler', () => {
       })
     );
   });
+
+  it('should send correctly formatted request body to Anthropic API', async () => {
+    // Create a mock instance first to ensure we have a reference
+    const mockAnthropicInstance = {
+      messages: {
+        create: vi.fn().mockResolvedValue({
+          [Symbol.asyncIterator]: async function* () {
+            yield { type: 'message_start', message: { id: 'msg_123' } };
+            yield { type: 'content_block_delta', delta: { text: 'Hello' } };
+            yield { type: 'message_stop', message: { id: 'msg_123' } };
+          }
+        })
+      }
+    };
+    
+    // Override the Anthropic mock to return our instance
+    vi.mocked(Anthropic).mockImplementation(() => mockAnthropicInstance as unknown as Anthropic);
+    
+    // Now spy on the create method of our instance
+    const createSpy = vi.spyOn(mockAnthropicInstance.messages, 'create');
+    
+    // Set up request with all possible parameters
+    req = {
+      method: 'POST',
+      [Symbol.asyncIterator]: async function* () {
+        yield Buffer.from(JSON.stringify({
+          messages: [{ role: 'user', content: 'Hello' }],
+          system: 'You are a helpful assistant.',
+          model: 'claude-3-5-sonnet-20240229',
+          max_tokens: 1000,
+          temperature: 0.7,
+          top_p: 0.9,
+          stream: true,
+          thinking: {
+            type: 'enabled',
+            budget_tokens: 10000
+          },
+          config: {
+            model: 'claude-3-5-sonnet-20240229',
+            max_tokens: 1000,
+            temperature: 0.7,
+            top_p: 0.9,
+            stream: true,
+            enableThinking: true,
+            thinkingConfig: {
+              budget_tokens: 10000
+            }
+          },
+          apiKey: 'test-api-key'
+        }));
+      }
+    };
+    
+    await handler(req as NextApiRequest, res as NextApiResponse);
+    
+    // Verify the exact structure of the request sent to Anthropic API
+    expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({
+      messages: [{ role: 'user', content: 'Hello' }],
+      system: 'You are a helpful assistant.',
+      model: 'claude-3-5-sonnet-20240229',
+      max_tokens: 1000,
+      temperature: 0.7,
+      top_p: 0.9,
+      stream: true,
+      thinking: {
+        type: 'enabled',
+        budget_tokens: 10000
+      }
+    }));
+    
+    // Log the full request for inspection
+    console.log('Full Anthropic API request:', JSON.stringify(createSpy.mock.calls[0][0], null, 2));
+  });
 });
