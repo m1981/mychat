@@ -27,36 +27,30 @@ export function useTitleGeneration(providerKey: string, dependencies: any = {}) 
     }
 
     const currentProvider = providers[providerKey];
-    const modelConfig: ModelConfig = {
-      ...config,
-      model: config.model
-    };
-
+    
+    // Create a single request config with stream: false
     const requestConfig: RequestConfig = {
-      ...modelConfig,
-      stream: false
+      ...config,
+      model: config.model,
+      stream: false  // Always use non-streaming for title generation
     };
 
     const formattedRequest = currentProvider.formatRequest(messages, requestConfig);
     const { messages: formattedMessages } = formattedRequest;
 
     try {
-      // Replace getChatCompletion with ChatSubmissionService
       const submissionService = new ChatSubmissionService(
         currentProvider,
         apiKeys[providerKey],
-        // Pass an empty function for the onUpdate parameter
         () => {},
-        // Pass a proper stream handler object
         emptyStreamHandler
       );
-      
+
       const response = await submissionService.submit(
         formattedMessages,
-        modelConfig
+        requestConfig
       );
 
-      // Check if response is undefined, null, or empty string
       if (response === undefined || response === null || response === '') {
         throw new Error('No response received from title generation');
       }
