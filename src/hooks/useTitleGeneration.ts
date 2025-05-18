@@ -18,7 +18,8 @@ const emptyStreamHandler = {
 export function useTitleGeneration(providerKey: string, dependencies: any = {}) {
   const { i18n } = useTranslation();
   const setChats = useStore(state => state.setChats);
-
+  const apiKeys = useStore(state => state.apiKeys); // Get apiKeys from store
+  
   // Title generator configuration
   const generateTitle = useCallback(async (messages: MessageInterface[], config: ModelConfig) => {
     if (!config?.model) {
@@ -27,10 +28,18 @@ export function useTitleGeneration(providerKey: string, dependencies: any = {}) 
 
     const currentProvider = providers[providerKey];
     
+    // Get the API key for the current provider
+    const apiKey = apiKeys[providerKey];
+    
+    // Check if API key exists
+    if (!apiKey) {
+      throw new Error(`No API key found for provider: ${providerKey}`);
+    }
+    
     // Create a non-streaming request config
     const requestConfig: RequestConfig = {
       ...config,
-      stream: false  // Explicitly set stream to false
+      stream: false
     };
 
     // Format the request using the non-streaming config
@@ -40,7 +49,7 @@ export function useTitleGeneration(providerKey: string, dependencies: any = {}) 
     try {
       const submissionService = new ChatSubmissionService(
         currentProvider,
-        apiKey,  // Use the freshly retrieved API key
+        apiKey,  // Use the API key from store
         () => {},
         emptyStreamHandler
       );
@@ -60,7 +69,7 @@ export function useTitleGeneration(providerKey: string, dependencies: any = {}) 
       console.error('Error in title generation:', error);
       throw error;
     }
-  }, [providerKey]); // Remove apiKeys from dependency array since we're getting it fresh
+  }, [providerKey, apiKeys]); // Add apiKeys to dependency array
   
   // Use injected service or create a new one
   const titleGenerationService = useRef(
