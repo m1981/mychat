@@ -25,24 +25,15 @@ export function useTitleGeneration(providerKey: string, dependencies: any = {}) 
       throw new Error('Invalid model configuration');
     }
 
-    // Get the current API key from the store to ensure it's fresh
-    const currentApiKeys = useStore.getState().apiKeys;
-    const apiKey = currentApiKeys[providerKey];
-    
-    if (!apiKey) {
-      console.error(`No API key found for provider: ${providerKey}`);
-      throw new Error('API key is missing. Please add your API key in settings.');
-    }
-
     const currentProvider = providers[providerKey];
     
-    // Create a single request config with stream: false
+    // Create a non-streaming request config
     const requestConfig: RequestConfig = {
       ...config,
-      model: config.model,
-      stream: false  // Always use non-streaming for title generation
+      stream: false  // Explicitly set stream to false
     };
 
+    // Format the request using the non-streaming config
     const formattedRequest = currentProvider.formatRequest(messages, requestConfig);
     const { messages: formattedMessages } = formattedRequest;
 
@@ -54,9 +45,10 @@ export function useTitleGeneration(providerKey: string, dependencies: any = {}) 
         emptyStreamHandler
       );
       
+      // Pass the non-streaming requestConfig to submit
       const response = await submissionService.submit(
         formattedMessages,
-        requestConfig
+        requestConfig  // Use requestConfig instead of modelConfig
       );
 
       if (response === undefined || response === null || response === '') {
