@@ -5,7 +5,7 @@ import { debug } from '@utils/debug';
 
 import { UseMessageEditorProps, UseMessageEditorReturn } from '../components/Chat/ChatContent/Message/interfaces';
 
-import useSubmit from './useSubmit';
+import { useSubmit } from './useSubmit';
 
 // Declare setTimeout for ESLint
 declare const setTimeout: (callback: () => void, ms: number) => number;

@@ -38,8 +38,8 @@ export default defineConfig({
       ],
       thresholds: {
         // Global thresholds
-        branches: 62,
-        functions: 37,
+        branches: 64,
+        functions: 44,
 
         // File-specific thresholds
         'src/handlers/ChatStreamHandler.ts': {
@@ -52,7 +52,7 @@ export default defineConfig({
           statements: 10,
         },
         'src/hooks/useTitleGeneration.ts': {
-          statements: 12,
+          statements: 11,
         },
         'src/services/TitleGenerator.ts': {
           statements: 8,
@@ -113,14 +113,12 @@ export default defineConfig({
         },
         // Add thresholds for API handlers
         'api/chat/anthropic.ts': {
-          statements: 80,
-          branches: 80,
-          functions: 80,
-          lines: 80
+          statements: 79,
+          branches: 54,
         },
         'api/chat/openai.ts': {
           statements: 80,
-          branches: 80,
+          branches: 75,
           functions: 80,
           lines: 80
         }

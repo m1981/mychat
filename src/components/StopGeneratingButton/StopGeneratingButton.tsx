@@ -1,4 +1,4 @@
-import useSubmit from '@hooks/useSubmit';
+import { useSubmit } from '@hooks/useSubmit';
 import useStore from '@store/store';
 
 const StopGeneratingButton = () => {

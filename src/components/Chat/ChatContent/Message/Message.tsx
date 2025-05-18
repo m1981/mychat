@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-import useSubmit from '@hooks/useSubmit';
+import { useSubmit } from '@hooks/useSubmit';
 import useStore from '@store/store';
 import { ChatInterface } from '@type/chat';
 import { Role } from '@type/chat';
