@@ -1,0 +1,53 @@
+sequenceDiagram
+    participant Hook as useTitleGeneration
+    participant TitleService as TitleGenerationService
+    participant Formatter as MessageFormatter
+    participant SubmissionService as CompletionSubmissionService
+    participant Provider as AIProvider
+    participant API as API Handler
+    participant StateUpdater as StateUpdater
+
+    Hook->>TitleService: generateAndUpdateTitle(messages, chatIndex)
+    TitleService->>Formatter: format(messages)
+    Formatter-->>TitleService: formatted messages
+
+    TitleService->>SubmissionService: submitCompletion(formattedMessages, config)
+    SubmissionService->>Provider: formatRequest(messages, {stream: false})
+    Provider-->>SubmissionService: formatted request
+
+    SubmissionService->>API: POST /api/chat/{provider}
+    Note over API: Non-streaming request
+    API-->>SubmissionService: complete response
+    SubmissionService-->>TitleService: generated title
+
+    TitleService->>StateUpdater: update(chatIndex, title)
+    StateUpdater->>StateUpdater: Update application state
+    StateUpdater-->>TitleService: state updated
+    TitleService-->>Hook: title generation complete
+
+    Note over Hook,StateUpdater: Clear separation of concerns
+    Note over SubmissionService,API: Explicit non-streaming contractsequenceDiagram
+    participant UI as UI Components
+    participant Hook as useSubmit Hook
+    participant Service as ChatSubmissionService
+    participant Provider as AIProvider
+    participant API as API Handler
+    participant External as External API
+
+    UI->>Hook: User messages & UI config
+    Hook->>Service: Prepare messages & model config
+    Service->>Provider: Format request
+    
+    Provider-->>Service: Provider-specific formatted request
+    
+    Service->>API: Send formatted request with API key
+    API->>External: Forward request to external API
+    
+    External-->>API: Stream response chunks
+    API-->>Service: Forward response stream
+    Service-->>Hook: Process stream & update content
+    Hook-->>UI: Update UI with response
+    
+    note over Provider: Transforms messages & configs<br/>into provider-specific format
+    note over Service: Handles API communication<br/>and response streaming
+    note over API: NextJS API routes that<br/>proxy requests to external APIs
