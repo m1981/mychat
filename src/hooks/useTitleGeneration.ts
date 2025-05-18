@@ -1,7 +1,7 @@
 import { useRef, useCallback } from 'react';
 
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
-import { getChatCompletion } from '@src/api/api';
+import { ChatSubmissionService } from '@src/services/SubmissionService';
 import { TitleGenerationService } from '@src/services/TitleGenerationService';
 import { TitleGenerator } from '@src/services/TitleGenerator';
 import useStore from '@store/store';
@@ -10,7 +10,12 @@ import { RequestConfig } from '@type/provider';
 import { providers } from '@type/providers';
 import { useTranslation } from 'react-i18next';
 
-export function useTitleGeneration(providerKey: string) {
+// Create a minimal stream handler object
+const emptyStreamHandler = {
+  processStream: async () => {}
+};
+
+export function useTitleGeneration(providerKey: string, dependencies: any = {}) {
   const { i18n } = useTranslation();
   const setChats = useStore(state => state.setChats);
   const apiKeys = useStore(state => state.apiKeys);
@@ -36,14 +41,23 @@ export function useTitleGeneration(providerKey: string) {
     const { messages: formattedMessages } = formattedRequest;
 
     try {
-      const response = await getChatCompletion(
-        providerKey,
+      // Replace getChatCompletion with ChatSubmissionService
+      const submissionService = new ChatSubmissionService(
+        currentProvider,
+        apiKeys[providerKey],
+        // Pass an empty function for the onUpdate parameter
+        () => {},
+        // Pass a proper stream handler object
+        emptyStreamHandler
+      );
+      
+      const response = await submissionService.submit(
         formattedMessages,
-        modelConfig,
-        apiKeys[providerKey]
+        modelConfig
       );
 
-      if (!response) {
+      // Check if response is undefined, null, or empty string
+      if (response === undefined || response === null || response === '') {
         throw new Error('No response received from title generation');
       }
 
@@ -54,24 +68,29 @@ export function useTitleGeneration(providerKey: string) {
     }
   }, [providerKey, apiKeys]);
   
-  // Create title generation service
-  const titleGenerationService = useRef(new TitleGenerationService(
-    new TitleGenerator(
-      generateTitle,
-      i18n.language,
-      {
-        ...DEFAULT_MODEL_CONFIG,
-        model: providers[providerKey].models[0]
-      }
-    ),
-    setChats
-  )).current;
+  // Use injected service or create a new one
+  const titleGenerationService = useRef(
+    dependencies.titleGenerationService || 
+    new TitleGenerationService(
+      new TitleGenerator(
+        generateTitle,
+        i18n.language,
+        {
+          ...DEFAULT_MODEL_CONFIG,
+          model: providers[providerKey].models[0]
+        }
+      ),
+      setChats
+    )
+  ).current;
   
   // Handle title generation
   const handleTitleGeneration = useCallback(async () => {
     console.log('🏷️ handleTitleGeneration called');
     try {
-      const currentState = useStore.getState();
+      // Use injected store or default
+      const storeToUse = dependencies.store || useStore;
+      const currentState = storeToUse.getState();
       if (!currentState.chats || currentState.currentChatIndex < 0) {
         console.error('❌ No active chat found for title generation');
         throw new Error('No active chat found');
@@ -88,7 +107,7 @@ export function useTitleGeneration(providerKey: string) {
       console.error('❌ Title generation failed:', error);
       throw error;
     }
-  }, [titleGenerationService]);
+  }, [titleGenerationService, dependencies.store]);
   
   return { handleTitleGeneration };
 }

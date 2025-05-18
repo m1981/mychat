@@ -127,7 +127,9 @@ describe('useSubmit hook', () => {
     };
     
     // Mock title generation
-    mockTitleGeneration = vi.fn().mockResolvedValue(undefined);
+    mockTitleGeneration = {
+      handleTitleGeneration: vi.fn().mockResolvedValue(undefined)
+    };
     
     // Mock submission state
     mockSubmissionState = {
@@ -503,7 +505,7 @@ describe('useSubmit hook', () => {
       expect(mockSubmissionState.dispatch).toHaveBeenCalledWith({ type: 'STREAMING' });
       expect(mockSubmissionState.dispatch).toHaveBeenCalledWith({ type: 'STREAM_COMPLETE' });
       expect(mockSubmissionState.dispatch).toHaveBeenCalledWith({ type: 'GENERATING_TITLE' });
-      expect(mockTitleGeneration).toHaveBeenCalled();
+      expect(mockTitleGeneration.handleTitleGeneration).toHaveBeenCalled();
       expect(mockSubmissionState.dispatch).toHaveBeenCalledWith({ type: 'COMPLETE' });
       
       // Verify cleanup

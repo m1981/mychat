@@ -1,11 +1,6 @@
-import useStore from '@store/store';
-import { renderHook, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-import { useMessageEditor } from '../useMessageEditor';
-import useSubmit from '../useSubmit';
-
-// Mock dependencies
+// Mock dependencies BEFORE importing any modules that use them
 vi.mock('@store/store', () => {
   const mockSetChats = vi.fn();
   const mockState = {
@@ -38,9 +33,17 @@ vi.mock('@store/store', () => {
   };
 });
 
-vi.mock('../useSubmit', () => ({
-  default: vi.fn().mockReturnValue({
-    handleSubmit: vi.fn().mockResolvedValue(undefined)
+// Create a mock handleSubmit function that we can reference in tests
+const mockHandleSubmit = vi.fn().mockResolvedValue(undefined);
+
+// Mock useSubmit with a simple implementation
+vi.mock('@hooks/useSubmit', () => ({
+  useSubmit: () => ({
+    handleSubmit: mockHandleSubmit,
+    stopGeneration: vi.fn(),
+    regenerateMessage: vi.fn(),
+    error: null,
+    generating: false
   })
 }));
 
@@ -51,6 +54,11 @@ vi.mock('@utils/debug', () => ({
     error: vi.fn()
   }
 }));
+
+// NOW import the modules that depend on the mocks
+import { renderHook, act } from '@testing-library/react';
+import useStore from '@store/store';
+import { useMessageEditor } from '../useMessageEditor';
 
 describe('useMessageEditor - Use Case 3: Edit Existing Message', () => {
   const mockSetIsEdit = vi.fn();
@@ -89,7 +97,7 @@ describe('useMessageEditor - Use Case 3: Edit Existing Message', () => {
     expect(mockSetIsEdit).toHaveBeenCalledWith(false);
     
     // 4. Submit should NOT be called (no regeneration)
-    expect(useSubmit().handleSubmit).not.toHaveBeenCalled();
+    expect(mockHandleSubmit).not.toHaveBeenCalled();
   });
   
   it('should append a new message when saving at an index beyond the current messages', async () => {
@@ -186,7 +194,7 @@ describe('useMessageEditor - Composer Mode', () => {
     expect(result.current.editContent).toBe('');
     
     // 3. Submit should be called
-    expect(useSubmit().handleSubmit).toHaveBeenCalled();
+    expect(mockHandleSubmit).toHaveBeenCalled();
     
     // 4. Modal should NOT be opened
     expect(result.current.isModalOpen).toBe(false);
@@ -265,7 +273,7 @@ describe('useMessageEditor - handleSaveAndSubmitWithTruncation', () => {
     expect(result.current.isModalOpen).toBe(false);
     
     // 6. Submit should be called to regenerate response
-    expect(useSubmit().handleSubmit).toHaveBeenCalled();
+    expect(mockHandleSubmit).toHaveBeenCalled();
   });
 });
 

@@ -293,7 +293,7 @@ function useSubmit(dependencies: SubmitDependencies = {}) {
       // Generate title
       debug.log('useSubmit', '[useSubmit] Generating title');
       submission?.dispatch?.({ type: 'GENERATING_TITLE' });
-      await titleGeneration();
+      await titleGeneration.handleTitleGeneration();
       
       // Complete successfully
       debug.log('useSubmit', '[useSubmit] Submission complete');

@@ -38,8 +38,12 @@ vi.mock('@hooks/useTextSelection', () => ({
 
 // Mock the useSubmit hook
 vi.mock('@hooks/useSubmit', () => ({
-  default: () => ({
+  useSubmit: () => ({
     handleSubmit: vi.fn(),
+    stopGeneration: vi.fn(),
+    regenerateMessage: vi.fn(),
+    error: null,
+    generating: false
   }),
 }));
 
