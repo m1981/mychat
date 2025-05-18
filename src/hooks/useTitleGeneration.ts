@@ -18,8 +18,7 @@ const emptyStreamHandler = {
 export function useTitleGeneration(providerKey: string, dependencies: any = {}) {
   const { i18n } = useTranslation();
   const setChats = useStore(state => state.setChats);
-  const apiKeys = useStore(state => state.apiKeys);
-  
+
   // Title generator configuration
   const generateTitle = useCallback(async (messages: MessageInterface[], config: ModelConfig) => {
     if (!config?.model) {

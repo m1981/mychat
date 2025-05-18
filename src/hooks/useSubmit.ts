@@ -1,3 +1,4 @@
+
 import { useRef, useCallback, useMemo } from 'react';
 import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
@@ -65,13 +66,7 @@ interface SubmitDependencies {
 
 // The hook implementation with dependency injection
 function useSubmit(dependencies: SubmitDependencies = {}) {
-  debug.log('useSubmit', '[useSubmit] useSubmit hook called');
-  
-  // Add component identification if possible
-  const componentStack = new Error().stack;
-  const callingComponent = componentStack?.split('\n')[2] || 'Unknown component';
-  debug.log('useSubmit', `[useSubmit] useSubmit called from: ${callingComponent}`);
-  
+
   // Use injected dependencies or create defaults
   const store = dependencies.store || useStore;
   
@@ -102,14 +97,6 @@ function useSubmit(dependencies: SubmitDependencies = {}) {
     const currentChat = chats?.[currentChatIndex];
     const providerKey = currentChat?.config.provider || DEFAULT_PROVIDER;
     const key = apiKeys[providerKey];
-    
-    // Create a stack trace to identify the caller
-    const stackTrace = new Error().stack;
-    const caller = stackTrace?.split('\n')[2] || 'Unknown caller';
-    
-    debug.log('useSubmit', `[useSubmit] useMemo for providerSetup called from: ${caller}`);
-    debug.log('useSubmit', `[useSubmit] Retrieved API key for provider ${providerKey}: ${key ? 'Key exists' : 'Key missing'}`);
-    debug.log('useSubmit', `[useSubmit] providerSetup render count: ${renderCountRef.current}`);
     
     return {
       currentChat,
@@ -154,6 +141,7 @@ function useSubmit(dependencies: SubmitDependencies = {}) {
       currentState.currentChatIndex
     );
     messageManager.setChats(updatedChats);
+
     return {
       currentState,
       updatedChats
@@ -172,53 +160,6 @@ function useSubmit(dependencies: SubmitDependencies = {}) {
     // Check if API key exists
     if (!providerSetup.apiKey) {
       debug.error('useSubmit', '[useSubmit] No API key found for provider:', providerSetup.providerKey);
-      
-      // For development mode, provide a mock response instead of showing an error
-      if (import.meta.env.DEV) {
-        debug.log('useSubmit', '[useSubmit] Using mock response in development mode');
-        
-        // Start global submission
-        globalSubmissionManager.startSubmission();
-        
-        try {
-          // Set generating state
-          setGenerating(true);
-          setError(null);
-          
-          // Get current state and prepare messages
-          const currentState = messageManager.getStoreState();
-          const updatedChats = messageManager.appendAssistantMessage(
-            currentState.chats,
-            currentState.currentChatIndex
-          );
-          messageManager.setChats(updatedChats);
-          
-          // Simulate streaming response
-          const mockResponse = "This is a mock response for development mode. No API key is required.";
-          
-          // Stream the mock response character by character
-          for (let i = 0; i < mockResponse.length; i++) {
-            await new Promise(resolve => setTimeout(resolve, 50));
-            
-            const latestState = messageManager.getStoreState();
-            const updatedChats = messageManager.updateMessageContent(
-              latestState.chats,
-              latestState.currentChatIndex,
-              mockResponse[i]
-            );
-            messageManager.setChats(updatedChats);
-          }
-          
-          // Complete the response
-          setGenerating(false);
-          globalSubmissionManager.endSubmission();
-          return;
-        } catch (error) {
-          setGenerating(false);
-          globalSubmissionManager.endSubmission();
-          return;
-        }
-      }
       
       // For production, show the error
       setError(`No API key found for ${providerSetup.providerKey}. Please add your API key in settings.`);
