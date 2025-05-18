@@ -18,66 +18,7 @@ const emptyStreamHandler = {
 export function useTitleGeneration(providerKey: string, dependencies: any = {}) {
   const { i18n } = useTranslation();
   const setChats = useStore(state => state.setChats);
-  const apiKeys = useStore(state => state.apiKeys); // Get apiKeys from store
-  
-  // Title generator configuration
-  const generateTitle = useCallback(async (messages: MessageInterface[], config: ModelConfig) => {
-    if (!config?.model) {
-      throw new Error('Invalid model configuration');
-    }
-
-    const currentProvider = providers[providerKey];
-    
-    // Debug the API keys and provider key
-    console.log('🔑 Title generation - Provider key:', providerKey);
-    console.log('🔑 Title generation - Available API keys:', Object.keys(apiKeys || {}));
-    
-    // Get the API key for the current provider
-    const apiKey = apiKeys?.[providerKey];
-    
-    // Check if API key exists
-    if (!apiKey) {
-      // Get the current state to check if API keys are available
-      const currentState = useStore.getState();
-      console.log('🔑 Title generation - Current state API keys:', Object.keys(currentState.apiKeys || {}));
-      
-      throw new Error(`No API key found for provider: ${providerKey}`);
-    }
-    
-    // Create a non-streaming request config
-    const requestConfig: RequestConfig = {
-      ...config,
-      stream: false
-    };
-
-    // Format the request using the non-streaming config
-    const formattedRequest = currentProvider.formatRequest(messages, requestConfig);
-    const { messages: formattedMessages } = formattedRequest;
-
-    try {
-      const submissionService = new ChatSubmissionService(
-        currentProvider,
-        apiKey,  // Use the API key from store
-        () => {},
-        emptyStreamHandler
-      );
-      
-      // Pass the non-streaming requestConfig to submit
-      const response = await submissionService.submit(
-        formattedMessages,
-        requestConfig  // Use requestConfig instead of modelConfig
-      );
-
-      if (response === undefined || response === null || response === '') {
-        throw new Error('No response received from title generation');
-      }
-
-      return response;
-    } catch (error) {
-      console.error('Error in title generation:', error);
-      throw error;
-    }
-  }, [providerKey, apiKeys]); // Add apiKeys to dependency array
+  const apiKeys = useStore(state => state.apiKeys);
   
   // Handle title generation
   const handleTitleGeneration = useCallback(async () => {
@@ -123,6 +64,13 @@ export function useTitleGeneration(providerKey: string, dependencies: any = {}) 
           const formattedRequest = currentProvider.formatRequest(messages, requestConfig);
           const { messages: formattedMessages } = formattedRequest;
           
+          // Explicitly ensure stream is false in the formatted request
+          // This is critical as some providers might not respect the config
+          if (formattedRequest.stream === true) {
+            console.warn('⚠️ Provider returned stream:true despite our request for non-streaming');
+            formattedRequest.stream = false;
+          }
+          
           const submissionService = new ChatSubmissionService(
             currentProvider,
             apiKey,  // Use the API key from current state
@@ -133,7 +81,10 @@ export function useTitleGeneration(providerKey: string, dependencies: any = {}) 
           // Pass the non-streaming requestConfig to submit
           const response = await submissionService.submit(
             formattedMessages,
-            requestConfig
+            {
+              ...requestConfig,
+              stream: false  // Explicitly set stream to false again
+            }
           );
           
           if (response === undefined || response === null || response === '') {
@@ -145,7 +96,8 @@ export function useTitleGeneration(providerKey: string, dependencies: any = {}) 
         i18n.language,
         {
           ...DEFAULT_MODEL_CONFIG,
-          model: providers[providerKey].models[0]
+          model: providers[providerKey].models[0],
+          stream: false  // Explicitly set stream to false in the model config
         }
       );
       
