@@ -26,6 +26,15 @@ export function useTitleGeneration(providerKey: string, dependencies: any = {}) 
       throw new Error('Invalid model configuration');
     }
 
+    // Get the current API key from the store to ensure it's fresh
+    const currentApiKeys = useStore.getState().apiKeys;
+    const apiKey = currentApiKeys[providerKey];
+    
+    if (!apiKey) {
+      console.error(`No API key found for provider: ${providerKey}`);
+      throw new Error('API key is missing. Please add your API key in settings.');
+    }
+
     const currentProvider = providers[providerKey];
     
     // Create a single request config with stream: false
@@ -41,11 +50,11 @@ export function useTitleGeneration(providerKey: string, dependencies: any = {}) 
     try {
       const submissionService = new ChatSubmissionService(
         currentProvider,
-        apiKeys[providerKey],
+        apiKey,  // Use the freshly retrieved API key
         () => {},
         emptyStreamHandler
       );
-
+      
       const response = await submissionService.submit(
         formattedMessages,
         requestConfig
@@ -60,7 +69,7 @@ export function useTitleGeneration(providerKey: string, dependencies: any = {}) 
       console.error('Error in title generation:', error);
       throw error;
     }
-  }, [providerKey, apiKeys]);
+  }, [providerKey]); // Remove apiKeys from dependency array since we're getting it fresh
   
   // Use injected service or create a new one
   const titleGenerationService = useRef(
