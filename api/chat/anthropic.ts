@@ -1,4 +1,4 @@
-// api/anthropic.ts
+
 /* eslint-env node */
 import Anthropic from '@anthropic-ai/sdk';
 import type {
@@ -49,6 +49,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     apiKey 
   } = data;
 
+  console.log('[Anthropic API] Received request data:', JSON.stringify({
+    messageCount: messages?.length,
+    system: system ? 'Present' : 'Not present',
+    model,
+    max_tokens,
+    temperature,
+    top_p,
+    stream,
+    thinking: thinking ? JSON.stringify(thinking) : 'Not present',
+    chatConfig: chatConfig ? 'Present' : 'Not present',
+    apiKey: apiKey ? 'Present (hidden)' : 'Not present'
+  }, null, 2));
+
   const anthropic = new Anthropic({
     apiKey: apiKey,
   });
@@ -70,15 +83,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         messages,
         model: model || chatConfig?.model,
         max_tokens: max_tokens || chatConfig?.max_tokens,
-        temperature: temperature || chatConfig?.temperature,
-        top_p: top_p || chatConfig?.top_p,
-        stream: true,
-        // Use system parameter if provided
-        ...(system && { system }),
-        // Add thinking configuration if provided
-        ...(thinking && { thinking })
+        system: system,
+        stream: true
       };
 
+      // const requestParams = {
+      //   messages,
+      //   model: model || chatConfig?.model,
+      //   max_tokens: max_tokens || chatConfig?.max_tokens,
+      //   temperature: temperature || chatConfig?.temperature,
+      //   top_p: top_p || chatConfig?.top_p,
+      //   stream: true,
+      //   // Use system parameter if provided
+      //   ...(system && { system }),
+      //   // Add thinking configuration if provided
+      //   ...(thinking && { thinking })
+      // };
+
+      console.log('[Anthropic API] Sending request to Anthropic:', JSON.stringify(requestParams, null, 2));
+      
       const stream = await anthropic.messages.create(requestParams);
 
       let lastPing = Date.now();
@@ -155,7 +178,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })),
         model: chatConfig.model,
         max_tokens: chatConfig.max_tokens,
-        temperature: chatConfig.temperature,
+        system: system
       });
 
       res.status(200).json(response);
