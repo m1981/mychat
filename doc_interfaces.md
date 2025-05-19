@@ -2,6 +2,104 @@
 
 This document outlines the key interfaces in our provider architecture design, along with the motivation behind each interface based on SOLID principles and React patterns.
 
+```mermaid
+graph TD
+    subgraph "React Components"
+        App[App.tsx]
+        Chat[Chat Component]
+        Menu[Menu Component]
+    end
+
+    subgraph "Context"
+        PC[ProviderContext]
+    end
+
+    subgraph "Hooks"
+        UCC[useChatCompletion]
+        UTG[useTitleGeneration]
+        UP[useProvider]
+        US[useSubmit]
+        UMM[useMessageManager]
+    end
+
+    subgraph "Services"
+        CSS[ChatSubmissionService]
+        TGS[TitleGenerationService]
+    end
+
+    subgraph "Providers"
+        PR[ProviderRegistry]
+        OP[OpenAI Provider]
+        AP[Anthropic Provider]
+    end
+
+    subgraph "Interfaces"
+        API[AIProviderInterface]
+        RC[RequestConfig]
+        FR[FormattedRequest]
+        PR_R[ProviderResponse]
+        MI[MessageInterface]
+        MC[ModelConfig]
+    end
+
+    subgraph "Store"
+        ZS[Zustand Store]
+        CS[ChatSlice]
+        IS[InputSlice]
+        AS[AuthSlice]
+        CfS[ConfigSlice]
+        PS[PromptSlice]
+        RS[RequestSlice]
+    end
+
+    %% Store relationships
+    ZS --> CS
+    ZS --> IS
+    ZS --> AS
+    ZS --> CfS
+    ZS --> PS
+    ZS --> RS
+
+    %% Provider context flow
+    App --> PC
+    PC --> PR
+    PR --> OP
+    PR --> AP
+    OP -.implements.-> API
+    AP -.implements.-> API
+
+    %% Hook dependencies
+    Chat --> UCC
+    Chat --> UTG
+    Chat --> US
+    UCC --> UP
+    UTG --> UP
+    UP --> PC
+    
+    %% Service connections
+    US --> CSS
+    UTG --> TGS
+    CSS --> API
+    TGS --> API
+    
+    %% Interface relationships
+    API --> RC
+    API --> FR
+    API --> PR_R
+    RC --> MC
+
+    %% Store connections
+    Chat --> ZS
+    Menu --> ZS
+    US --> ZS
+    UMM --> ZS
+    US --> UMM
+    
+    %% Additional connections
+    CSS -.uses.-> UP
+    TGS -.uses.-> UP
+```
+
 ## Core Interfaces
 
 ### `AIProviderInterface`
