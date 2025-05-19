@@ -45,12 +45,9 @@ export interface ProviderResponse {
   [key: string]: unknown;
 }
 
-export interface AIProvider {
-  id: ProviderKey;
-  name: string;
-  endpoints: string[];
-  models: string[];
-  formatRequest: (messages: MessageInterface[], config: RequestConfig) => FormattedRequest;
-  parseResponse: (response: ProviderResponse) => string;
-  parseStreamingResponse: (chunk: ProviderResponse) => string;
+export interface AIProviderInterface {
+  formatRequest: (config: RequestConfig, messages: MessageInterface[]) => FormattedRequest;
+  parseResponse: (response: any) => ProviderResponse;
+  submitCompletion: (formattedRequest: FormattedRequest) => Promise<ProviderResponse>;
+  submitStream: (formattedRequest: FormattedRequest) => Promise<ReadableStream>;
 }

@@ -1,44 +1,45 @@
-import useStore from '@store/store';
-import { MessageInterface, ChatInterface } from '@type/chat';
-
+import { MessageInterface, ChatInterface, ModelConfig } from '@type/chat';
 import { TitleGenerator } from './TitleGenerator';
+import { AIProviderInterface } from '@type/provider';
 
 export class TitleGenerationService {
+  private titleGenerator: TitleGenerator;
+  private updateCallback: (chats: ChatInterface[]) => void;
+  
   constructor(
-    private titleGenerator: TitleGenerator,
-    private setChats: (chats: ChatInterface[]) => void
-  ) {}
-
+    provider: AIProviderInterface,
+    updateCallback: (chats: ChatInterface[]) => void
+  ) {
+    this.titleGenerator = new TitleGenerator(provider);
+    this.updateCallback = updateCallback;
+  }
+  
   async generateAndUpdateTitle(
+    chatIndex: number,
     messages: MessageInterface[],
-    chatIndex: number
+    chats: ChatInterface[],
+    config: ModelConfig
   ): Promise<void> {
-    const lastUserMessage = messages
-      .slice()
-      .reverse()
-      .find(msg => msg.role === 'user')?.content || '';
-    
-    const lastAssistantMessage = messages
-      .slice()
-      .reverse()
-      .find(msg => msg.role === 'assistant')?.content || '';
-
-    const title = await this.titleGenerator.generateChatTitle(
-      lastUserMessage,
-      lastAssistantMessage
-    );
-
-    const state = useStore.getState();
-    if (!state.chats) {
-      throw new Error('Chats array is undefined');
+    try {
+      // Only generate title if we have enough messages
+      if (messages.length < 2) {
+        return;
+      }
+      
+      const title = await this.titleGenerator.generateChatTitle(messages, config);
+      
+      // Update chat title
+      const updatedChats = [...chats];
+      updatedChats[chatIndex] = {
+        ...updatedChats[chatIndex],
+        title,
+        titleSet: true // Mark that we've set a title
+      };
+      
+      this.updateCallback(updatedChats);
+    } catch (error) {
+      console.error('Failed to generate title:', error);
+      // Don't update the title if there's an error
     }
-
-    const updatedChats = [...(state.chats || [])];
-    updatedChats[chatIndex] = {
-      ...updatedChats[chatIndex],
-      title,
-      titleSet: true
-    };
-    this.setChats(updatedChats);
   }
 }

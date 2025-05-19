@@ -10,6 +10,7 @@ import { ChatInterface } from '@type/chat';
 import { Theme } from '@type/theme';
 import { getEnvVar } from '@utils/env';
 import { Toaster } from 'react-hot-toast';
+import { ProviderProvider } from '@contexts/ProviderContext';
 
 import i18n from './i18n';
 
@@ -95,6 +96,7 @@ function App() {
   const setTheme = useStore((state) => state.setTheme);
   const setApiKey = useStore((state) => state.setApiKey);
   const setCurrentChatIndex = useStore((state) => state.setCurrentChatIndex);
+  const providerKey = useStore(state => state.currentProvider);
 
   const handleErrorClick = () => {
     try {
@@ -175,38 +177,40 @@ function App() {
   const showTestButton = true;
 
   return (
-    <Sentry.ErrorBoundary 
-      fallback={({ error, resetError }) => (
-        <ErrorFallback 
-          error={error as Error}
-          resetError={resetError} 
-        />
-      )}
-      onError={(error, info) => {
-        Sentry.withScope((scope) => {
-          scope.setExtra("componentStack", info);
-          Sentry.captureException(error);
-        });
-        console.error("Error caught by boundary:", error);
-      }}
-    >
-      <div className='overflow-hidden w-full h-full relative'>
-        <Menu />
-        <Chat />
-        <Toaster />
-        {showTestButton && (
-          <>
-            <Debug />
-            <button 
-              className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded"
-              onClick={handleErrorClick}
-            >
-              Test Sentry
-            </button>
-          </>
+    <ProviderProvider providerKey={providerKey}>
+      <Sentry.ErrorBoundary 
+        fallback={({ error, resetError }) => (
+          <ErrorFallback 
+            error={error as Error}
+            resetError={resetError} 
+          />
         )}
-      </div>
-    </Sentry.ErrorBoundary>
+        onError={(error, info) => {
+          Sentry.withScope((scope) => {
+            scope.setExtra("componentStack", info);
+            Sentry.captureException(error);
+          });
+          console.error("Error caught by boundary:", error);
+        }}
+      >
+        <div className='overflow-hidden w-full h-full relative'>
+          <Menu />
+          <Chat />
+          <Toaster />
+          {showTestButton && (
+            <>
+              <Debug />
+              <button 
+                className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded"
+                onClick={handleErrorClick}
+              >
+                Test Sentry
+              </button>
+            </>
+          )}
+        </div>
+      </Sentry.ErrorBoundary>
+    </ProviderProvider>
   );
 }
 

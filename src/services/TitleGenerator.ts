@@ -1,30 +1,82 @@
 /* eslint-env browser */
 
+import { TitleGeneratorInterface } from './interfaces/TitleGeneratorInterface';
 import { MessageInterface, ModelConfig } from '@type/chat';
+import { AIProviderInterface } from '@type/provider';
 
-type TitleGeneratorResponse = {
-  content?: string;
-  choices?: Array<{
-    message?: {
-      content?: string;
-    };
-  }>;
-};
-
-export class TitleGenerator {
-  constructor(
-    private readonly generateTitle: (
-      messages: MessageInterface[],
-      config: ModelConfig
-    ) => Promise<TitleGeneratorResponse | string>,
-    private readonly language: string,
-    private readonly defaultConfig: ModelConfig
-  ) {
-    if (!defaultConfig || !defaultConfig.model) {
-      throw new Error('Invalid model configuration');
+export class TitleGenerator implements TitleGeneratorInterface {
+  private provider: AIProviderInterface;
+  
+  constructor(provider: AIProviderInterface) {
+    this.provider = provider;
+  }
+  
+  async generateChatTitle(messages: MessageInterface[], config: ModelConfig): Promise<string> {
+    try {
+      const prompt = this.formatTitlePrompt(messages);
+      const formattedRequest = this.provider.formatRequest(
+        { ...config, stream: false }, // Ensure streaming is disabled for title generation
+        prompt
+      );
+      const response = await this.provider.submitCompletion(formattedRequest);
+      return this.extractTitleFromResponse(response);
+    } catch (error) {
+      console.error('Error generating chat title:', error);
+      return 'New Conversation'; // Fallback title
     }
   }
-
+  
+  private formatTitlePrompt(messages: MessageInterface[]): MessageInterface[] {
+    // Find the last user and assistant messages for context
+    const lastUserMessage = messages
+      .slice()
+      .reverse()
+      .find(msg => msg.role === 'user')?.content || '';
+    
+    const lastAssistantMessage = messages
+      .slice()
+      .reverse()
+      .find(msg => msg.role === 'assistant')?.content || '';
+    
+    // Create a system message for better title generation
+    const systemMessage: MessageInterface = {
+      role: 'system',
+      content: 'Generate a concise, descriptive title (5 words or less) for this conversation. Return only the title text with no quotes or additional explanation.'
+    };
+    
+    // Create a prompt for title generation
+    return [
+      systemMessage,
+      {
+        role: 'user',
+        content: `Generate a title for this conversation:\nUser: ${lastUserMessage}\nAssistant: ${lastAssistantMessage}`
+      }
+    ];
+  }
+  
+  private extractTitleFromResponse(response: any): string {
+    let title = '';
+    
+    try {
+      // Handle different response formats from various providers
+      if (typeof response.content === 'string') {
+        title = response.content;
+      } else if (response.choices && Array.isArray(response.choices)) {
+        // OpenAI format
+        title = response.choices[0]?.message?.content || 
+               response.choices[0]?.delta?.content || '';
+      } else if (response.delta && typeof response.delta.text === 'string') {
+        // Anthropic format
+        title = response.delta.text;
+      }
+      
+      return this.cleanupTitle(title);
+    } catch (error) {
+      console.error('Error extracting title from response:', error);
+      return 'New Conversation';
+    }
+  }
+  
   private cleanupTitle(title: string): string {
     return title
       .trim()
@@ -37,51 +89,5 @@ export class TitleGenerator {
       // Remove multiple spaces
       .replace(/\s+/g, ' ')
       .trim();
-  }
-
-  async generateChatTitle(
-    userMessage: string,
-    assistantMessage: string
-  ): Promise<string> {
-    if (!this.defaultConfig || !this.defaultConfig.model) {
-      throw new Error('Invalid model configuration');
-    }
-
-    const message: MessageInterface = {
-      role: 'user',
-      content: `Generate a title in less than 6 words for the following message (language: ${this.language}):\n"""\nUser: ${userMessage}\nAssistant: ${assistantMessage}\n"""`,
-    };
-
-    try {
-      const response = await this.generateTitle([message], this.defaultConfig);
-      console.log('Title generation raw response:', response);
-
-      let title: string;
-
-      // Handle different response types
-      if (typeof response === 'string') {
-        title = response;
-      }
-      // Handle structured response
-      else if ('content' in response && response.content) {
-        title = response.content;
-      }
-      // Handle OpenAI-style response
-      else if ('choices' in response && Array.isArray(response.choices)) {
-        const content = response.choices[0]?.message?.content;
-        if (!content) {
-          throw new Error('Invalid response format from title generation');
-        }
-        title = content;
-      }
-      else {
-        throw new Error('Invalid response format from title generation');
-      }
-
-      return this.cleanupTitle(title);
-    } catch (error) {
-      console.error('Title generation failed:', error);
-      throw error;
-    }
   }
 }

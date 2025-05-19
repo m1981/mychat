@@ -1,123 +1,101 @@
-import { useRef, useCallback } from 'react';
-
-import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
-import { ChatSubmissionService } from '@src/services/SubmissionService';
-import { TitleGenerationService } from '@src/services/TitleGenerationService';
-import { TitleGenerator } from '@src/services/TitleGenerator';
+import { useCallback } from 'react';
 import useStore from '@store/store';
 import { MessageInterface, ModelConfig } from '@type/chat';
-import { RequestConfig } from '@type/provider';
-import { providers } from '@type/providers';
-import { useTranslation } from 'react-i18next';
+import { useProvider } from '@contexts/ProviderContext';
 
-// Create a minimal stream handler object
-const emptyStreamHandler = {
-  processStream: async () => {}
-};
-
-export function useTitleGeneration(providerKey: string, dependencies: any = {}) {
-  const { i18n } = useTranslation();
+export function useTitleGeneration() {
+  const provider = useProvider();
   const setChats = useStore(state => state.setChats);
-  const apiKeys = useStore(state => state.apiKeys);
   
-  // Handle title generation
-  const handleTitleGeneration = useCallback(async () => {
-    console.log('🏷️ handleTitleGeneration called');
+  const generateTitle = useCallback(async (
+    messages: MessageInterface[], 
+    config: ModelConfig,
+    chatIndex?: number
+  ) => {
     try {
-      // Use injected store or default
-      const storeToUse = dependencies.store || useStore;
-      const currentState = storeToUse.getState();
-      
-      // Debug API keys in the current state
-      console.log('🔑 handleTitleGeneration - Provider key:', providerKey);
-      console.log('🔑 handleTitleGeneration - Available API keys:', Object.keys(currentState.apiKeys || {}));
-      
-      if (!currentState.chats || currentState.currentChatIndex < 0) {
-        console.error('❌ No active chat found for title generation');
-        throw new Error('No active chat found');
-      }
-
-      console.log('🏷️ Generating title for chat', currentState.currentChatIndex);
-      
-      // Get the API key directly from the current state
-      const apiKey = currentState.apiKeys?.[providerKey];
-      if (!apiKey) {
-        throw new Error(`No API key found for provider: ${providerKey} in handleTitleGeneration`);
+      // Skip if not enough messages
+      if (messages.length < 2) {
+        return;
       }
       
-      // Create a new title generator with the current API key
-      const titleGenerator = new TitleGenerator(
-        async (messages, config) => {
-          if (!config?.model) {
-            throw new Error('Invalid model configuration');
-          }
-          
-          const currentProvider = providers[providerKey];
-          
-          // Create a non-streaming request config
-          const requestConfig: RequestConfig = {
-            ...config,
-            stream: false
-          };
-          
-          // Format the request using the non-streaming config
-          const formattedRequest = currentProvider.formatRequest(messages, requestConfig);
-          const { messages: formattedMessages } = formattedRequest;
-          
-          // Explicitly ensure stream is false in the formatted request
-          // This is critical as some providers might not respect the config
-          if (formattedRequest.stream === true) {
-            console.warn('⚠️ Provider returned stream:true despite our request for non-streaming');
-            formattedRequest.stream = false;
-          }
-          
-          const submissionService = new ChatSubmissionService(
-            currentProvider,
-            apiKey,  // Use the API key from current state
-            () => {},
-            emptyStreamHandler
-          );
-          
-          // Pass the non-streaming requestConfig to submit
-          const response = await submissionService.submit(
-            formattedMessages,
-            {
-              ...requestConfig,
-              stream: false  // Explicitly set stream to false again
-            }
-          );
-          
-          if (response === undefined || response === null || response === '') {
-            throw new Error('No response received from title generation');
-          }
-          
-          return response;
-        },
-        i18n.language,
+      // Get current state
+      const currentState = useStore.getState();
+      const { chats } = currentState;
+      const targetChatIndex = chatIndex !== undefined ? chatIndex : currentState.currentChatIndex;
+      
+      // Only generate title if it hasn't been set yet
+      const currentChat = chats[targetChatIndex];
+      if (!currentChat || currentChat.titleSet) {
+        return;
+      }
+      
+      // Create title prompt
+      const lastUserMessage = messages
+        .slice()
+        .reverse()
+        .find(msg => msg.role === 'user')?.content || '';
+      
+      const lastAssistantMessage = messages
+        .slice()
+        .reverse()
+        .find(msg => msg.role === 'assistant')?.content || '';
+      
+      const titlePrompt = [
         {
-          ...DEFAULT_MODEL_CONFIG,
-          model: providers[providerKey].models[0],
-          stream: false  // Explicitly set stream to false in the model config
+          role: 'system',
+          content: 'Generate a concise, descriptive title (5 words or less) for this conversation. Return only the title text with no quotes or additional explanation.'
+        },
+        {
+          role: 'user',
+          content: `Generate a title for this conversation:\nUser: ${lastUserMessage}\nAssistant: ${lastAssistantMessage}`
         }
+      ];
+      
+      // Format request using provider
+      const formattedRequest = provider.formatRequest(
+        { ...config, stream: false },
+        titlePrompt
       );
       
-      // Create a new title generation service with the current title generator
-      const titleGenerationService = new TitleGenerationService(
-        titleGenerator,
-        setChats
-      );
+      // Submit request
+      const response = await provider.submitCompletion(formattedRequest);
       
-      await titleGenerationService.generateAndUpdateTitle(
-        currentState.chats[currentState.currentChatIndex].messages,
-        currentState.currentChatIndex
-      );
+      // Extract title from response
+      let title = '';
+      if (typeof response.content === 'string') {
+        title = response.content;
+      } else if (response.choices && Array.isArray(response.choices)) {
+        title = response.choices[0]?.message?.content || '';
+      } else if (response.delta && typeof response.delta.text === 'string') {
+        title = response.delta.text;
+      }
       
-      console.log('🏷️ Title generation completed successfully');
+      // Clean up title
+      title = title
+        .trim()
+        .replace(/^["'`]|["'`]$/g, '')
+        .replace(/["'`]/g, '')
+        .replace(/^[^\w\s]|[^\w\s]$/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      if (!title) {
+        title = 'New Conversation';
+      }
+      
+      // Update chat title
+      const updatedChats = [...chats];
+      updatedChats[targetChatIndex] = {
+        ...updatedChats[targetChatIndex],
+        title,
+        titleSet: true
+      };
+      
+      setChats(updatedChats);
     } catch (error) {
-      console.error('❌ Title generation failed:', error);
-      throw error;
+      console.error('Error in title generation:', error);
     }
-  }, [providerKey, i18n.language, setChats, dependencies.store]);
+  }, [provider, setChats]);
   
-  return { handleTitleGeneration };
+  return { generateTitle };
 }

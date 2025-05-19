@@ -1,7 +1,8 @@
 // src/config/providers/provider.registry.ts
 import { ProviderKey } from '@type/chat';
-
 import { ProviderConfig } from './provider.config';
+import { AIProviderInterface } from '@type/provider';
+import { providers } from '@type/providers';
 
 const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
   anthropic: {
@@ -110,5 +111,12 @@ export class ProviderRegistry {
     }
 
     throw new Error(`Provider ${provider} not supported`);
+  }
+
+  static getProviderImplementation(key: ProviderKey): AIProviderInterface {
+    if (!providers[key]) {
+      throw new Error(`Provider implementation for ${key} not found`);
+    }
+    return providers[key];
   }
 }
