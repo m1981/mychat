@@ -24,26 +24,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const data = JSON.parse(Buffer.concat(chunks).toString());
   
   // Extract standardized parameters
-  const { 
-    formattedRequest, // Use the formatted request from AIProviderInterface.formatRequest
-    apiKey 
-  } = data;
+  const { formattedRequest, apiKey } = data;
 
+  if (!formattedRequest || !apiKey) {
+    return res.status(400).json({ 
+      error: 'Missing required parameters',
+      status: 400
+    });
+  }
+
+  // Initialize OpenAI client with the API key from the request
   const openai = new OpenAI({
     apiKey: apiKey,
-    timeout: 30000, // 30 second timeout for API requests
+    timeout: 30000,
   });
 
   try {
     if (formattedRequest.stream) {
+      // The OpenAI SDK automatically uses the correct endpoint
+      // We don't need to specify it explicitly
+      const streamResponse = await openai.chat.completions.create({
+        ...formattedRequest,
+        stream: true,
+      });
+
+      // Set up SSE headers
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      const streamResponse = await openai.chat.completions.create(
-        formattedRequest as OpenAI.ChatCompletionCreateParamsStreaming
-      );
-
+      // Keep-alive mechanism
       let lastPing = Date.now();
       const keepAliveInterval = setInterval(() => {
         if (Date.now() - lastPing >= 5000) {
@@ -63,14 +73,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.end();
       }
     } else {
-      const response = await openai.chat.completions.create(
-        formattedRequest as OpenAI.ChatCompletionCreateParamsNonStreaming
-      );
+      // The OpenAI SDK automatically uses the correct endpoint
+      // We don't need to specify it explicitly
+      const response = await openai.chat.completions.create({
+        ...formattedRequest,
+        stream: false,
+      });
 
-      // Return standardized response format matching ProviderResponse interface
+      // Return standardized response
       res.status(200).json({
+        content: response.choices[0]?.message?.content || '',
         choices: response.choices,
-        content: response.choices[0]?.message?.content || ''
+        model: response.model,
+        usage: response.usage
       });
     }
   } catch (error: unknown) {

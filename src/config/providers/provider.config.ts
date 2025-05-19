@@ -1,6 +1,5 @@
 // provider.config.ts - Contains only configuration data
 import { ProviderKey } from '@type/chat';
-import { getEnvVar } from '@utils/env';
 
 export interface ProviderModel {
   id: string;
@@ -20,19 +19,14 @@ export interface ProviderConfig {
   models: ProviderModel[];
 }
 
-// Determine whether to use direct API endpoints or proxy through Next.js
-const USE_DIRECT_API = getEnvVar('USE_DIRECT_API', 'false') === 'true';
-
 // Configuration data only - no dependencies on implementations
 export const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
   anthropic: {
     id: 'anthropic',
     name: 'Anthropic',
     defaultModel: 'claude-3-7-sonnet-20250219',
-    // Use either direct API or Next.js proxy based on environment
-    endpoints: USE_DIRECT_API 
-      ? ['https://api.anthropic.com/v1/messages'] 
-      : ['/api/chat/anthropic'],
+    // Always use the secure proxy endpoint
+    endpoints: ['/api/chat/anthropic'],
     models: [
       {
         id: 'claude-3-7-sonnet-20250219',
@@ -50,10 +44,8 @@ export const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
     id: 'openai',
     name: 'OpenAI',
     defaultModel: 'gpt-4o',
-    // Use either direct API or Next.js proxy based on environment
-    endpoints: USE_DIRECT_API 
-      ? ['https://api.openai.com/v1/chat/completions'] 
-      : ['/api/chat/openai'],
+    // Always use the secure proxy endpoint
+    endpoints: ['/api/chat/openai'],
     models: [
       {
         id: 'gpt-4o',

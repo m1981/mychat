@@ -39,23 +39,16 @@ describe('Anthropic API Handler', () => {
       // Mock the async iterator for req
       [Symbol.asyncIterator]: async function* () {
         yield Buffer.from(JSON.stringify({
-          messages: [{ role: 'user', content: 'Hello' }],
-          system: 'You are a helpful assistant.',
-          model: 'claude-3-5-sonnet-20240229',
-          max_tokens: 1000,
-          temperature: 0.7,
-          stream: true,
-          thinking: {
-            type: 'enabled',
-            budget_tokens: 10000
-          },
-          config: {
+          // Update to match the expected format
+          formattedRequest: {
+            messages: [{ role: 'user', content: 'Hello' }],
+            system: 'You are a helpful assistant.',
             model: 'claude-3-5-sonnet-20240229',
             max_tokens: 1000,
             temperature: 0.7,
             stream: true,
-            enableThinking: true,
-            thinkingConfig: {
+            thinking: {
+              type: 'enabled',
               budget_tokens: 10000
             }
           },
@@ -168,25 +161,16 @@ describe('Anthropic API Handler', () => {
       method: 'POST',
       [Symbol.asyncIterator]: async function* () {
         yield Buffer.from(JSON.stringify({
-          messages: [{ role: 'user', content: 'Hello' }],
-          system: 'You are a helpful assistant.',
-          model: 'claude-3-5-sonnet-20240229',
-          max_tokens: 1000,
-          temperature: 0.7,
-          top_p: 0.9,
-          stream: true,
-          thinking: {
-            type: 'enabled',
-            budget_tokens: 10000
-          },
-          config: {
+          formattedRequest: {
+            messages: [{ role: 'user', content: 'Hello' }],
+            system: 'You are a helpful assistant.',
             model: 'claude-3-5-sonnet-20240229',
             max_tokens: 1000,
             temperature: 0.7,
             top_p: 0.9,
             stream: true,
-            enableThinking: true,
-            thinkingConfig: {
+            thinking: {
+              type: 'enabled',
               budget_tokens: 10000
             }
           },
@@ -211,8 +195,5 @@ describe('Anthropic API Handler', () => {
         budget_tokens: 10000
       }
     }));
-    
-    // Log the full request for inspection
-    console.log('Full Anthropic API request:', JSON.stringify(createSpy.mock.calls[0][0], null, 2));
   });
 });

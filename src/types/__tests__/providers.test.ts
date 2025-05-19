@@ -137,14 +137,16 @@ describe('Provider Implementations', () => {
       await openaiProvider.submitCompletion(formattedRequest);
       
       expect(global.fetch).toHaveBeenCalledWith(
-        '/api/chat/openai', // Exact string match instead of StringContaining
+        '/api/chat/openai',
         {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer mock-openai-key'
+            'Content-Type': 'application/json'
           },
-          body: JSON.stringify(formattedRequest)
+          body: JSON.stringify({
+            formattedRequest,
+            apiKey: 'mock-openai-key'
+          })
         }
       );
     });
@@ -162,15 +164,15 @@ describe('Provider Implementations', () => {
       const stream = await openaiProvider.submitStream(formattedRequest);
       
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/chat/openai'),
-        expect.objectContaining({
+        '/api/chat/openai',
+        {
           method: 'POST',
-          headers: expect.objectContaining({
+          headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer mock-openai-key'
-          }),
+          },
           body: JSON.stringify({...formattedRequest, stream: true})
-        })
+        }
       );
       
       expect(stream).toBeDefined();
@@ -250,16 +252,17 @@ describe('Provider Implementations', () => {
       await anthropicProvider.submitCompletion(formattedRequest);
       
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/chat/anthropic'),
-        expect.objectContaining({
+        '/api/chat/anthropic',
+        {
           method: 'POST',
-          headers: expect.objectContaining({
-            'Content-Type': 'application/json',
-            'x-api-key': 'mock-anthropic-key',
-            'anthropic-version': '2023-06-01'
-          }),
-          body: JSON.stringify(formattedRequest)
-        })
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            formattedRequest,
+            apiKey: 'mock-anthropic-key'
+          })
+        }
       );
     });
 

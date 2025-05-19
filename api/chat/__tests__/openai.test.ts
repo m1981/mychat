@@ -38,8 +38,9 @@ describe('OpenAI API Handler', () => {
       // Mock the async iterator for req
       [Symbol.asyncIterator]: async function* () {
         yield Buffer.from(JSON.stringify({
-          messages: [{ role: 'user', content: 'Hello' }],
-          config: {
+          // Update to match the expected format
+          formattedRequest: {
+            messages: [{ role: 'user', content: 'Hello' }],
             model: 'gpt-4',
             max_tokens: 1000,
             temperature: 0.7,

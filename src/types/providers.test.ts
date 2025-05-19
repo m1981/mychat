@@ -60,7 +60,7 @@ global.fetch = vi.fn().mockImplementation(() =>
 // Add this at the top of your test file, before importing providers
 vi.mock('@utils/env', () => ({
   getEnvVar: (key: string, defaultValue: string) => {
-    if (key === 'USE_DIRECT_API') return 'true';
+    // Remove the USE_DIRECT_API check since we're not using it anymore
     return defaultValue;
   }
 }));

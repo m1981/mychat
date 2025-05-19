@@ -38,21 +38,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const data = await parseRequestBody(req);
   
   // Extract standardized parameters
-  const { 
-    formattedRequest, // Use the formatted request from AIProviderInterface.formatRequest
-    apiKey 
-  } = data;
+  const { formattedRequest, apiKey } = data;
 
-  console.log('[Anthropic API] Received request data:', JSON.stringify({
-    formattedRequest: formattedRequest ? 'Present (details hidden)' : 'Not present',
-    apiKey: apiKey ? 'Present (hidden)' : 'Not present'
-  }, null, 2));
+  if (!formattedRequest || !apiKey) {
+    return res.status(400).json({ 
+      error: 'Missing required parameters',
+      status: 400
+    });
+  }
+
+  const anthropic = new Anthropic({
+    apiKey: apiKey,
+  });
 
   try {
-    const anthropic = new Anthropic({
-      apiKey: apiKey,
-    });
-
     if (formattedRequest.stream) {
       // Set up SSE headers
       res.setHeader('Content-Type', 'text/event-stream');
@@ -135,10 +134,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     } else {
       // Non-streaming response
-      const response = await anthropic.messages.create(formattedRequest);
+      const response = await anthropic.messages.create({
+        ...formattedRequest,
+        stream: false
+      });
 
-      // Return standardized response format matching ProviderResponse interface
-      res.status(200).json(response);
+      // Return standardized response
+      res.status(200).json({
+        content: response.content,
+        model: response.model,
+        id: response.id,
+        type: response.type
+      });
     }
   } catch (error: any) {
     console.error('[Anthropic API] Error:', error);
