@@ -1,30 +1,46 @@
-   import React, { createContext, useContext, ReactNode } from 'react';
+   import React, { createContext, useContext, useState, useEffect } from 'react';
    import { AIProviderInterface } from '@type/provider';
    import { ProviderKey } from '@type/chat';
-   import { providers } from '@type/providers';
+   import { ProviderRegistry } from '@config/providers/provider.registry';
+   import useStore from '@store/store';
+   import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 
-   export type ProviderContextType = AIProviderInterface | null;
+   // Create context with null as default value
+   export const ProviderContext = createContext<AIProviderInterface | null>(null);
 
-   const ProviderContext = createContext<ProviderContextType>(null);
+   // Provider component that wraps your app and makes the provider available
+   export const ProviderProvider: React.FC<{ 
+     children: React.ReactNode;
+     providerKey?: ProviderKey;
+   }> = ({ children, providerKey }) => {
+     const { currentChatIndex, chats, apiKeys } = useStore();
+     const [provider, setProvider] = useState<AIProviderInterface | null>(null);
 
-   interface ProviderProviderProps {
-     providerKey: ProviderKey;
-     children: ReactNode;
-   }
+     useEffect(() => {
+       // Get provider key from prop, current chat, or use default
+       const effectiveProviderKey: ProviderKey = providerKey || 
+         chats?.[currentChatIndex]?.config?.provider || 
+         DEFAULT_PROVIDER;
+       
+       // Get provider from registry
+       const currentProvider = ProviderRegistry.getProvider(effectiveProviderKey);
+       
+       // Set provider
+       setProvider(currentProvider);
+     }, [currentChatIndex, chats, providerKey]);
 
-   export function ProviderProvider({ providerKey, children }: ProviderProviderProps) {
-     const provider = providers[providerKey];
      return (
        <ProviderContext.Provider value={provider}>
          {children}
        </ProviderContext.Provider>
      );
-   }
+   };
 
-   export function useProvider(): AIProviderInterface {
-     const provider = useContext(ProviderContext);
-     if (!provider) {
+   // Hook to use the provider context
+   export const useProvider = (): AIProviderInterface => {
+     const context = useContext(ProviderContext);
+     if (context === null) {
        throw new Error('useProvider must be used within a ProviderProvider');
      }
-     return provider;
+     return context;
    }
