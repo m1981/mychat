@@ -56,10 +56,3 @@ export interface AIProviderInterface {
   submitCompletion: (formattedRequest: FormattedRequest) => Promise<ProviderResponse>;
   submitStream: (formattedRequest: FormattedRequest) => Promise<ReadableStream>;
 }
-
-export interface AIProvider {
-  id: string;
-  name: string;
-  endpoints: string[];
-  models: string[];
-}

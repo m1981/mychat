@@ -9,6 +9,7 @@ import useStore from '@store/store';
 import { ModelConfig } from '@type/chat';
 import { providers } from '@type/providers';
 import { debug } from '@utils/debug';
+import { useProvider } from '@contexts/ProviderContext';
 
 import { useMessageManager } from './useMessageManager';
 import { useStreamHandler } from './useStreamHandler';
