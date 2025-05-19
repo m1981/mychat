@@ -20,7 +20,7 @@ export interface FormattedRequest {
   // Optional provider-specific fields
   system?: string;         // For providers that support system prompts
   thinking?: {             // For providers that support thinking mode
-    type: string;          // Changed from "enabled" to string
+    type: string;          // Type of thinking mode
     budget_tokens: number;
   };
   presence_penalty?: number;
@@ -30,7 +30,7 @@ export interface FormattedRequest {
   [key: string]: unknown;
 }
 
-// Define a generic response type
+// Define a standardized response type
 export interface ProviderResponse {
   content?: string | Array<{text: string}>;
   choices?: Array<{

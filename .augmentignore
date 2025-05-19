@@ -13,3 +13,6 @@ public
 .env
 .venv
 venv
+src/assets
+src/components
+

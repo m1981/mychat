@@ -171,6 +171,7 @@ export default defineConfig({
       '@src': resolve(__dirname, './src'),
       '@icon': resolve(__dirname, './src/assets/icons'),
       '@type': resolve(__dirname, './src/types'),
+      '@contexts': resolve(__dirname, './src/contexts'),
       '@hooks': resolve(__dirname, './src/hooks'),
       '@store': resolve(__dirname, './src/store'),
       '@config': resolve(__dirname, './src/config'),

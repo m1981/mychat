@@ -1,11 +1,18 @@
-   import React, { createContext, useContext } from 'react';
+   import React, { createContext, useContext, ReactNode } from 'react';
    import { AIProviderInterface } from '@type/provider';
    import { ProviderKey } from '@type/chat';
    import { providers } from '@type/providers';
-   
-   const ProviderContext = createContext<AIProviderInterface | null>(null);
-   
-   export function ProviderProvider({ providerKey, children }) {
+
+   export type ProviderContextType = AIProviderInterface | null;
+
+   const ProviderContext = createContext<ProviderContextType>(null);
+
+   interface ProviderProviderProps {
+     providerKey: ProviderKey;
+     children: ReactNode;
+   }
+
+   export function ProviderProvider({ providerKey, children }: ProviderProviderProps) {
      const provider = providers[providerKey];
      return (
        <ProviderContext.Provider value={provider}>
@@ -13,7 +20,7 @@
        </ProviderContext.Provider>
      );
    }
-   
+
    export function useProvider(): AIProviderInterface {
      const provider = useContext(ProviderContext);
      if (!provider) {

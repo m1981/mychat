@@ -1,8 +1,22 @@
 import { useCallback } from 'react';
 import { MessageInterface, ModelConfig } from '@type/chat';
 import { useProvider } from '@contexts/ProviderContext';
+import { RequestConfig } from '@type/provider';
 
-export function useChatCompletion() {
+export interface UseChatCompletionReturn {
+  generateCompletion: (
+    messages: MessageInterface[],
+    config: ModelConfig
+  ) => Promise<string>;
+  
+  generateCompletionStream: (
+    messages: MessageInterface[],
+    config: ModelConfig,
+    onChunk: (chunk: string) => void
+  ) => Promise<void>;
+}
+
+export function useChatCompletion(): UseChatCompletionReturn {
   const provider = useProvider();
   
   const generateCompletion = useCallback(async (
@@ -10,21 +24,21 @@ export function useChatCompletion() {
     config: ModelConfig
   ): Promise<string> => {
     try {
-      const formattedRequest = provider.formatRequest(
-        { ...config, stream: false },
-        messages
-      );
+      const requestConfig: RequestConfig = {
+        ...config,
+        stream: false
+      };
       
+      const formattedRequest = provider.formatRequest(requestConfig, messages);
       const response = await provider.submitCompletion(formattedRequest);
+      const parsedResponse = provider.parseResponse(response);
       
       // Extract completion from response
       let content = '';
-      if (typeof response.content === 'string') {
-        content = response.content;
-      } else if (response.choices && Array.isArray(response.choices)) {
-        content = response.choices[0]?.message?.content || '';
-      } else if (response.delta && typeof response.delta.text === 'string') {
-        content = response.delta.text;
+      if (typeof parsedResponse.content === 'string') {
+        content = parsedResponse.content;
+      } else if (parsedResponse.choices && Array.isArray(parsedResponse.choices)) {
+        content = parsedResponse.choices[0]?.message?.content || '';
       }
       
       return content;
@@ -40,11 +54,12 @@ export function useChatCompletion() {
     onChunk: (chunk: string) => void
   ): Promise<void> => {
     try {
-      const formattedRequest = provider.formatRequest(
-        { ...config, stream: true },
-        messages
-      );
+      const requestConfig: RequestConfig = {
+        ...config,
+        stream: true
+      };
       
+      const formattedRequest = provider.formatRequest(requestConfig, messages);
       const stream = await provider.submitStream(formattedRequest);
       
       if (!stream) {
@@ -73,7 +88,8 @@ export function useChatCompletion() {
           
           try {
             const parsed = JSON.parse(data);
-            content = parsed.choices?.[0]?.delta?.content || '';
+            const parsedResponse = provider.parseResponse(parsed);
+            content = typeof parsedResponse.content === 'string' ? parsedResponse.content : '';
           } catch (e) {
             // Not valid JSON
             continue;
@@ -82,7 +98,8 @@ export function useChatCompletion() {
           // Try parsing as JSON
           try {
             const parsed = JSON.parse(chunk);
-            content = parsed.delta?.text || parsed.choices?.[0]?.delta?.content || '';
+            const parsedResponse = provider.parseResponse(parsed);
+            content = typeof parsedResponse.content === 'string' ? parsedResponse.content : '';
           } catch (e) {
             // Not JSON, might be plain text
             content = chunk;

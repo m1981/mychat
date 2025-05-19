@@ -2,8 +2,17 @@ import { useCallback } from 'react';
 import useStore from '@store/store';
 import { MessageInterface, ModelConfig } from '@type/chat';
 import { useProvider } from '@contexts/ProviderContext';
+import { RequestConfig } from '@type/provider';
 
-export function useTitleGeneration() {
+export interface UseTitleGenerationReturn {
+  generateTitle: (
+    messages: MessageInterface[], 
+    config: ModelConfig,
+    chatIndex?: number
+  ) => Promise<void>;
+}
+
+export function useTitleGeneration(): UseTitleGenerationReturn {
   const provider = useProvider();
   const setChats = useStore(state => state.setChats);
   
@@ -52,22 +61,25 @@ export function useTitleGeneration() {
       ];
       
       // Format request using provider
-      const formattedRequest = provider.formatRequest(
-        { ...config, stream: false },
-        titlePrompt
-      );
+      const requestConfig: RequestConfig = {
+        ...config,
+        stream: false
+      };
+      
+      const formattedRequest = provider.formatRequest(requestConfig, titlePrompt);
       
       // Submit request
       const response = await provider.submitCompletion(formattedRequest);
       
+      // Parse response
+      const parsedResponse = provider.parseResponse(response);
+      
       // Extract title from response
       let title = '';
-      if (typeof response.content === 'string') {
-        title = response.content;
-      } else if (response.choices && Array.isArray(response.choices)) {
-        title = response.choices[0]?.message?.content || '';
-      } else if (response.delta && typeof response.delta.text === 'string') {
-        title = response.delta.text;
+      if (typeof parsedResponse.content === 'string') {
+        title = parsedResponse.content;
+      } else if (parsedResponse.choices && Array.isArray(parsedResponse.choices)) {
+        title = parsedResponse.choices[0]?.message?.content || '';
       }
       
       // Clean up title
