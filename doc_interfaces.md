@@ -246,53 +246,60 @@ export interface FormattedRequest {
     temperature: number;
 
     /**
-     * Nucleus sampling parameter between 0 and 1
-     * Only considers tokens with cumulative probability <= top_p
-     * Lower values make output more focused on high-probability tokens
+     * Controls diversity via nucleus sampling
+     * 0.1 = only consider tokens comprising the top 10% probability mass
+     * 1.0 = consider all tokens (but still weighted by probability)
      */
-    top_p: number;
+    top_p?: number;
 
     /**
-     * Whether to stream the response (true) or receive it all at once (false)
+     * Whether to stream the response
+     * When true, the response will be delivered in chunks
+     * When false, the response will be delivered all at once
      */
     stream: boolean;
 
     /**
-     * System prompt to set context for the conversation
-     * Only for providers that support system prompts (e.g., OpenAI, Anthropic)
-     */
-    system?: string;
-
-    /**
-     * Configuration for thinking mode
-     * Only for providers that support thinking capabilities (e.g., Anthropic)
+     * Thinking configuration for providers that support it (e.g., Anthropic)
+     * Enables the AI to reason through complex problems before responding
      */
     thinking?: {
         /**
-         * Type of thinking mode (e.g., "enabled")
+         * Type of thinking mode
+         * - "enabled": AI will use thinking capabilities
+         * - "disabled": AI will not use thinking capabilities
          */
-        type: string;
+        type: "enabled" | "disabled";
 
         /**
          * Maximum number of tokens to allocate for thinking
+         * Higher values allow for more complex reasoning but consume more tokens
          */
         budget_tokens: number;
     };
 
     /**
+     * System message for providers that support it separately from messages
+     * (e.g., Anthropic treats system messages differently)
+     */
+    system?: string;
+
+    /**
      * Reduces repetition of the same tokens
      * Higher values decrease likelihood of repeating the same phrases
+     * Optional, as not all providers support this
      */
     presence_penalty?: number;
 
     /**
      * Reduces repetition of the same topics
      * Higher values decrease likelihood of discussing the same topics
+     * Optional, as not all providers support this
      */
     frequency_penalty?: number;
 
     /**
-     * Allow additional provider-specific fields
+     * Allow additional provider-specific request fields
      * Enables extensibility for provider-specific parameters
      */
     [key: string]: unknown;
@@ -421,7 +428,7 @@ Base configuration for AI models.
 ```typescript
 export interface ModelConfig {
     /**
-     * Model identifier (e.g., "gpt-4o", "claude-3-7-sonnet")
+     * Model identifier to use (e.g., "gpt-4o", "claude-3-7-sonnet")
      */
     model: string;
 
@@ -433,17 +440,16 @@ export interface ModelConfig {
     temperature: number;
 
     /**
-     * Maximum number of tokens to generate in the response
-     * Higher values allow for longer responses but may increase costs
+     * Controls diversity via nucleus sampling
+     * 0.1 = only consider tokens comprising the top 10% probability mass
+     * 1.0 = consider all tokens (but still weighted by probability)
      */
-    max_tokens: number;
+    top_p?: number;
 
     /**
-     * Nucleus sampling parameter between 0 and 1
-     * Only considers tokens with cumulative probability <= top_p
-     * Lower values make output more focused on high-probability tokens
+     * Maximum number of tokens to generate in the response
      */
-    top_p: number;
+    max_tokens: number;
 
     /**
      * Reduces repetition of the same tokens
@@ -463,12 +469,12 @@ export interface ModelConfig {
      * Whether thinking capability is enabled for this model
      * Thinking allows the AI to reason through complex problems before responding
      */
-    enableThinking?: boolean;
-
+    thinking_mode?: {
     /**
-     * Configuration for thinking mode
+         * Whether thinking is enabled
      */
-    thinkingConfig?: {
+        enabled: boolean;
+
         /**
          * Maximum number of tokens to allocate for thinking
          * Higher values allow for more complex reasoning but consume more tokens
@@ -512,19 +518,9 @@ Configuration for a provider in the registry.
 ```typescript
 export interface ProviderConfig {
     /**
-     * Unique identifier for the provider
-     */
-    id: string;
-
-    /**
      * Display name of the provider
      */
     name: string;
-
-    /**
-     * Default model ID to use for this provider
-     */
-    defaultModel: string;
 
     /**
      * List of API endpoints this provider can use
@@ -532,60 +528,35 @@ export interface ProviderConfig {
     endpoints: string[];
 
     /**
-     * Array of models supported by this provider
-     */
-    models: Array<{
-        /**
-         * Unique identifier for the model
+     * List of model IDs supported by this provider
          */
-        id: string;
+    models: string[];
 
         /**
-         * Display name of the model
+     * Optional default model to use for this provider
          */
-        name: string;
+    defaultModel?: string;
 
         /**
-         * Maximum number of tokens the model can generate in a response
-         */
-        maxCompletionTokens: number;
-
-        /**
-         * Cost information for the model
-         */
-        cost: {
-            /**
-             * Cost for input tokens (prompts sent to the model)
-             */
-            input: {
-                /**
-                 * Price per unit of tokens (e.g., per 1000 tokens)
+     * Optional configuration for provider-specific features
                  */
-                price: number,
-
+    features?: {
                 /**
-                 * Number of tokens per pricing unit (typically 1000)
+         * Whether this provider supports thinking mode
                  */
-                unit: number
-            };
+        supportsThinking?: boolean;
 
             /**
-             * Cost for output tokens (responses generated by the model)
-             */
-            output: {
-                /**
-                 * Price per unit of tokens (e.g., per 1000 tokens)
+         * Whether this provider supports streaming responses
                  */
-                price: number,
+        supportsStreaming?: boolean;
 
                 /**
-                 * Number of tokens per pricing unit (typically 1000)
+         * Additional provider-specific feature flags
                  */
-                unit: number
+        [key: string]: boolean | undefined;
             };
         }
-    }>;
-}
 ```
 
 ## Context Types
