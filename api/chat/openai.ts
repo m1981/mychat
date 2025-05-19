@@ -16,13 +16,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Parse the request body manually since bodyParser is disabled
+  // Parse the request body
   const chunks = [];
   for await (const chunk of req) {
     chunks.push(chunk);
   }
   const data = JSON.parse(Buffer.concat(chunks).toString());
-  const { messages, config: chatConfig, apiKey } = data;
+  
+  // Extract standardized parameters
+  const { 
+    formattedRequest, // Use the formatted request from AIProviderInterface.formatRequest
+    apiKey 
+  } = data;
 
   const openai = new OpenAI({
     apiKey: apiKey,
@@ -30,20 +35,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 
   try {
-    if (chatConfig.stream) {
+    if (formattedRequest.stream) {
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      const requestParams = {
-        ...chatConfig,
-        messages,
-        model: chatConfig.model || 'gpt-3.5-turbo',
-        stream: true,
-      };
-
       const streamResponse = await openai.chat.completions.create(
-        requestParams as OpenAI.ChatCompletionCreateParamsStreaming
+        formattedRequest as OpenAI.ChatCompletionCreateParamsStreaming
       );
 
       let lastPing = Date.now();
@@ -65,34 +63,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.end();
       }
     } else {
-      const response = await openai.chat.completions.create({
-        ...chatConfig,
-        messages,
-        model: chatConfig.model || 'gpt-3.5-turbo',
-        stream: false,
-      } as OpenAI.ChatCompletionCreateParamsNonStreaming);
+      const response = await openai.chat.completions.create(
+        formattedRequest as OpenAI.ChatCompletionCreateParamsNonStreaming
+      );
 
-      // Transform the response to match expected format
+      // Return standardized response format matching ProviderResponse interface
       res.status(200).json({
+        choices: response.choices,
         content: response.choices[0]?.message?.content || ''
       });
     }
   } catch (error: unknown) {
     console.error('OpenAI API Error:', error);
     
-    // More robust error handling
     let errorStatus = 500;
     let errorMessage = 'An error occurred during the API request';
     
-    // Handle plain objects with status property
     if (error && typeof error === 'object' && 'status' in error) {
       errorStatus = (error as { status: number }).status;
     }
     
-    // Handle Error instances
     if (error instanceof Error) {
       errorMessage = error.message;
-      // Check for status property on Error instances too
       if ('status' in error) {
         errorStatus = (error as unknown as { status: number }).status;
       }

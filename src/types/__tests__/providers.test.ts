@@ -137,15 +137,15 @@ describe('Provider Implementations', () => {
       await openaiProvider.submitCompletion(formattedRequest);
       
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/chat/openai'),
-        expect.objectContaining({
+        '/api/chat/openai', // Exact string match instead of StringContaining
+        {
           method: 'POST',
-          headers: expect.objectContaining({
+          headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer mock-openai-key'
-          }),
+          },
           body: JSON.stringify(formattedRequest)
-        })
+        }
       );
     });
     
@@ -174,6 +174,13 @@ describe('Provider Implementations', () => {
       );
       
       expect(stream).toBeDefined();
+    });
+
+    it('should have correct provider properties', () => {
+      expect(openaiProvider.id).toBe('openai');
+      expect(openaiProvider.name).toBe('OpenAI');
+      expect(openaiProvider.endpoints).toEqual(['/api/chat/openai']);
+      expect(openaiProvider.models).toContain('gpt-4o');
     });
   });
   
@@ -254,6 +261,13 @@ describe('Provider Implementations', () => {
           body: JSON.stringify(formattedRequest)
         })
       );
+    });
+
+    it('should have correct provider properties', () => {
+      expect(anthropicProvider.id).toBe('anthropic');
+      expect(anthropicProvider.name).toBe('Anthropic');
+      expect(anthropicProvider.endpoints).toEqual(['/api/chat/anthropic']);
+      expect(anthropicProvider.models).toContain('claude-3-7-sonnet-20250219');
     });
   });
 });

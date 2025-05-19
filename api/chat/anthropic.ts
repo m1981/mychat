@@ -36,74 +36,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Parse the request body
   const data = await parseRequestBody(req);
+  
+  // Extract standardized parameters
   const { 
-    messages, 
-    system, 
-    model, 
-    max_tokens, 
-    temperature, 
-    top_p, 
-    stream, 
-    thinking,
-    config: chatConfig, 
+    formattedRequest, // Use the formatted request from AIProviderInterface.formatRequest
     apiKey 
   } = data;
 
   console.log('[Anthropic API] Received request data:', JSON.stringify({
-    messageCount: messages?.length,
-    system: system ? 'Present' : 'Not present',
-    model,
-    max_tokens,
-    temperature,
-    top_p,
-    stream,
-    thinking: thinking ? JSON.stringify(thinking) : 'Not present',
-    chatConfig: chatConfig ? 'Present' : 'Not present',
+    formattedRequest: formattedRequest ? 'Present (details hidden)' : 'Not present',
     apiKey: apiKey ? 'Present (hidden)' : 'Not present'
   }, null, 2));
 
-  const anthropic = new Anthropic({
-    apiKey: apiKey,
-  });
-
   try {
-    // Set standard SSE headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    
-    // Additional headers required by Anthropic
-    res.setHeader('X-Accel-Buffering', 'no');
-    res.setHeader('Transfer-Encoding', 'chunked');
+    const anthropic = new Anthropic({
+      apiKey: apiKey,
+    });
 
-    const streamMode = stream ?? chatConfig?.stream ?? false;
-    if (streamMode) {
-      const requestParams = {
-        messages,
-        model: model || chatConfig?.model,
-        max_tokens: max_tokens || chatConfig?.max_tokens,
-        temperature: temperature || chatConfig?.temperature,
-        top_p: top_p || chatConfig?.top_p,
-        stream: true,
-        // Use system parameter if provided
-        ...(system && { system }),
-        // Add thinking configuration if provided
-        ...(thinking && { thinking })
-      };
+    if (formattedRequest.stream) {
+      // Set up SSE headers
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
 
-      console.log('[Anthropic API] Sending request to Anthropic:', JSON.stringify(requestParams, null, 2));
-      
-      const stream = await anthropic.messages.create(requestParams);
-
+      // Keep-alive mechanism
       let lastPing = Date.now();
       const keepAliveInterval = setInterval(() => {
-        if (Date.now() - lastPing >= 5000) {
+        if (Date.now() - lastPing >= 15000) {
           res.write(':keep-alive\n\n');
           lastPing = Date.now();
         }
-      }, 5000);
+      }, 15000);
 
       try {
+        // Create streaming request to Anthropic
+        const stream = await anthropic.messages.create({
+          ...formattedRequest,
+          stream: true
+        });
+
+        // Process each chunk
         for await (const chunk of stream) {
           lastPing = Date.now();
           
@@ -162,65 +135,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     } else {
       // Non-streaming response
-      const response = await anthropic.messages.create({
-        messages: messages.map((msg: MessageInterface) => ({
-          role: msg.role === 'assistant' ? 'assistant' : 'user',
-          content: msg.content,
-        })),
-        model: chatConfig.model,
-        max_tokens: chatConfig.max_tokens,
-        system: system
-      });
+      const response = await anthropic.messages.create(formattedRequest);
 
+      // Return standardized response format matching ProviderResponse interface
       res.status(200).json(response);
     }
-  } catch (error: unknown) {
-    console.error('Anthropic API Error:', error);
+  } catch (error: any) {
+    console.error('[Anthropic API] Error:', error);
     
-    // Simplified error handling with type guards
-    let errorStatus = 500;
-    let errorMessage = 'An error occurred during the API request';
-    let errorType = 'unknown_error';
-    let errorDetails = undefined;
-    
-    // Handle both Error objects and plain objects
-    if (error && typeof error === 'object') {
-      // Extract status if available
-      if ('status' in error && typeof error.status === 'number') {
-        errorStatus = error.status;
-      }
-      
-      // Extract type if available
-      if ('type' in error && typeof error.type === 'string') {
-        errorType = error.type;
-      }
-      
-      // Extract message from Error instances or plain objects
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if ('message' in error && typeof error.message === 'string') {
-        errorMessage = error.message;
-      }
-      
-      // Extract details if available
-      if ('error' in error && error.error && typeof error.error === 'object' && 'details' in error.error) {
-        errorDetails = error.error.details;
-      }
-    }
-    
-    // Log detailed error information
-    console.error('Anthropic API Error details:', {
-      status: errorStatus,
-      type: errorType,
-      message: errorMessage,
-      details: errorDetails
-    });
+    // Extract error details
+    const errorStatus = error.status || 500;
+    const errorMessage = error.message || 'Unknown error';
+    const errorType = error.type || 'unknown_error';
+    const errorDetails = error.error?.details || '';
     
     res.status(errorStatus).json({
       error: errorMessage,
       status: errorStatus,
       type: errorType,
-      details: errorDetails,
+      details: errorDetails
     });
   }
 }

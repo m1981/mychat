@@ -3,37 +3,25 @@ import { render, screen } from '@testing-library/react';
 import { ProviderProvider, useProvider } from '@contexts/ProviderContext';
 import React from 'react';
 
+// Mock store
+vi.mock('@store/store', () => ({
+  default: () => ({
+    currentChatIndex: 0,
+    chats: [],
+    apiKeys: {}
+  })
+}));
+
 // Mock provider registry
 vi.mock('@config/providers/provider.registry', () => ({
   ProviderRegistry: {
-    getProviderImplementation: vi.fn().mockImplementation((key) => {
-      if (key === 'openai') {
-        return {
-          id: 'openai',
-          formatRequest: vi.fn(),
-          parseResponse: vi.fn(),
-          submitCompletion: vi.fn(),
-          submitStream: vi.fn()
-        };
-      }
-      if (key === 'anthropic') {
-        return {
-          id: 'anthropic',
-          formatRequest: vi.fn(),
-          parseResponse: vi.fn(),
-          submitCompletion: vi.fn(),
-          submitStream: vi.fn()
-        };
-      }
-      return null;
-    }),
     getProvider: vi.fn().mockImplementation((key) => {
       if (key === 'openai') {
         return {
           id: 'openai',
           name: 'OpenAI',
           defaultModel: 'gpt-4o',
-          endpoints: ['chat/openai'],
+          endpoints: ['/api/chat/openai'],
           models: [
             {
               id: 'gpt-4o',
@@ -52,7 +40,7 @@ vi.mock('@config/providers/provider.registry', () => ({
           id: 'anthropic',
           name: 'Anthropic',
           defaultModel: 'claude-3-7-sonnet-20250219',
-          endpoints: ['/chat/anthropic'],
+          endpoints: ['/api/chat/anthropic'],
           models: [
             {
               id: 'claude-3-7-sonnet-20250219',
@@ -67,20 +55,6 @@ vi.mock('@config/providers/provider.registry', () => ({
         };
       }
       return null;
-    })
-  }
-}));
-
-// Mock model registry
-vi.mock('@config/models/model.registry', () => ({
-  ModelRegistry: {
-    getModelCapabilities: vi.fn().mockReturnValue({
-      modelId: 'claude-3-7-sonnet-20250219',
-      provider: 'anthropic',
-      maxResponseTokens: 8192,
-      defaultResponseTokens: 4096,
-      supportsThinking: true,
-      defaultThinkingBudget: 16000
     })
   }
 }));

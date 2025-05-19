@@ -57,6 +57,14 @@ global.fetch = vi.fn().mockImplementation(() =>
   })
 );
 
+// Add this at the top of your test file, before importing providers
+vi.mock('@utils/env', () => ({
+  getEnvVar: (key: string, defaultValue: string) => {
+    if (key === 'USE_DIRECT_API') return 'true';
+    return defaultValue;
+  }
+}));
+
 describe('Providers', () => {
   describe('OpenAI Provider', () => {
     const openaiProvider = providers.openai;
@@ -88,7 +96,7 @@ describe('Providers', () => {
     it('should have correct provider properties', () => {
       expect(openaiProvider.id).toBe('openai');
       expect(openaiProvider.name).toBe('OpenAI');
-      expect(openaiProvider.endpoints).toEqual(['https://api.openai.com']);
+      expect(openaiProvider.endpoints).toEqual(['/api/chat/openai']);
       expect(openaiProvider.models).toContain('gpt-4o');
     });
 
@@ -198,7 +206,7 @@ describe('Providers', () => {
     it('should have correct provider properties', () => {
       expect(anthropicProvider.id).toBe('anthropic');
       expect(anthropicProvider.name).toBe('Anthropic');
-      expect(anthropicProvider.endpoints).toEqual(['https://api.anthropic.com']);
+      expect(anthropicProvider.endpoints).toEqual(['/api/chat/anthropic']);
       expect(anthropicProvider.models).toContain('claude-3-7-sonnet-20250219');
     });
 

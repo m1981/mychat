@@ -1,72 +1,7 @@
-// src/config/providers/provider.registry.ts
+// provider.registry.ts - Registry that works with configurations only
 import { ProviderKey } from '@type/chat';
-import { ProviderConfig } from './provider.config';
-import { AIProviderInterface } from '@type/provider';
-import { providers } from '@type/providers';
-
-const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
-  anthropic: {
-    id: 'anthropic',
-    name: 'Anthropic',
-    defaultModel: 'claude-3-7-sonnet-20250219',
-    endpoints: ['/chat/anthropic'],
-    models: [
-      {
-        id: 'claude-3-7-sonnet-20250219',
-        name: 'Claude 3.7 Sonnet',
-        maxCompletionTokens: 8192,
-        cost: {
-          input: { price: 0.003, unit: 1000 },
-          output: { price: 0.015, unit: 1000 }
-        }
-      },
-      {
-        id: 'claude-3-5-sonnet-20241022',
-        name: 'Claude 3.5 Sonnet',
-        maxCompletionTokens: 8192,
-        cost: {
-          input: { price: 0.003, unit: 1000 },
-          output: { price: 0.015, unit: 1000 }
-        }
-      },
-      {
-        id: 'claude-3-haiku-20240307',
-        name: 'Claude 3 Haiku',
-        maxCompletionTokens: 4096,
-        cost: {
-          input: { price: 0.00025, unit: 1000 },
-          output: { price: 0.00125, unit: 1000 }
-        }
-      }
-    ]
-  },
-  openai: {
-    id: 'openai',
-    name: 'OpenAI',
-    defaultModel: 'gpt-4o',
-    endpoints: ['chat/openai'],
-    models: [
-      {
-        id: 'gpt-4o',
-        name: 'GPT-4o',
-        maxCompletionTokens: 16384,
-        cost: {
-          input: { price: 0.0025, unit: 1000 },
-          output: { price: 0.01, unit: 1000 }
-        }
-      },
-      {
-        id: 'gpt-4o-mini',
-        name: 'GPT-4o mini',
-        maxCompletionTokens: 16384,
-        cost: {
-          input: { price: 0.00015, unit: 1000 },
-          output: { price: 0.0006, unit: 1000 }
-        }
-      }
-    ]
-  }
-};
+import { ProviderConfig, PROVIDER_CONFIGS } from './provider.config';
+import { getProviderImplementation } from '@type/providers';
 
 export class ProviderRegistry {
   static getProvider(key: ProviderKey): ProviderConfig {
@@ -114,9 +49,6 @@ export class ProviderRegistry {
   }
 
   static getProviderImplementation(key: ProviderKey): AIProviderInterface {
-    if (!providers[key]) {
-      throw new Error(`Provider implementation for ${key} not found`);
-    }
-    return providers[key];
+    return getProviderImplementation(key);
   }
 }

@@ -697,6 +697,154 @@ export interface UseChatCompletionReturn {
 }
 ```
 
+## API Contracts
+
+### Frontend-Backend Communication
+
+The communication between the frontend and backend follows a standardized contract pattern to ensure consistency, security, and maintainability.
+
+```mermaid
+sequenceDiagram
+    participant FC as Frontend Client
+    participant PR as ProviderRegistry
+    participant API as AIProviderInterface
+    participant BE as Backend API Routes
+    participant EP as External Provider APIs
+    
+    FC->>PR: Get provider for current chat
+    PR-->>FC: Return provider implementation
+    FC->>API: Call formatRequest()
+    API-->>FC: Return FormattedRequest
+    FC->>BE: POST /api/chat/{provider} with FormattedRequest
+    BE->>EP: Forward request to external API
+    EP-->>BE: Return provider-specific response
+    BE-->>FC: Return standardized ProviderResponse
+    FC->>API: Call parseResponse() or parseStreamingResponse()
+    API-->>FC: Return extracted content
+```
+
+**Motivation:**
+- **Security**: API keys are never exposed to the client, only stored and used on the server
+- **Standardization**: Consistent request and response formats across different providers
+- **Separation of Concerns**: Each component has a clear, focused responsibility
+- **Maintainability**: Changes to provider APIs only require updates in one place
+- **Extensibility**: New providers can be added with minimal changes to the architecture
+
+### Request Contract
+
+When the frontend makes a request to the backend, it follows this standardized format:
+
+```typescript
+interface BackendRequestBody {
+  /**
+   * Provider-specific formatted request created by AIProviderInterface.formatRequest
+   * Contains all necessary parameters for the AI provider API
+   */
+  formattedRequest: FormattedRequest;
+  
+  /**
+   * API key for the provider
+   * Retrieved from secure storage and sent to the backend
+   * Never exposed in client-side code
+   */
+  apiKey: string;
+}
+```
+
+**Motivation:**
+- **Single Responsibility Principle (SRP)**: The frontend is responsible only for formatting the request according to the provider's requirements, while the backend is responsible for securely communicating with the external API.
+- **Dependency Inversion Principle (DIP)**: Both frontend and backend depend on the shared `FormattedRequest` interface rather than specific implementation details.
+- **Information Hiding**: The details of how requests are formatted are encapsulated within the provider implementation.
+- **Consistency**: All providers use the same request structure, making the code more maintainable.
+
+### Response Contract
+
+The backend returns responses in a standardized format that matches the `ProviderResponse` interface:
+
+```typescript
+interface ProviderResponse {
+  content?: string | Array<{text: string}>;
+  choices?: Array<{
+    message?: { content?: string };
+    delta?: { content?: string };
+  }>;
+  type?: string;
+  delta?: { 
+    text?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+```
+
+**Motivation:**
+- **Adapter Pattern**: The backend acts as an adapter between provider-specific response formats and the standardized format used by the application.
+- **Liskov Substitution Principle (LSP)**: All provider responses can be treated uniformly by the frontend.
+- **Open/Closed Principle (OCP)**: The response format is extensible through the index signature for provider-specific fields.
+- **Abstraction**: The frontend doesn't need to know the details of each provider's response format.
+
+### Streaming Response Contract
+
+For streaming responses, the backend uses Server-Sent Events (SSE) with a standardized event format:
+
+```
+data: {"type":"content_block_delta","delta":{"text":"Hello"}}
+
+data: {"type":"content_block_delta","delta":{"text":" world"}}
+
+data: [DONE]
+```
+
+**Motivation:**
+- **Real-time Updates**: Allows for incremental updates to the UI as responses are generated.
+- **Efficiency**: Reduces perceived latency by showing partial responses immediately.
+- **Standardization**: Uses the well-established SSE protocol for streaming data.
+- **Compatibility**: Works across all modern browsers and with server frameworks.
+
+### Error Handling Contract
+
+Errors are returned in a consistent format:
+
+```typescript
+interface ErrorResponse {
+  error: string;
+  status: number;
+  type?: string;
+  details?: string;
+}
+```
+
+**Motivation:**
+- **Robustness**: Proper error handling improves application reliability.
+- **User Experience**: Meaningful error messages help users understand and resolve issues.
+- **Debugging**: Detailed error information aids in troubleshooting.
+- **Consistency**: Standardized error format makes error handling more maintainable.
+
+## Implementation Guidelines
+
+### Backend Route Handlers
+
+Backend route handlers should:
+
+1. Accept POST requests with the standardized request body
+2. Extract the `formattedRequest` and `apiKey` from the request
+3. Initialize the appropriate AI provider client
+4. Forward the request to the external API
+5. Format the response according to the standardized response contract
+6. Handle errors and return appropriate error responses
+
+### Frontend Provider Implementations
+
+Frontend provider implementations should:
+
+1. Implement the `AIProviderInterface`
+2. Format requests using the `formatRequest` method
+3. Send requests to the backend with the standardized request body
+4. Parse responses using the `parseResponse` or `parseStreamingResponse` methods
+5. Handle errors and provide meaningful error messages
+
+This contract-based approach ensures that the frontend and backend can evolve independently while maintaining compatibility, and that new providers can be added with minimal changes to the existing codebase.
+
 ## Overall Architecture Benefits
 
 1. **Decoupling**: Components are decoupled from specific provider implementations.

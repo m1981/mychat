@@ -14,20 +14,28 @@
      providerKey?: ProviderKey;
    }> = ({ children, providerKey }) => {
      const { currentChatIndex, chats, apiKeys } = useStore();
-     const [provider, setProvider] = useState<AIProviderInterface | null>(null);
+     
+     // For testing purposes, directly get the provider if providerKey is provided
+     if (providerKey) {
+       const directProvider = ProviderRegistry.getProvider(providerKey);
+       return (
+         <ProviderContext.Provider value={directProvider}>
+           {children}
+         </ProviderContext.Provider>
+       );
+     }
+     
+     // For normal app usage, use state and effect
+     const [provider, setProvider] = useState<AIProviderInterface | null>(() => {
+       const effectiveProviderKey = chats?.[currentChatIndex]?.config?.provider || DEFAULT_PROVIDER;
+       return ProviderRegistry.getProvider(effectiveProviderKey);
+     });
 
      useEffect(() => {
-       // Get provider key from prop, current chat, or use default
-       const effectiveProviderKey: ProviderKey = providerKey || 
-         chats?.[currentChatIndex]?.config?.provider || 
-         DEFAULT_PROVIDER;
-       
-       // Get provider from registry
+       const effectiveProviderKey = chats?.[currentChatIndex]?.config?.provider || DEFAULT_PROVIDER;
        const currentProvider = ProviderRegistry.getProvider(effectiveProviderKey);
-       
-       // Set provider
        setProvider(currentProvider);
-     }, [currentChatIndex, chats, providerKey]);
+     }, [currentChatIndex, chats]);
 
      return (
        <ProviderContext.Provider value={provider}>
