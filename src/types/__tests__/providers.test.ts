@@ -30,12 +30,14 @@ vi.mock('@config/providers/provider.registry', () => ({
     getProvider: vi.fn().mockImplementation((key) => {
       if (key === 'openai') {
         return {
+          name: 'OpenAI',
           endpoints: ['/api/chat/openai'],
           models: []
         };
       }
       if (key === 'anthropic') {
         return {
+          name: 'Anthropic',
           endpoints: ['/api/chat/anthropic'],
           models: []
         };
@@ -119,7 +121,7 @@ describe('Provider Implementations', () => {
       
       const result = openaiProvider.parseResponse(response);
       
-      expect(result.content).toBe('Hello, how can I help you?');
+      expect(result).toBe('Hello, how can I help you?');
     });
     
     it('should submit completion request correctly', async () => {
@@ -225,7 +227,7 @@ describe('Provider Implementations', () => {
       
       const result = anthropicProvider.parseResponse(response);
       
-      expect(result.content).toBe('Hello, I am Claude. How can I assist you today?');
+      expect(result).toBe('Hello, I am Claude. How can I assist you today?');
     });
     
     it('should submit completion request correctly', async () => {

@@ -1,8 +1,6 @@
-import { ProviderKey, ChatConfig } from '@type/chat';
+import { ChatConfig } from '@type/chat';
 
-import { DEFAULT_MODEL_CONFIG } from './ModelConfig';
-
-export const DEFAULT_PROVIDER: ProviderKey = 'anthropic';
+import { DEFAULT_MODEL_CONFIG, DEFAULT_PROVIDER } from './ModelConfig';
 
 export const DEFAULT_SYSTEM_MESSAGE = import.meta.env.VITE_DEFAULT_SYSTEM_MESSAGE ?? 
   'Be my helpful female advisor.';

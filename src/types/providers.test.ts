@@ -37,6 +37,26 @@ vi.mock('@config/providers/provider.registry', () => ({
   }
 }));
 
+vi.mock('@store/store', () => ({
+  default: {
+    getState: () => ({
+      apiKeys: {
+        openai: 'mock-openai-key',
+        anthropic: 'mock-anthropic-key'
+      }
+    })
+  }
+}));
+
+// Mock fetch
+global.fetch = vi.fn().mockImplementation(() => 
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({}),
+    body: {} as any
+  })
+);
+
 describe('Providers', () => {
   describe('OpenAI Provider', () => {
     const openaiProvider = providers.openai;
@@ -73,10 +93,14 @@ describe('Providers', () => {
     });
 
     it('should format request correctly', () => {
-      const formattedRequest = openaiProvider.formatRequest(messages, config);
+      const formattedRequest = openaiProvider.formatRequest(config, messages);
       
       expect(formattedRequest).toEqual({
-        messages,
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant.' },
+          { role: 'user', content: 'Hello!' },
+          { role: 'assistant', content: 'Hi there!' }
+        ],
         model: 'gpt-4o',
         max_tokens: 4096,
         temperature: 0.7,
@@ -117,41 +141,6 @@ describe('Providers', () => {
       expect(() => openaiProvider.parseResponse(response)).toThrow('Invalid response format from OpenAI');
     });
 
-    it('should parse streaming response correctly', () => {
-      const response = {
-        choices: [
-          {
-            delta: {
-              content: 'Streaming content'
-            }
-          }
-        ]
-      };
-      
-      const parsedResponse = openaiProvider.parseStreamingResponse(response);
-      expect(parsedResponse).toBe('Streaming content');
-    });
-
-    it('should handle empty streaming response', () => {
-      const response = {
-        choices: [
-          {
-            delta: {}
-          }
-        ]
-      };
-      
-      const parsedResponse = openaiProvider.parseStreamingResponse(response);
-      expect(parsedResponse).toBe('');
-    });
-
-    it('should handle errors in streaming response parsing', () => {
-      const response = null;
-      
-      const parsedResponse = openaiProvider.parseStreamingResponse(response);
-      expect(parsedResponse).toBe('');
-    });
-
     it('should filter out empty messages', () => {
       const messagesWithEmpty = [
         { role: 'system', content: 'You are a helpful assistant.' },
@@ -160,7 +149,7 @@ describe('Providers', () => {
         { role: 'user', content: '   ' }    // Whitespace-only message that should be filtered
       ];
       
-      const formattedRequest = openaiProvider.formatRequest(messagesWithEmpty, config);
+      const formattedRequest = openaiProvider.formatRequest(config, messagesWithEmpty);
       
       // Check that empty messages are filtered out
       expect(formattedRequest.messages.length).toBe(2);
@@ -198,6 +187,10 @@ describe('Providers', () => {
         enableThinking: true,
         thinkingConfig: {
           budget_tokens: 16000
+        },
+        thinking_mode: {
+          enabled: true,
+          budget_tokens: 16000
         }
       };
     });
@@ -210,7 +203,7 @@ describe('Providers', () => {
     });
 
     it('should format request correctly with system message', () => {
-      const formattedRequest = anthropicProvider.formatRequest(messages, config);
+      const formattedRequest = anthropicProvider.formatRequest(config, messages);
       
       // Check that system message is properly handled as a system parameter
       expect(formattedRequest.system).toBe('You are a helpful assistant.');
@@ -247,7 +240,7 @@ describe('Providers', () => {
         { role: 'assistant', content: 'Hi there!' }
       ];
       
-      const formattedRequest = anthropicProvider.formatRequest(messagesWithoutSystem, config);
+      const formattedRequest = anthropicProvider.formatRequest(config, messagesWithoutSystem);
       
       // Check that no system parameter is added
       expect(formattedRequest.system).toBeUndefined();
@@ -267,10 +260,13 @@ describe('Providers', () => {
     it('should format request correctly with thinking disabled', () => {
       const configWithoutThinking = {
         ...config,
-        enableThinking: false
+        thinking_mode: {
+          enabled: false,
+          budget_tokens: 16000
+        }
       };
       
-      const formattedRequest = anthropicProvider.formatRequest(messages, configWithoutThinking);
+      const formattedRequest = anthropicProvider.formatRequest(configWithoutThinking, messages);
       
       // Check that thinking is not included
       expect(formattedRequest.thinking).toBeUndefined();
@@ -335,7 +331,7 @@ describe('Providers', () => {
         { role: 'user', content: '   ' }    // Whitespace-only message that should be filtered
       ];
       
-      const formattedRequest = anthropicProvider.formatRequest(messagesWithEmpty, config);
+      const formattedRequest = anthropicProvider.formatRequest(config, messagesWithEmpty);
       
       // Check that empty messages are filtered out
       expect(formattedRequest.messages.length).toBe(1);

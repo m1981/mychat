@@ -46,8 +46,20 @@ export interface ProviderResponse {
 }
 
 export interface AIProviderInterface {
+  id: string;
+  name: string;
+  endpoints: string[];
+  models: string[];
   formatRequest: (config: RequestConfig, messages: MessageInterface[]) => FormattedRequest;
-  parseResponse: (response: any) => ProviderResponse;
+  parseResponse: (response: any) => string;
+  parseStreamingResponse: (response: any) => string;
   submitCompletion: (formattedRequest: FormattedRequest) => Promise<ProviderResponse>;
   submitStream: (formattedRequest: FormattedRequest) => Promise<ReadableStream>;
+}
+
+export interface AIProvider {
+  id: string;
+  name: string;
+  endpoints: string[];
+  models: string[];
 }

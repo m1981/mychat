@@ -26,6 +26,61 @@ vi.mock('@config/providers/provider.registry', () => ({
         };
       }
       return null;
+    }),
+    getProvider: vi.fn().mockImplementation((key) => {
+      if (key === 'openai') {
+        return {
+          id: 'openai',
+          name: 'OpenAI',
+          defaultModel: 'gpt-4o',
+          endpoints: ['chat/openai'],
+          models: [
+            {
+              id: 'gpt-4o',
+              name: 'GPT-4o',
+              maxCompletionTokens: 16384,
+              cost: {
+                input: { price: 0.0025, unit: 1000 },
+                output: { price: 0.01, unit: 1000 }
+              }
+            }
+          ]
+        };
+      }
+      if (key === 'anthropic') {
+        return {
+          id: 'anthropic',
+          name: 'Anthropic',
+          defaultModel: 'claude-3-7-sonnet-20250219',
+          endpoints: ['/chat/anthropic'],
+          models: [
+            {
+              id: 'claude-3-7-sonnet-20250219',
+              name: 'Claude 3.7 Sonnet',
+              maxCompletionTokens: 8192,
+              cost: {
+                input: { price: 0.003, unit: 1000 },
+                output: { price: 0.015, unit: 1000 }
+              }
+            }
+          ]
+        };
+      }
+      return null;
+    })
+  }
+}));
+
+// Mock model registry
+vi.mock('@config/models/model.registry', () => ({
+  ModelRegistry: {
+    getModelCapabilities: vi.fn().mockReturnValue({
+      modelId: 'claude-3-7-sonnet-20250219',
+      provider: 'anthropic',
+      maxResponseTokens: 8192,
+      defaultResponseTokens: 4096,
+      supportsThinking: true,
+      defaultThinkingBudget: 16000
     })
   }
 }));

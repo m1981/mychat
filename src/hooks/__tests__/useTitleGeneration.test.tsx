@@ -1,52 +1,113 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useTitleGeneration } from '@hooks/useTitleGeneration';
 import { MessageInterface, ModelConfig } from '@type/chat';
-import { ProviderContext } from '@contexts/ProviderContext';
 import React from 'react';
 
-// Mock store
-const mockSetChats = vi.fn();
-vi.mock('@store/store', () => ({
-  default: {
-    getState: () => ({
-      chats: [
-        { id: 'chat1', title: '', titleSet: false, messages: [] }
-      ],
-      currentChatIndex: 0
-    }),
-    setState: vi.fn(),
-    getState: vi.fn().mockReturnValue({
-      chats: [
-        { id: 'chat1', title: '', titleSet: false, messages: [] }
-      ],
-      currentChatIndex: 0
-    }),
-    setChats: mockSetChats
+// Mock the ProviderRegistry
+vi.mock('@config/providers/provider.registry', () => ({
+  ProviderRegistry: {
+    getProvider: vi.fn().mockImplementation((key) => {
+      if (key === 'openai') {
+        return {
+          id: 'openai',
+          name: 'OpenAI',
+          defaultModel: 'gpt-4o',
+          endpoints: ['/api/chat/openai'],
+          models: [
+            {
+              id: 'gpt-4o',
+              name: 'GPT-4o',
+              maxCompletionTokens: 16384,
+              cost: {
+                input: { price: 0.0025, unit: 1000 },
+                output: { price: 0.01, unit: 1000 }
+              }
+            }
+          ]
+        };
+      }
+      if (key === 'anthropic') {
+        return {
+          id: 'anthropic',
+          name: 'Anthropic',
+          defaultModel: 'claude-3-7-sonnet-20250219',
+          endpoints: ['/api/chat/anthropic'],
+          models: [
+            {
+              id: 'claude-3-7-sonnet-20250219',
+              name: 'Claude 3.7 Sonnet',
+              maxCompletionTokens: 8192,
+              cost: {
+                input: { price: 0.003, unit: 1000 },
+                output: { price: 0.015, unit: 1000 }
+              }
+            }
+          ]
+        };
+      }
+      return null;
+    })
   }
 }));
+
+// Mock the ModelRegistry
+vi.mock('@config/models/model.registry', () => ({
+  ModelRegistry: {
+    getModelCapabilities: vi.fn().mockReturnValue({
+      maxResponseTokens: 4096
+    })
+  }
+}));
+
+// Mock the ProviderContext
+vi.mock('@contexts/ProviderContext', () => ({
+  useProvider: () => mockProvider
+}));
+
+// Setup mocks
+const mockSetChats = vi.fn();
+const mockGetState = vi.fn().mockReturnValue({
+  chats: [
+    { id: 'chat1', title: '', titleSet: false, messages: [] }
+  ],
+  currentChatIndex: 0
+});
+
+// Use vi.mock with a factory function that doesn't reference external variables
+vi.mock('@store/store', () => {
+  return {
+    default: {
+      getState: () => mockGetState(),
+      setState: vi.fn(),
+      setChats: (...args: any[]) => mockSetChats(...args)
+    }
+  };
+});
 
 // Mock provider
 const mockProvider = {
   formatRequest: vi.fn().mockReturnValue({ messages: [], model: 'test-model' }),
-  parseResponse: vi.fn().mockReturnValue({ content: 'Generated Title' }),
+  parseResponse: vi.fn().mockReturnValue('Generated Title'),
   submitCompletion: vi.fn().mockResolvedValue({ content: 'Generated Title' }),
   submitStream: vi.fn()
 };
 
+// Import the hook after mocking
+import { useTitleGeneration } from '@hooks/useTitleGeneration';
+
 describe('useTitleGeneration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetState.mockReturnValue({
+      chats: [
+        { id: 'chat1', title: '', titleSet: false, messages: [] }
+      ],
+      currentChatIndex: 0
+    });
   });
   
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <ProviderContext.Provider value={mockProvider}>
-      {children}
-    </ProviderContext.Provider>
-  );
-  
   it('should generate a title for a chat', async () => {
-    const { result } = renderHook(() => useTitleGeneration(), { wrapper });
+    const { result } = renderHook(() => useTitleGeneration());
     
     const messages: MessageInterface[] = [
       { id: '1', role: 'user', content: 'What is React?' },
@@ -99,14 +160,14 @@ describe('useTitleGeneration', () => {
   
   it('should not generate a title if chat already has one', async () => {
     // Mock store with a chat that already has a title
-    vi.mocked(vi.importActual('@store/store')).default.getState.mockReturnValueOnce({
+    mockGetState.mockReturnValueOnce({
       chats: [
         { id: 'chat1', title: 'Existing Title', titleSet: true, messages: [] }
       ],
       currentChatIndex: 0
     });
     
-    const { result } = renderHook(() => useTitleGeneration(), { wrapper });
+    const { result } = renderHook(() => useTitleGeneration());
     
     const messages: MessageInterface[] = [
       { id: '1', role: 'user', content: 'What is React?' },
@@ -134,7 +195,7 @@ describe('useTitleGeneration', () => {
     // Mock provider to throw an error
     mockProvider.submitCompletion.mockRejectedValueOnce(new Error('API Error'));
     
-    const { result } = renderHook(() => useTitleGeneration(), { wrapper });
+    const { result } = renderHook(() => useTitleGeneration());
     
     const messages: MessageInterface[] = [
       { id: '1', role: 'user', content: 'What is React?' },

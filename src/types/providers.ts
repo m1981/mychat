@@ -3,15 +3,28 @@ import { ModelRegistry } from '@config/models/model.registry';
 import { ProviderModel } from '@config/providers/provider.config';
 import { ProviderRegistry } from '@config/providers/provider.registry';
 import { MessageInterface, ProviderKey } from '@type/chat';
-import { AIProvider, ProviderResponse, RequestConfig, FormattedRequest } from '@type/provider';
+import { AIProvider, AIProviderInterface, ProviderResponse, RequestConfig, FormattedRequest } from '@type/provider';
+import store from '@store/store';
 
-export const providers: Record<ProviderKey, AIProvider> = {
+// Helper function to safely get provider properties
+const getProviderProperty = (key: ProviderKey, property: string, defaultValue: any) => {
+  try {
+    const provider = ProviderRegistry.getProvider(key);
+    return provider[property] || defaultValue;
+  } catch (error) {
+    console.warn(`Error getting provider property ${property} for ${key}:`, error);
+    return defaultValue;
+  }
+};
+
+export const providers: Record<ProviderKey, AIProviderInterface> = {
   openai: {
     id: 'openai',
-    name: ProviderRegistry.getProvider('openai').name,
-    endpoints: ProviderRegistry.getProvider('openai').endpoints,
-    models: ProviderRegistry.getProvider('openai').models.map((m: ProviderModel) => m.id),
-    formatRequest: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => {
+    name: getProviderProperty('openai', 'name', 'OpenAI'),
+    endpoints: getProviderProperty('openai', 'endpoints', ['/api/chat/openai']),
+    models: getProviderProperty('openai', 'models', [])
+      .map((m: ProviderModel) => m.id || 'gpt-4o'),
+    formatRequest: (config: RequestConfig, messages: MessageInterface[]): FormattedRequest => {
       const formattedRequest = {
         messages: messages
           // Filter out empty messages
@@ -49,13 +62,52 @@ export const providers: Record<ProviderKey, AIProvider> = {
         return '';
       }
     },
+    submitCompletion: async (formattedRequest: FormattedRequest): Promise<ProviderResponse> => {
+      const apiKey = store.getState().apiKeys.openai;
+      const endpoint = getProviderProperty('openai', 'endpoints', ['/api/chat/openai'])[0];
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(formattedRequest)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
+      
+      return await response.json();
+    },
+    submitStream: async (formattedRequest: FormattedRequest): Promise<ReadableStream> => {
+      const apiKey = store.getState().apiKeys.openai;
+      const endpoint = getProviderProperty('openai', 'endpoints', ['/api/chat/openai'])[0];
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({...formattedRequest, stream: true})
+      });
+      
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
+      
+      return response.body as ReadableStream;
+    }
   },
   anthropic: {
     id: 'anthropic',
-    name: ProviderRegistry.getProvider('anthropic').name,
-    endpoints: ProviderRegistry.getProvider('anthropic').endpoints,
-    models: ProviderRegistry.getProvider('anthropic').models.map((m: ProviderModel) => m.id),
-    formatRequest: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => {
+    name: getProviderProperty('anthropic', 'name', 'Anthropic'),
+    endpoints: getProviderProperty('anthropic', 'endpoints', ['/api/chat/anthropic']),
+    models: getProviderProperty('anthropic', 'models', [])
+      .map((m: ProviderModel) => m.id || 'claude-3-7-sonnet-20250219'),
+    formatRequest: (config: RequestConfig, messages: MessageInterface[]): FormattedRequest => {
       // Extract system message if present
       const systemMessage = messages.find(m => m.role === 'system');
       
@@ -75,9 +127,9 @@ export const providers: Record<ProviderKey, AIProvider> = {
         temperature: config.temperature,
         top_p: config.top_p,
         stream: config.stream ?? false,
-        thinking: config.enableThinking ? {
-          type: "enabled" as const, // Use a literal type with 'as const'
-          budget_tokens: config.thinkingConfig.budget_tokens
+        thinking: config.thinking_mode?.enabled ? {
+          type: "enabled" as const,
+          budget_tokens: config.thinking_mode.budget_tokens
         } : undefined,
         // Add system parameter if system message exists
         ...(systemMessage && { system: systemMessage.content }),
@@ -108,5 +160,45 @@ export const providers: Record<ProviderKey, AIProvider> = {
         return '';
       }
     },
+    submitCompletion: async (formattedRequest: FormattedRequest): Promise<ProviderResponse> => {
+      const apiKey = store.getState().apiKeys.anthropic;
+      const endpoint = getProviderProperty('anthropic', 'endpoints', ['/api/chat/anthropic'])[0];
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify(formattedRequest)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Anthropic API error: ${response.status}`);
+      }
+      
+      return await response.json();
+    },
+    submitStream: async (formattedRequest: FormattedRequest): Promise<ReadableStream> => {
+      const apiKey = store.getState().apiKeys.anthropic;
+      const endpoint = getProviderProperty('anthropic', 'endpoints', ['/api/chat/anthropic'])[0];
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({...formattedRequest, stream: true})
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Anthropic API error: ${response.status}`);
+      }
+      
+      return response.body as ReadableStream;
+    }
   },
 };

@@ -1,8 +1,22 @@
 // src/config/providers/__tests__/provider.registry.test.ts
 import { ProviderKey } from '@type/chat';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Mock ModelRegistry before importing modules that use it
+vi.mock('@config/models/model.registry', () => ({
+  ModelRegistry: {
+    getModelCapabilities: vi.fn().mockReturnValue({
+      modelId: 'claude-3-7-sonnet-20250219',
+      provider: 'anthropic',
+      maxResponseTokens: 8192,
+      defaultResponseTokens: 4096,
+      supportsThinking: true,
+      defaultThinkingBudget: 16000
+    })
+  }
+}));
 
+// Import after mocking
 import { ProviderRegistry } from '../provider.registry';
 
 describe('ProviderRegistry', () => {
