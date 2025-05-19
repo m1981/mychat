@@ -48,9 +48,16 @@ export interface AIProviderInterface {
     /**
      * Extracts content from a provider's non-streaming response
      * @param response - Raw response from the provider's API
-     * @returns Standardized response with extracted content
+     * @returns Extracted content as a string
      */
-    parseResponse: (response: any) => ProviderResponse;
+    parseResponse: (response: any) => string;
+
+    /**
+     * Extracts content from a provider's streaming response chunk
+     * @param response - Raw response chunk from the provider's API
+     * @returns Extracted content as a string
+     */
+    parseStreamingResponse: (response: any) => string;
 
     /**
      * Submits a completion request to the provider

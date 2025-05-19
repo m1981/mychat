@@ -3,7 +3,27 @@ import { renderHook, act } from '@testing-library/react';
 import { MessageInterface, ModelConfig } from '@type/chat';
 import React from 'react';
 
-// Mock the ProviderRegistry
+// Use vi.hoisted to create mock functions that can be used in vi.mock
+const mocks = vi.hoisted(() => {
+  return {
+    setChats: vi.fn(),
+    getState: vi.fn().mockReturnValue({
+      chats: [
+        { id: 'chat1', title: '', titleSet: false, messages: [] }
+      ],
+      currentChatIndex: 0
+    }),
+    provider: {
+      formatRequest: vi.fn().mockReturnValue({ messages: [], model: 'test-model' }),
+      // Return an object with content property instead of a string
+      parseResponse: vi.fn().mockReturnValue({ content: 'Generated Title' }),
+      submitCompletion: vi.fn().mockResolvedValue({ content: 'Generated Title' }),
+      submitStream: vi.fn()
+    }
+  };
+});
+
+// Now use the hoisted mocks in vi.mock() calls
 vi.mock('@config/providers/provider.registry', () => ({
   ProviderRegistry: {
     getProvider: vi.fn().mockImplementation((key) => {
@@ -50,7 +70,6 @@ vi.mock('@config/providers/provider.registry', () => ({
   }
 }));
 
-// Mock the ModelRegistry
 vi.mock('@config/models/model.registry', () => ({
   ModelRegistry: {
     getModelCapabilities: vi.fn().mockReturnValue({
@@ -59,38 +78,25 @@ vi.mock('@config/models/model.registry', () => ({
   }
 }));
 
-// Mock the ProviderContext
 vi.mock('@contexts/ProviderContext', () => ({
-  useProvider: () => mockProvider
+  useProvider: () => mocks.provider
 }));
 
-// Setup mocks
-const mockSetChats = vi.fn();
-const mockGetState = vi.fn().mockReturnValue({
-  chats: [
-    { id: 'chat1', title: '', titleSet: false, messages: [] }
-  ],
-  currentChatIndex: 0
-});
-
-// Use vi.mock with a factory function that doesn't reference external variables
 vi.mock('@store/store', () => {
+  // Create a function that takes a selector and returns the result of calling that selector on the mock store
+  const useStoreMock = (selector) => selector({
+    getState: mocks.getState,
+    setState: vi.fn(),
+    setChats: mocks.setChats
+  });
+  
+  // Add getState as a static method on the function
+  useStoreMock.getState = mocks.getState;
+  
   return {
-    default: {
-      getState: () => mockGetState(),
-      setState: vi.fn(),
-      setChats: (...args: any[]) => mockSetChats(...args)
-    }
+    default: useStoreMock
   };
 });
-
-// Mock provider
-const mockProvider = {
-  formatRequest: vi.fn().mockReturnValue({ messages: [], model: 'test-model' }),
-  parseResponse: vi.fn().mockReturnValue('Generated Title'),
-  submitCompletion: vi.fn().mockResolvedValue({ content: 'Generated Title' }),
-  submitStream: vi.fn()
-};
 
 // Import the hook after mocking
 import { useTitleGeneration } from '@hooks/useTitleGeneration';
@@ -98,7 +104,7 @@ import { useTitleGeneration } from '@hooks/useTitleGeneration';
 describe('useTitleGeneration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetState.mockReturnValue({
+    mocks.getState.mockReturnValue({
       chats: [
         { id: 'chat1', title: '', titleSet: false, messages: [] }
       ],
@@ -126,7 +132,7 @@ describe('useTitleGeneration', () => {
     });
     
     // Verify provider methods were called correctly
-    expect(mockProvider.formatRequest).toHaveBeenCalledWith(
+    expect(mocks.provider.formatRequest).toHaveBeenCalledWith(
       expect.objectContaining({ 
         model: 'gpt-4o',
         stream: false 
@@ -143,24 +149,23 @@ describe('useTitleGeneration', () => {
       ])
     );
     
-    expect(mockProvider.submitCompletion).toHaveBeenCalled();
-    expect(mockProvider.parseResponse).toHaveBeenCalled();
+    expect(mocks.provider.submitCompletion).toHaveBeenCalled();
+    expect(mocks.provider.parseResponse).toHaveBeenCalled();
     
     // Verify chat was updated
-    expect(mockSetChats).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: 'chat1',
-          title: 'Generated Title',
-          titleSet: true
-        })
-      ])
-    );
+    expect(mocks.setChats).toHaveBeenCalledWith([
+      {
+        id: 'chat1',
+        title: 'Generated Title',
+        titleSet: true,
+        messages: [] // Include any other properties that should be in the updated chat
+      }
+    ]);
   });
   
   it('should not generate a title if chat already has one', async () => {
     // Mock store with a chat that already has a title
-    mockGetState.mockReturnValueOnce({
+    mocks.getState.mockReturnValueOnce({
       chats: [
         { id: 'chat1', title: 'Existing Title', titleSet: true, messages: [] }
       ],
@@ -186,14 +191,14 @@ describe('useTitleGeneration', () => {
     });
     
     // Verify provider methods were not called
-    expect(mockProvider.formatRequest).not.toHaveBeenCalled();
-    expect(mockProvider.submitCompletion).not.toHaveBeenCalled();
-    expect(mockSetChats).not.toHaveBeenCalled();
+    expect(mocks.provider.formatRequest).not.toHaveBeenCalled();
+    expect(mocks.provider.submitCompletion).not.toHaveBeenCalled();
+    expect(mocks.setChats).not.toHaveBeenCalled();
   });
   
   it('should handle errors gracefully', async () => {
     // Mock provider to throw an error
-    mockProvider.submitCompletion.mockRejectedValueOnce(new Error('API Error'));
+    mocks.provider.submitCompletion.mockRejectedValueOnce(new Error('API Error'));
     
     const { result } = renderHook(() => useTitleGeneration());
     
