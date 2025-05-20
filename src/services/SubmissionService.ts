@@ -28,10 +28,24 @@ export class ChatSubmissionService implements SubmissionService {
       throw new Error('API key is missing. Please add your API key in settings.');
     }
     
-    const formattedRequest = this.provider.formatRequest(messages, {
+    // Validate that messages is an array
+    if (!Array.isArray(messages)) {
+      console.error('Invalid messages parameter:', messages);
+      throw new Error('Messages must be an array');
+    }
+    
+    // Create a config object that includes thinking_mode if enableThinking is true
+    const configWithThinking = {
       ...modelConfig,
-      stream: true
-    });
+      stream: true,
+      thinking_mode: modelConfig.enableThinking ? {
+        enabled: true,
+        budget_tokens: modelConfig.thinkingConfig?.budget_tokens || 1000
+      } : undefined
+    };
+    
+    // Format the request using the provider's formatRequest method
+    const formattedRequest = this.provider.formatRequest(messages, configWithThinking);
 
     try {
       // Get the current abort controller from Zustand
