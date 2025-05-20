@@ -12,7 +12,21 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
     name: PROVIDER_CONFIGS.openai.name,
     endpoints: PROVIDER_CONFIGS.openai.endpoints,
     models: PROVIDER_CONFIGS.openai.models.map(m => m.id),
-    formatRequest: (config: RequestConfig, messages: MessageInterface[]): FormattedRequest => {
+    formatRequest: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => {
+      // Validate inputs
+      if (!Array.isArray(messages)) {
+        console.error('Invalid messages parameter in OpenAI formatRequest:', messages);
+        // Return a minimal valid request to avoid crashing
+        return {
+          model: config.model || 'gpt-4o',
+          max_tokens: config.max_tokens || 1000,
+          temperature: config.temperature || 0.7,
+          top_p: config.top_p || 1,
+          stream: config.stream || false,
+          messages: []
+        };
+      }
+      
       const formattedRequest = {
         messages: messages
           .filter(m => m.content.trim() !== '')
@@ -108,7 +122,21 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
     name: PROVIDER_CONFIGS.anthropic.name,
     endpoints: PROVIDER_CONFIGS.anthropic.endpoints,
     models: PROVIDER_CONFIGS.anthropic.models.map(m => m.id),
-    formatRequest: (config: RequestConfig, messages: MessageInterface[]): FormattedRequest => {
+    formatRequest: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => {
+      // Validate inputs
+      if (!Array.isArray(messages)) {
+        console.error('Invalid messages parameter in Anthropic formatRequest:', messages);
+        // Return a minimal valid request to avoid crashing
+        return {
+          model: config.model || 'claude-3-7-sonnet-20250219',
+          max_tokens: config.max_tokens || 1000,
+          temperature: config.temperature || 0.7,
+          top_p: config.top_p || 1,
+          stream: config.stream || false,
+          messages: []
+        };
+      }
+      
       // Extract system message if present
       const systemMessage = messages.find(m => m.role === 'system');
       

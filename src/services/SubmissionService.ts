@@ -34,18 +34,10 @@ export class ChatSubmissionService implements SubmissionService {
       throw new Error('Messages must be an array');
     }
     
-    // Create a config object that includes thinking_mode if enableThinking is true
-    const configWithThinking = {
+    const formattedRequest = this.provider.formatRequest(messages, {
       ...modelConfig,
-      stream: true,
-      thinking_mode: modelConfig.enableThinking ? {
-        enabled: true,
-        budget_tokens: modelConfig.thinkingConfig?.budget_tokens || 1000
-      } : undefined
-    };
-    
-    // Format the request using the provider's formatRequest method
-    const formattedRequest = this.provider.formatRequest(messages, configWithThinking);
+      stream: true
+    });
 
     try {
       // Get the current abort controller from Zustand

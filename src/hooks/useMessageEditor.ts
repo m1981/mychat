@@ -137,7 +137,11 @@ export function useMessageEditor({
     setIsModalOpen(false);
     
     // Now submit with updated state to regenerate AI response
-    await handleSubmit();
+    try {
+      await handleSubmit();
+    } catch (error) {
+      console.error('Error submitting message after edit:', error);
+    }
   }, [messageIndex, setChats, getStoreState, editContent, setIsEdit, setIsEditing, handleSubmit]);
   
   // Handle save and submit
@@ -151,7 +155,11 @@ export function useMessageEditor({
       setEditContent('');
       
       // Submit the message
-      await handleSubmit();
+      try {
+        await handleSubmit();
+      } catch (error) {
+        console.error('Error submitting message:', error);
+      }
     } else {
       // If we're editing an existing message, show confirmation modal
       setIsModalOpen(true);
