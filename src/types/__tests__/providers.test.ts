@@ -91,7 +91,8 @@ describe('Provider Implementations', () => {
         frequency_penalty: 0
       };
       
-      const result = openaiProvider.formatRequest(config, messages);
+      // Update parameter order: messages first, then config
+      const result = openaiProvider.formatRequest(messages, config);
       
       expect(result).toEqual({
         messages: [
@@ -206,7 +207,8 @@ describe('Provider Implementations', () => {
         }
       };
       
-      const result = anthropicProvider.formatRequest(config, messages);
+      // Update parameter order: messages first, then config
+      const result = anthropicProvider.formatRequest(messages, config);
       
       expect(result).toEqual({
         model: 'claude-3-7-sonnet-20250219',

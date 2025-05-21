@@ -11,15 +11,16 @@ export const DEFAULT_PROVIDER: ProviderKey = 'anthropic';
  * This provides sensible defaults for model parameters
  */
 export const DEFAULT_MODEL_CONFIG: Readonly<ModelConfig> = Object.freeze({
-  model: 'claude-3-7-sonnet',
+  // Use the full model ID including version
+  model: 'claude-3-7-sonnet-20250219',
+  max_tokens: 4096,
   temperature: 0.7,
-  max_tokens: 4000,
-  top_p: 1,
+  top_p: 1.0,
   presence_penalty: 0,
   frequency_penalty: 0,
-  enableThinking: true,
-  thinkingConfig: {
-    budget_tokens: 1000
+  thinking_mode: {
+    enabled: false,
+    budget_tokens: 16000
   }
 });
 

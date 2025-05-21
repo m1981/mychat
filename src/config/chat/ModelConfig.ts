@@ -51,6 +51,9 @@ export function getModelCapabilities(modelId: string): ModelCapabilities {
     supportsSystemPrompt: true
   };
   
+  // Normalize model ID by removing version suffix if present
+  const normalizedModelId = modelId.replace(/-\d{8}$/, '');
+  
   // Model-specific capabilities
   const modelCapabilities: Record<string, Partial<ModelCapabilities>> = {
     'gpt-4o': {
@@ -63,13 +66,16 @@ export function getModelCapabilities(modelId: string): ModelCapabilities {
     },
     'claude-3-5-sonnet': {
       maxResponseTokens: 4096,
-      supportsThinking: true
+      supportsThinking: false
     }
   };
   
+  // Try to get capabilities for the normalized model ID
+  const capabilities = modelCapabilities[normalizedModelId] || modelCapabilities[modelId];
+  
   return {
     ...defaultCapabilities,
-    ...modelCapabilities[modelId]
+    ...capabilities
   };
 }
 

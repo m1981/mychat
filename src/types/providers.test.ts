@@ -101,7 +101,8 @@ describe('Providers', () => {
     });
 
     it('should format request correctly', () => {
-      const formattedRequest = openaiProvider.formatRequest(config, messages);
+      // Update parameter order: messages first, then config
+      const formattedRequest = openaiProvider.formatRequest(messages, config);
       
       expect(formattedRequest).toEqual({
         messages: [
@@ -157,7 +158,8 @@ describe('Providers', () => {
         { role: 'user', content: '   ' }    // Whitespace-only message that should be filtered
       ];
       
-      const formattedRequest = openaiProvider.formatRequest(config, messagesWithEmpty);
+      // Update parameter order: messages first, then config
+      const formattedRequest = openaiProvider.formatRequest(messagesWithEmpty, config);
       
       // Check that empty messages are filtered out
       expect(formattedRequest.messages.length).toBe(2);
@@ -211,7 +213,8 @@ describe('Providers', () => {
     });
 
     it('should format request correctly with system message', () => {
-      const formattedRequest = anthropicProvider.formatRequest(config, messages);
+      // Update parameter order: messages first, then config
+      const formattedRequest = anthropicProvider.formatRequest(messages, config);
       
       // Check that system message is properly handled as a system parameter
       expect(formattedRequest.system).toBe('You are a helpful assistant.');
@@ -248,12 +251,14 @@ describe('Providers', () => {
         { role: 'assistant', content: 'Hi there!' }
       ];
       
-      const formattedRequest = anthropicProvider.formatRequest(config, messagesWithoutSystem);
+      // Update parameter order: messages first, then config
+      const formattedRequest = anthropicProvider.formatRequest(messagesWithoutSystem, config);
       
       // Check that no system parameter is added
       expect(formattedRequest.system).toBeUndefined();
       
       // Check that regular messages are included
+      expect(formattedRequest.messages.length).toBe(2);
       expect(formattedRequest.messages[0]).toEqual({
         role: 'user',
         content: 'Hello!'
@@ -339,7 +344,8 @@ describe('Providers', () => {
         { role: 'user', content: '   ' }    // Whitespace-only message that should be filtered
       ];
       
-      const formattedRequest = anthropicProvider.formatRequest(config, messagesWithEmpty);
+      // Update parameter order: messages first, then config
+      const formattedRequest = anthropicProvider.formatRequest(messagesWithEmpty, config);
       
       // Check that empty messages are filtered out
       expect(formattedRequest.messages.length).toBe(1);

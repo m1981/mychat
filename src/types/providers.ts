@@ -5,6 +5,20 @@ import { MessageInterface, ProviderKey } from '@type/chat';
 import { AIProviderInterface, ProviderResponse, RequestConfig, FormattedRequest } from '@type/provider';
 import store from '@store/store';
 
+export interface AIProviderInterface {
+  id: string;
+  name: string;
+  endpoints: string[];
+  models: string[];
+  
+  // Standardize parameter order: messages first, then config
+  formatRequest: (messages: MessageInterface[], config: RequestConfig) => FormattedRequest;
+  parseResponse: (response: ProviderResponse) => string;
+  parseStreamingResponse: (response: ProviderResponse) => string;
+  submitCompletion: (formattedRequest: FormattedRequest) => Promise<ProviderResponse>;
+  submitStream: (formattedRequest: FormattedRequest) => Promise<ReadableStream>;
+}
+
 // Create provider implementations using configuration data directly
 export const providers: Record<ProviderKey, AIProviderInterface> = {
   openai: {
@@ -143,7 +157,7 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
       // Filter out system messages and empty messages for the regular message array
       const regularMessages = messages
         .filter(m => m.role !== 'system')
-        .filter(m => m.content.trim() !== '')
+        .filter(m => m.content && m.content.trim() !== '')
         .map(m => ({
           role: m.role === 'assistant' ? 'assistant' : 'user',
           content: m.content,
