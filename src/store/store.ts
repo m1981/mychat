@@ -1,5 +1,5 @@
 import { ProviderRegistry } from '@config/providers/provider.registry';
-import { DEFAULT_CHAT_CONFIG } from '@constants/chat';
+import { createDefaultChatConfig, DEFAULT_SYSTEM_MESSAGE } from '@constants/chat';
 import { StoreApi, create } from 'zustand';
 import { persist, PersistStorage } from 'zustand/middleware';
 import * as Sentry from '@sentry/react';
@@ -16,7 +16,9 @@ export type StoreState = ChatSlice &
   AuthSlice &
   ConfigSlice &
   PromptSlice &
-  RequestSlice;
+  RequestSlice & {
+    resetState: () => void;
+  };
 
 export type StoreSlice<T> = (
   set: StoreApi<StoreState>['setState'],
@@ -96,6 +98,29 @@ const useStore = create<StoreState>()(
       ...createConfigSlice(set, get),
       ...createPromptSlice(set, get),
       ...createRequestSlice(set, get),
+      
+      // Add resetState function to reset the store to initial values
+      resetState: () => {
+        console.log('Resetting store state to defaults');
+        set({
+          chats: [],
+          currentChatIndex: -1,
+          defaultChatConfig: createDefaultChatConfig(),
+          // Reset other state properties as needed
+          apiKeys: {},
+          apiEndpoints: {},
+          theme: 'system',
+          autoTitle: true,
+          prompts: [],
+          defaultSystemMessage: DEFAULT_SYSTEM_MESSAGE,
+          hideMenuOptions: false,
+          firstVisit: true,
+          hideSideMenu: false,
+          folders: [],
+          enterToSubmit: true,
+          layoutWidth: 'normal',
+        });
+      }
     }),
     {
       name: 'free-chat-gpt',

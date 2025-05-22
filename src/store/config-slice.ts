@@ -1,9 +1,9 @@
-import { DEFAULT_SYSTEM_MESSAGE } from '@config/chat/ChatConfig';
-import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
-import { ChatConfig, ProviderKey } from '@type/chat';
-import { Theme } from '@type/theme';
-
-import { StoreSlice } from './store';
+import { StateCreator } from 'zustand';
+import { ConfigSlice, StoreState } from './types';
+import { createDefaultChatConfig, DEFAULT_SYSTEM_MESSAGE } from '@config/defaults/ChatDefaults';
+import { ProviderRegistry } from '@config/providers/provider.registry';
+import { ChatConfig } from '@type/config';
+import { debug } from '@utils/debug';
 
 export type LayoutWidth = 'normal' | 'wide';
 
@@ -30,7 +30,7 @@ export interface ConfigSlice {
 
 }
 
-export const createConfigSlice: StoreSlice<ConfigSlice> = (set) => ({
+export const createConfigSlice: StateCreator<StoreState, [], [], ConfigSlice> = (set, get) => ({
   openConfig: false,
   theme: 'dark',
   hideMenuOptions: false,
@@ -38,10 +38,7 @@ export const createConfigSlice: StoreSlice<ConfigSlice> = (set) => ({
   autoTitle: true,
   enterToSubmit: true,
   layoutWidth: 'normal',
-  defaultChatConfig: {
-    provider: 'anthropic',
-    modelConfig: DEFAULT_MODEL_CONFIG,
-  },
+  defaultChatConfig: createDefaultChatConfig(),
   defaultSystemMessage: DEFAULT_SYSTEM_MESSAGE,
   setOpenConfig: (openConfig: boolean) => {
     set((prev: ConfigSlice) => ({
@@ -61,11 +58,71 @@ export const createConfigSlice: StoreSlice<ConfigSlice> = (set) => ({
       autoTitle: autoTitle,
     }));
   },
-  setDefaultChatConfig: (config: ChatConfig) => {
-    set((prev: ConfigSlice) => ({
-      ...prev,
-      defaultChatConfig: config,
-    }));
+  setDefaultChatConfig: (config: Partial<ChatConfig>) => {
+    debug.log('store', 'Setting default chat config:', config);
+    
+    // Get current config
+    const currentConfig = get().defaultChatConfig;
+    
+    // Create a new config object to avoid mutation issues
+    let newConfig = { ...currentConfig };
+    
+    // Handle provider change - update model if provider changes
+    if (config.provider && config.provider !== currentConfig.provider) {
+      debug.log('store', `Provider changed from ${currentConfig.provider} to ${config.provider}`);
+      
+      try {
+        // Get default model for the new provider
+        const defaultModel = ProviderRegistry.getDefaultModelForProvider(config.provider);
+        debug.log('store', `Default model for ${config.provider}: ${defaultModel}`);
+        
+        // Create new modelConfig with updated model
+        newConfig = {
+          ...newConfig,
+          provider: config.provider,
+          modelConfig: {
+            ...newConfig.modelConfig,
+            model: defaultModel,
+            ...(config.modelConfig || {})
+          }
+        };
+        
+        // If the user explicitly provided a model, use that instead
+        if (config.modelConfig?.model) {
+          newConfig.modelConfig.model = config.modelConfig.model;
+        }
+      } catch (error) {
+        debug.error('store', `Error getting default model for provider ${config.provider}:`, error);
+      }
+    } else {
+      // No provider change, just merge the configs
+      newConfig = {
+        ...newConfig,
+        ...config,
+        modelConfig: {
+          ...newConfig.modelConfig,
+          ...(config.modelConfig || {})
+        }
+      };
+    }
+    
+    // Ensure capabilities is an object, not an array
+    if (newConfig.modelConfig?.capabilities && Array.isArray(newConfig.modelConfig.capabilities)) {
+      debug.warn('store', 'Converting capabilities array to object');
+      newConfig.modelConfig.capabilities = {};
+    }
+    
+    // Merge capabilities
+    if (newConfig.modelConfig && currentConfig.modelConfig?.capabilities) {
+      newConfig.modelConfig.capabilities = {
+        ...(currentConfig.modelConfig.capabilities || {}),
+        ...(newConfig.modelConfig.capabilities || {})
+      };
+    }
+    
+    debug.log('store', 'New default chat config:', newConfig);
+    
+    set({ defaultChatConfig: newConfig });
   },
   setProvider: (provider: ProviderKey) => {
     set((prev) => ({

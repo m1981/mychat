@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import useStore from '../store';
 import { DEFAULT_PROVIDER } from '@config/defaults/ChatDefaults';
+import { DEFAULT_CHAT_CONFIG } from '@constants/chat';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -27,9 +28,20 @@ Object.defineProperty(window, 'localStorage', {
 describe('Configuration Persistence Tests', () => {
   beforeEach(() => {
     localStorageMock.clear();
+    
     // Reset the store to initial state
-    const { resetState } = useStore.getState();
-    resetState();
+    const store = useStore.getState();
+    if (typeof store.resetState === 'function') {
+      store.resetState();
+    } else {
+      // Manual reset if resetState is not available
+      useStore.setState({
+        chats: [],
+        currentChatIndex: -1,
+        defaultChatConfig: DEFAULT_CHAT_CONFIG,
+        // Add other default values as needed
+      });
+    }
   });
 
   afterEach(() => {
