@@ -45,28 +45,32 @@ export const createConfigSlice: StateCreator<StoreState, [], [], ConfigSlice> = 
     // Get current config
     const currentConfig = get().defaultChatConfig;
     
+    // Handle provider change - update model if provider changes
+    if (config.provider && config.provider !== currentConfig.provider) {
+      debug.log('store', `Provider changed from ${currentConfig.provider} to ${config.provider}`);
+      
+      try {
+        // Get default model for the new provider
+        const defaultModel = ProviderRegistry.getDefaultModelForProvider(config.provider);
+        debug.log('store', `Default model for ${config.provider}: ${defaultModel}`);
+        
+        // Update model in the config
+        if (!config.modelConfig) {
+          config.modelConfig = { ...currentConfig.modelConfig, model: defaultModel };
+        } else {
+          config.modelConfig.model = defaultModel;
+        }
+      } catch (error) {
+        debug.error('store', `Error getting default model for provider ${config.provider}:`, error);
+      }
+    }
+    
     // Create a new config object
     const newConfig = { ...currentConfig };
     
     // Update provider if specified
     if (config.provider) {
       newConfig.provider = config.provider;
-      
-      // If provider changed, update the model
-      if (config.provider !== currentConfig.provider) {
-        try {
-          const defaultModel = ProviderRegistry.getDefaultModelForProvider(config.provider);
-          debug.log('store', `Provider changed to ${config.provider}, default model: ${defaultModel}`);
-          
-          // Update model in modelConfig
-          newConfig.modelConfig = {
-            ...newConfig.modelConfig,
-            model: defaultModel
-          };
-        } catch (error) {
-          debug.log('store', `Error getting default model for provider ${config.provider}:`, error);
-        }
-      }
     }
     
     // Update modelConfig if specified

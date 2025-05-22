@@ -9,22 +9,37 @@ import store from '@store/store';
 // Provider-specific request formatters using strategy pattern
 const requestFormatters = {
   openai: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => {
-    // Create base request
-    const baseRequest = {
-      model: config.model || 'gpt-4o',
-      max_tokens: config.max_tokens || 1000,
-      temperature: config.temperature || 0.7,
-      top_p: config.top_p || 1,
-      stream: config.stream || false,
-      messages: messages.map(m => ({
-        role: m.role,
-        content: m.content
-      }))
+    // Validate inputs
+    if (!Array.isArray(messages)) {
+      console.error('Invalid messages parameter in OpenAI formatRequest:', messages);
+      // Return a minimal valid request to avoid crashing
+      return {
+        model: config.model || 'gpt-4o',
+        max_tokens: config.max_tokens || 1000,
+        temperature: config.temperature || 0.7,
+        top_p: config.top_p || 1,
+        stream: config.stream || false,
+        messages: []
+      };
+    }
+    
+    const formattedRequest = {
+      messages: messages
+        .filter(m => m.content && m.content.trim() !== '')
+        .map(m => ({
+          role: m.role,
+          content: m.content
+        })),
+      model: config.model,
+      max_tokens: ModelRegistry.getModelCapabilities(config.model).maxResponseTokens,
+      temperature: config.temperature,
+      presence_penalty: config.presence_penalty,
+      top_p: config.top_p,
+      frequency_penalty: config.frequency_penalty,
+      stream: config.stream ?? false
     };
     
-    // Apply capability middleware
-    const context = createCapabilityContext('openai', config.model, config);
-    return capabilityRegistry.applyRequestMiddleware(baseRequest, context);
+    return formattedRequest;
   },
   
   anthropic: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => {
@@ -83,18 +98,20 @@ const requestFormatters = {
 const responseParserStrategies = {
   openai: {
     parseResponse: (response: ProviderResponse): string => {
-      // Apply capability middleware to response
-      const config = store.getState().config.modelConfig;
-      const context = createCapabilityContext('openai', config.model, config);
-      const processedResponse = capabilityRegistry.applyResponseMiddleware(response, context);
+      // Handle direct content response (used in tests)
+      if (response.content) {
+        return response.content;
+      }
       
-      // Extract content from processed response
-      if (processedResponse.choices?.[0]?.message?.content) {
-        return processedResponse.choices[0].message.content;
+      // Handle standard OpenAI response format
+      if (response.choices && 
+          response.choices[0] && 
+          response.choices[0].message && 
+          response.choices[0].message.content !== undefined) {
+        return response.choices[0].message.content;
       }
-      if (processedResponse.content && typeof processedResponse.content === 'string') {
-        return processedResponse.content;
-      }
+      
+      // If we get here, the response format is invalid
       throw new Error('Invalid response format from OpenAI');
     },
     
