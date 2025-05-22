@@ -11,12 +11,21 @@ export interface ProviderModel {
   };
 }
 
+export interface ProviderCapabilities {
+  supportsThinking: boolean;
+  supportsStreaming: boolean;
+  supportsSystemPrompt: boolean;
+  maxCompletionTokens: number;
+  defaultModel: string;
+}
+
 export interface ProviderConfig {
   id: ProviderKey;
   name: string;
   defaultModel: string;
   endpoints: string[];
   models: ProviderModel[];
+  capabilities: ProviderCapabilities;
 }
 
 // Configuration data only - no dependencies on implementations
@@ -25,7 +34,6 @@ export const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
     id: 'anthropic',
     name: 'Anthropic',
     defaultModel: 'claude-3-7-sonnet-20250219',
-    // Always use the secure proxy endpoint
     endpoints: ['/api/chat/anthropic'],
     models: [
       {
@@ -38,13 +46,19 @@ export const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
         }
       },
       // Other models...
-    ]
+    ],
+    capabilities: {
+      supportsThinking: true,
+      supportsStreaming: true,
+      supportsSystemPrompt: true,
+      maxCompletionTokens: 8192,
+      defaultModel: 'claude-3-7-sonnet-20250219'
+    }
   },
   openai: {
     id: 'openai',
     name: 'OpenAI',
     defaultModel: 'gpt-4o',
-    // Always use the secure proxy endpoint
     endpoints: ['/api/chat/openai'],
     models: [
       {
@@ -57,6 +71,13 @@ export const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
         }
       },
       // Other models...
-    ]
+    ],
+    capabilities: {
+      supportsThinking: false,
+      supportsStreaming: true,
+      supportsSystemPrompt: true,
+      maxCompletionTokens: 16384,
+      defaultModel: 'gpt-4o'
+    }
   }
 };

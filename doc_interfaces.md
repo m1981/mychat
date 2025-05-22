@@ -791,6 +791,244 @@ interface ErrorResponse {
 - **Debugging**: Detailed error information aids in troubleshooting.
 - **Consistency**: Standardized error format makes error handling more maintainable.
 
+## Capability Registry Interfaces
+
+### `CapabilityDefinition`
+
+Defines a provider capability with its UI component and detection logic.
+
+**Motivation:**
+- **Single Responsibility Principle (SRP)**: Each capability encapsulates its own detection logic and UI component.
+- **Open/Closed Principle (OCP)**: New capabilities can be added without modifying existing code.
+- **Interface Segregation Principle (ISP)**: The interface defines only the essential methods needed for capability detection and rendering.
+- **Dependency Inversion Principle (DIP)**: Components depend on the capability abstraction rather than concrete implementations.
+- **Plugin Pattern**: Enables extensibility through a registry of capabilities.
+
+```typescript
+export interface CapabilityDefinition {
+  /**
+   * Unique identifier for the capability
+   */
+  id: string;
+  
+  /**
+   * Display name of the capability for UI presentation
+   */
+  name: string;
+  
+  /**
+   * Determines if this capability is supported by a specific provider and model
+   * @param provider - Provider key (e.g., 'openai', 'anthropic')
+   * @param model - Model identifier (e.g., 'gpt-4o', 'claude-3-7-sonnet')
+   * @returns Boolean indicating if the capability is supported
+   */
+  isSupported: (provider: ProviderKey, model: string) => boolean;
+  
+  /**
+   * React component for configuring this capability
+   * Receives model configuration and setter function
+   */
+  configComponent: React.ComponentType<{
+    modelConfig: ModelConfig;
+    setModelConfig: (config: ModelConfig) => void;
+  }>;
+  
+  /**
+   * Optional priority for UI rendering order
+   * Higher numbers appear first in the UI
+   */
+  priority?: number;
+  
+  /**
+   * Optional middleware to modify requests for this capability
+   * @param request - The formatted request
+   * @param config - The model configuration
+   * @returns Modified request with capability-specific adjustments
+   */
+  formatRequestMiddleware?: (request: FormattedRequest, config: ModelConfig) => FormattedRequest;
+  
+  /**
+   * Optional middleware to modify responses for this capability
+   * @param response - The provider response
+   * @param config - The model configuration
+   * @returns Modified response with capability-specific processing
+   */
+  parseResponseMiddleware?: (response: ProviderResponse, config: ModelConfig) => ProviderResponse;
+}
+```
+
+### `CapabilityRegistry`
+
+Registry that manages provider capabilities and their detection.
+
+**Motivation:**
+- **SRP**: Centralizes capability management.
+- **OCP**: New capabilities can be registered without modifying existing code.
+- **DIP**: Components depend on the registry abstraction rather than specific capabilities.
+- **Factory Pattern**: The registry acts as a factory for capability instances.
+- **React Configuration Pattern**: Follows React's pattern of centralized configuration.
+
+```typescript
+export interface CapabilityRegistry {
+  /**
+   * Registers a new capability in the registry
+   * @param capability - Capability definition to register
+   */
+  registerCapability: (capability: CapabilityDefinition) => void;
+  
+  /**
+   * Gets all capabilities supported by a specific provider and model
+   * @param provider - Provider key
+   * @param model - Model identifier
+   * @returns Array of supported capabilities
+   */
+  getSupportedCapabilities: (provider: ProviderKey, model: string) => CapabilityDefinition[];
+  
+  /**
+   * Checks if a specific capability is supported by a provider and model
+   * @param capabilityId - Capability identifier
+   * @param provider - Provider key
+   * @param model - Model identifier
+   * @returns Boolean indicating if the capability is supported
+   */
+  isCapabilitySupported: (capabilityId: string, provider: ProviderKey, model: string) => boolean;
+  
+  /**
+   * Gets UI components for all capabilities supported by a provider and model
+   * @param provider - Provider key
+   * @param model - Model identifier
+   * @returns Array of capability UI components with their props
+   */
+  getCapabilityComponents: (
+    provider: ProviderKey, 
+    model: string, 
+    modelConfig: ModelConfig, 
+    setModelConfig: (config: ModelConfig) => void
+  ) => React.ReactNode[];
+  
+  /**
+   * Applies all capability middleware to a request
+   * @param request - The formatted request
+   * @param provider - Provider key
+   * @param model - Model identifier
+   * @param config - The model configuration
+   * @returns Request with all applicable capability middleware applied
+   */
+  applyRequestMiddleware: (
+    request: FormattedRequest, 
+    provider: ProviderKey, 
+    model: string, 
+    config: ModelConfig
+  ) => FormattedRequest;
+  
+  /**
+   * Applies all capability middleware to a response
+   * @param response - The provider response
+   * @param provider - Provider key
+   * @param model - Model identifier
+   * @param config - The model configuration
+   * @returns Response with all applicable capability middleware applied
+   */
+  applyResponseMiddleware: (
+    response: ProviderResponse, 
+    provider: ProviderKey, 
+    model: string, 
+    config: ModelConfig
+  ) => ProviderResponse;
+}
+```
+
+## Capability Registry Implementation
+
+The implementation of the Capability Registry follows a singleton pattern to ensure consistent access throughout the application.
+
+```mermaid
+classDiagram
+    class CapabilityDefinition {
+        +string id
+        +string name
+        +isSupported(provider, model) boolean
+        +React.ComponentType configComponent
+        +number? priority
+        +formatRequestMiddleware?(request, config) FormattedRequest
+        +parseResponseMiddleware?(response, config) ProviderResponse
+    }
+    
+    class CapabilityRegistry {
+        +registerCapability(capability) void
+        +getSupportedCapabilities(provider, model) CapabilityDefinition[]
+        +isCapabilitySupported(capabilityId, provider, model) boolean
+        +getCapabilityComponents(provider, model, modelConfig, setModelConfig) React.ReactNode[]
+        +applyRequestMiddleware(request, provider, model, config) FormattedRequest
+        +applyResponseMiddleware(response, provider, model, config) ProviderResponse
+    }
+    
+    class CapabilityRegistryImpl {
+        -CapabilityDefinition[] capabilities
+        +registerCapability(capability) void
+        +getSupportedCapabilities(provider, model) CapabilityDefinition[]
+        +isCapabilitySupported(capabilityId, provider, model) boolean
+        +getCapabilityComponents(provider, model, modelConfig, setModelConfig) React.ReactNode[]
+        +applyRequestMiddleware(request, provider, model, config) FormattedRequest
+        +applyResponseMiddleware(response, provider, model, config) ProviderResponse
+    }
+    
+    CapabilityRegistry <|.. CapabilityRegistryImpl
+    CapabilityRegistryImpl o-- CapabilityDefinition
+```
+
+## Integration with Provider Architecture
+
+The Capability Registry integrates with the existing provider architecture as follows:
+
+```mermaid
+graph TD
+    subgraph "React Components"
+        CC[ChatConfigMenu]
+        MC[ModelSelector]
+    end
+    
+    subgraph "Capability Registry"
+        CR[CapabilityRegistry]
+        CD[CapabilityDefinition]
+    end
+    
+    subgraph "Provider Architecture"
+        PR[ProviderRegistry]
+        API[AIProviderInterface]
+    end
+    
+    CC -->|Uses| CR
+    CR -->|Registers| CD
+    CR -->|Queries| PR
+    PR -->|Provides| API
+    MC -->|Uses| PR
+    
+    subgraph "Capability Components"
+        TC[ThinkingModeToggle]
+        FC[FileUploadConfig]
+        SC[StreamingToggle]
+    end
+    
+    CD -->|References| TC
+    CD -->|References| FC
+    CD -->|References| SC
+    
+    subgraph "Request/Response Pipeline"
+        FReq[formatRequest]
+        FRes[parseResponse]
+    end
+    
+    CR -->|Enhances| FReq
+    CR -->|Enhances| FRes
+```
+
+This architecture ensures that:
+1. New capabilities can be added without modifying existing code
+2. UI components for capabilities are dynamically rendered based on provider support
+3. Request and response processing can be enhanced by capability-specific middleware
+4. The system remains extensible for future AI model capabilities
+
 ## Implementation Guidelines
 
 ### Backend Route Handlers
@@ -815,6 +1053,153 @@ Frontend provider implementations should:
 5. Handle errors and provide meaningful error messages
 
 This contract-based approach ensures that the frontend and backend can evolve independently while maintaining compatibility, and that new providers can be added with minimal changes to the existing codebase.
+
+## Capability Registry Interfaces
+
+### `CapabilityContext`
+
+Context provided to capability middleware functions.
+
+**Motivation:**
+- **Information Hiding**: Encapsulates all necessary context without exposing implementation details.
+- **Dependency Injection**: Provides middleware functions with all required dependencies.
+- **Extensibility**: Can be extended with additional context information without breaking existing middleware.
+
+```typescript
+export interface CapabilityContext {
+  /**
+   * Provider key (e.g., 'openai', 'anthropic')
+   */
+  provider: ProviderKey;
+  
+  /**
+   * Model identifier (e.g., 'gpt-4o', 'claude-3-7-sonnet')
+   */
+  model: string;
+  
+  /**
+   * Current model configuration
+   */
+  modelConfig: ModelConfig;
+  
+  /**
+   * Optional capability-specific configuration
+   */
+  capabilityConfig?: Record<string, any>;
+}
+```
+
+### `CapabilityComponentProps`
+
+Standard props interface for capability configuration components.
+
+**Motivation:**
+- **Consistency**: Ensures all capability components receive the same base props.
+- **Type Safety**: Provides type checking for component props.
+- **Extensibility**: Allows for additional props through generics.
+
+```typescript
+export interface CapabilityComponentProps<T = any> {
+  /**
+   * Current model configuration
+   */
+  modelConfig: ModelConfig;
+  
+  /**
+   * Function to update model configuration
+   */
+  setModelConfig: (config: ModelConfig) => void;
+  
+  /**
+   * Provider key
+   */
+  provider: ProviderKey;
+  
+  /**
+   * Model identifier
+   */
+  model: string;
+  
+  /**
+   * Capability-specific configuration
+   */
+  capabilityConfig?: T;
+}
+```
+
+## Middleware Execution
+
+### Request Middleware Pipeline
+
+The request middleware pipeline processes requests in the following order:
+
+1. **Base request formatting**: The provider's `formatRequest` method creates the initial request.
+2. **Capability middleware application**: Each capability's `formatRequestMiddleware` is applied in order of priority (highest first).
+3. **Final request validation**: The request is validated before being sent to the API.
+
+```mermaid
+flowchart LR
+    FR[formatRequest] --> C1[Capability 1 Middleware]
+    C1 --> C2[Capability 2 Middleware]
+    C2 --> C3[Capability 3 Middleware]
+    C3 --> V[Validation]
+    V --> API[API Request]
+```
+
+### Response Middleware Pipeline
+
+The response middleware pipeline processes responses in the following order:
+
+1. **Initial response parsing**: The provider's `parseResponse` method extracts the basic content.
+2. **Capability middleware application**: Each capability's `parseResponseMiddleware` is applied in order of priority (highest first).
+3. **Final response formatting**: The response is formatted for display in the UI.
+
+```mermaid
+flowchart LR
+    API[API Response] --> PR[parseResponse]
+    PR --> C1[Capability 1 Middleware]
+    C1 --> C2[Capability 2 Middleware]
+    C2 --> C3[Capability 3 Middleware]
+    C3 --> F[Final Formatting]
+```
+
+## Capability Configuration
+
+Each capability can define its own configuration structure, which is stored within the `ModelConfig` object. The configuration should follow these guidelines:
+
+1. **Namespace**: Use the capability ID as the configuration key.
+2. **Type Safety**: Define TypeScript interfaces for the configuration.
+3. **Defaults**: Provide sensible default values.
+4. **Validation**: Include validation logic for configuration values.
+
+Example for Thinking Mode capability:
+
+```typescript
+// In ModelConfig interface
+export interface ModelConfig {
+  model: string;
+  max_tokens: number;
+  temperature: number;
+  // ... other standard fields
+  
+  // Capability-specific configurations
+  thinking_mode?: {
+    enabled: boolean;
+    budget_tokens: number;
+  };
+  
+  file_upload?: {
+    enabled: boolean;
+    maxFiles: number;
+    maxSizePerFile: number;
+  };
+  
+  // Allow for future capabilities
+  [key: string]: any;
+}
+```
+
+This approach allows each capability to define its own configuration structure while maintaining type safety and avoiding conflicts between capabilities.
 
 ## Overall Architecture Benefits
 

@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
-
-
-import {
-  FrequencyPenaltySlider,
-  MaxTokenSlider,
-  ModelSelector,
-  PresencePenaltySlider,
-  TemperatureSlider,
-  TopPSlider,
-} from '@components/ConfigMenu/ConfigMenu';
+import { capabilityRegistry } from '@capabilities/registry';
+import { ModelSelector } from '@components/ConfigMenu/ConfigMenu';
 import PopupModal from '@components/PopupModal';
 import { DEFAULT_CHAT_CONFIG, DEFAULT_SYSTEM_MESSAGE } from '@config/chat/ChatConfig';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
@@ -79,27 +71,15 @@ const ChatConfigPopup = ({
           modelConfig={_modelConfig}
           setModelConfig={_setModelConfig}
         />
-        <MaxTokenSlider
-          provider={_provider}
-          modelConfig={_modelConfig}
-          setModelConfig={_setModelConfig}
-        />
-        <TemperatureSlider
-          modelConfig={_modelConfig}
-          setModelConfig={_setModelConfig}
-        />
-        <TopPSlider
-          modelConfig={_modelConfig}
-          setModelConfig={_setModelConfig}
-        />
-        <PresencePenaltySlider
-          modelConfig={_modelConfig}
-          setModelConfig={_setModelConfig}
-        />
-        <FrequencyPenaltySlider
-          modelConfig={_modelConfig}
-          setModelConfig={_setModelConfig}
-        />
+        
+        {/* Render all capability components dynamically (including standard ones) */}
+        {capabilityRegistry.getCapabilityComponents(
+          _provider, 
+          _modelConfig.model, 
+          _modelConfig, 
+          _setModelConfig
+        )}
+        
         <div
           className='btn btn-neutral cursor-pointer mt-5'
           onClick={handleReset}
