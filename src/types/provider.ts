@@ -46,19 +46,13 @@ export interface ProviderResponse {
 }
 
 export interface AIProviderInterface {
-  // Core identity
   id: string;
   name: string;
-  
-  // Available options
   endpoints: string[];
   models: string[];
-  
-  // Core functionality - keep simple
-  formatRequest: (messages: MessageInterface[], config: RequestConfig) => FormattedRequest;
+  formatRequest: (config: RequestConfig, messages: MessageInterface[]) => FormattedRequest;
   parseResponse: (response: any) => string;
-  
   parseStreamingResponse: (response: any) => string;
-  getCapabilities: (model: string) => string[];
-  validateConfig: (config: RequestConfig) => RequestConfig;
+  submitCompletion: (formattedRequest: FormattedRequest) => Promise<ProviderResponse>;
+  submitStream: (formattedRequest: FormattedRequest) => Promise<ReadableStream>;
 }

@@ -1,46 +1,43 @@
-import { CapabilityDefinition } from '@config/capabilities/types';
-import { FormattedRequest } from '@type/provider';
-import { CapabilityContext } from '@type/capability';
-import ThinkingModeToggle from '@components/ThinkingModeToggle';
+import { CapabilityDefinition, CapabilityContext } from '@type/capability';
+import { ProviderKey } from '@type/chat';
+import { FormattedRequest, ProviderResponse } from '@type/provider';
+import { PROVIDER_CONFIGS } from '@config/providers/provider.config';
+import { ThinkingModeToggle } from '@components/ThinkingModeToggle';
+import { capabilityRegistry } from './registry';
 
-/**
- * Thinking Mode capability definition
- * 
- * This capability allows the AI to "think" before responding,
- * which can improve the quality of responses for complex tasks.
- */
 export const ThinkingModeCapability: CapabilityDefinition = {
-  id: 'thinking_mode',
+  id: 'thinking',
   name: 'Thinking Mode',
-  description: 'Allows the AI to think before responding',
-  configComponent: ThinkingModeToggle,
-  priority: 10,
+  priority: 100, // High priority - show at top
   
-  isSupported: (provider, model) => {
-    // Currently only supported by Anthropic models
-    return provider === 'anthropic' && model.includes('claude');
-  },
+  isSupported: (provider: ProviderKey) => 
+    PROVIDER_CONFIGS[provider]?.capabilities?.supportsThinking || false,
+  
+  configComponent: ThinkingModeToggle,
   
   formatRequestMiddleware: (request: FormattedRequest, context: CapabilityContext): FormattedRequest => {
     const { modelConfig } = context;
     
     // Only apply if thinking mode is enabled
-    if (!modelConfig.capabilities?.thinking_mode?.enabled) {
+    if (!modelConfig.thinking_mode?.enabled) {
       return request;
     }
     
-    // Add thinking mode configuration to request
+    // Add thinking mode configuration to the request
     return {
       ...request,
       thinking: {
         type: 'enabled',
-        budget_tokens: modelConfig.capabilities.thinking_mode.budget_tokens || 16000
+        budget_tokens: modelConfig.thinking_mode.budget_tokens || 16000
       }
     };
   },
   
-  parseResponseMiddleware: (response, context) => {
-    // Process thinking mode response if needed
+  parseResponseMiddleware: (response: ProviderResponse, context: CapabilityContext): ProviderResponse => {
+    // Process thinking-specific response data if needed
     return response;
   }
 };
+
+// Register the capability
+capabilityRegistry.registerCapability(ThinkingModeCapability);

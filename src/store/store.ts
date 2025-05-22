@@ -6,7 +6,7 @@ import { persist, PersistStorage } from 'zustand/middleware';
 
 import { AuthSlice, createAuthSlice } from './auth-slice';
 import { ChatSlice, createChatSlice } from './chat-slice';
-import { ConfigSlice, createConfigSlice } from './slices/configSlice';
+import { ConfigSlice, createConfigSlice } from './config-slice';
 import { InputSlice, createInputSlice } from './input-slice';
 import { PromptSlice, createPromptSlice } from './prompt-slice';
 import { RequestSlice, createRequestSlice } from './request-slice';
@@ -39,34 +39,23 @@ const createCustomStorage = (): PersistStorage<Partial<StoreState>> => {
       }
     },
     setItem: (name, value) => {
+      if (isHandlingError) return;  // Prevent recursive error handling
+      
       try {
         localStorage.setItem(name, JSON.stringify(value));
       } catch (err: unknown) {
+        isHandlingError = true;
         const error = err as Error;
-        console.warn('Error writing to localStorage:', error);
-        
-        // Handle storage quota exceeded
-        if (!isHandlingError && error.name === 'QuotaExceededError') {
-          isHandlingError = true;
-          
-          // Clear non-essential data
-          try {
-            // Keep only essential data
-            const essentialData = {
-              chats: value.chats?.slice(-10) || [], // Keep only last 10 chats
-              defaultChatConfig: value.defaultChatConfig,
-              apiKeys: value.apiKeys,
-              apiEndpoints: value.apiEndpoints
-            };
-            
-            localStorage.setItem(name, JSON.stringify(essentialData));
-            console.log('Cleared non-essential data to free up storage');
-          } catch (clearError) {
-            console.error('Failed to clear data:', clearError);
-          }
-          
-          isHandlingError = false;
+        if (error instanceof Error && error.name === 'QuotaExceededError') {
+          useStore.getState().setError(
+            'Storage limit reached. Please delete some chats to continue saving new messages.'
+          );
+        } else {
+          useStore.getState().setError(
+            'Failed to save to localStorage. ' + error.message
+          );
         }
+        isHandlingError = false;
       }
     },
     removeItem: (name) => {
@@ -80,57 +69,64 @@ const createCustomStorage = (): PersistStorage<Partial<StoreState>> => {
   };
 };
 
-// Create store with all slices
 const useStore = create<StoreState>()(
   persist(
-    (set, get, api) => ({
-      ...createChatSlice(set, get, api),
-      ...createInputSlice(set, get, api),
-      ...createAuthSlice(set, get, api),
-      ...createConfigSlice(set, get, api),
-      ...createPromptSlice(set, get, api),
-      ...createRequestSlice(set, get, api),
+    (set, get) => ({
+      ...createChatSlice(set, get),
+      ...createInputSlice(set, get),
+      ...createAuthSlice(set, get),
+      ...createConfigSlice(set, get),
+      ...createPromptSlice(set, get),
+      ...createRequestSlice(set, get),
     }),
     {
-      name: 'chat-store',
+      name: 'free-chat-gpt',
+      version: 2, // Increment version for new provider implementation
       storage: createCustomStorage(),
       partialize: (state) => ({
-        // Only persist necessary state
         chats: state.chats,
-        defaultChatConfig: state.defaultChatConfig,
+        currentChatIndex: state.currentChatIndex,
         apiKeys: state.apiKeys,
         apiEndpoints: state.apiEndpoints,
-        firstVisit: state.firstVisit,
         theme: state.theme,
-        prompts: state.prompts,
         autoTitle: state.autoTitle,
+        prompts: state.prompts,
+        defaultChatConfig: state.defaultChatConfig,
+        defaultSystemMessage: state.defaultSystemMessage,
         hideMenuOptions: state.hideMenuOptions,
+        firstVisit: state.firstVisit,
         hideSideMenu: state.hideSideMenu,
+        folders: state.folders,
         enterToSubmit: state.enterToSubmit,
-        layoutWidth: state.layoutWidth
+        layoutWidth: state.layoutWidth,
       }),
-    }
-  )
-);
+      onRehydrateStorage: () => () => {
+        // Optional: Log when storage is rehydrated
+        console.log('Storage rehydrated');
+      },
+      migrate: (persistedState: any, version: number) => {
+        if (version === 1) {
+          // Migrate old provider configuration to new format
+          const chats = persistedState.chats?.map((chat: any) => ({
+            ...chat,
+            config: {
+              provider: chat.config?.provider || 'anthropic',
+              modelConfig: {
+                ...chat.config?.modelConfig,
+                model: ProviderRegistry.getProvider('anthropic').defaultModel,
+              },
+            },
+          }));
+
+          return {
+            ...persistedState,
+            chats,
+            defaultChatConfig: DEFAULT_CHAT_CONFIG,
+          };
+        }
+        return persistedState;
+      },
+    })
+  );
 
 export default useStore;
-
-// Direct selectors for common operations
-export const useCurrentChat = () => useStore(state => {
-  const { chats, currentChatIndex } = state;
-  return chats[currentChatIndex];
-});
-
-export const useCurrentChatConfig = () => useStore(state => {
-  const { chats, currentChatIndex } = state;
-  return chats[currentChatIndex]?.config;
-});
-
-export const useCurrentChatId = () => useStore(state => {
-  const { chats, currentChatIndex } = state;
-  return chats[currentChatIndex]?.id;
-});
-
-export const useIsGenerating = () => useStore(state => state.generating);
-
-export const useTheme = () => useStore(state => state.theme);
