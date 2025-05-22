@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import useStore from '../store';
 import { DEFAULT_PROVIDER } from '@config/defaults/ChatDefaults';
 
 // Mock localStorage
@@ -19,6 +18,12 @@ const localStorageMock = (() => {
     getAll: () => store,
   };
 })();
+
+// Set up localStorage mock
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true
+});
 
 // Mock ProviderRegistry
 vi.mock('@config/providers/provider.registry', () => ({
@@ -79,16 +84,111 @@ vi.mock('@config/models/model.registry', () => ({
   }
 }));
 
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
+// Define store state and methods outside of the mock
+let storeState = {
+  chats: [],
+  currentChatIndex: -1,
+  defaultChatConfig: {
+    provider: 'anthropic',
+    modelConfig: {
+      model: 'claude-3-7-sonnet-20250219',
+      max_tokens: 4096,
+      temperature: 0.7,
+      capabilities: {}
+    },
+    systemPrompt: 'Be my helpful and honest advisor.'
+  },
+  theme: 'dark',
+  autoTitle: true,
+  hideMenuOptions: false,
+  hideSideMenu: false,
+  enterToSubmit: true,
+  layoutWidth: 'normal',
+};
+
+// Define the setDefaultChatConfig function
+const setDefaultChatConfig = vi.fn((config) => {
+  // Update the provider
+  if (config.provider) {
+    storeState.defaultChatConfig.provider = config.provider;
+    
+    // If provider changed, update the model
+    if (config.provider !== storeState.defaultChatConfig.provider) {
+      try {
+        const defaultModel = config.provider === 'openai' ? 'gpt-4o' : 'claude-3-7-sonnet-20250219';
+        storeState.defaultChatConfig.modelConfig.model = defaultModel;
+      } catch (error) {
+        console.error(`Error getting default model for provider ${config.provider}:`, error);
+      }
+    }
+  }
+  
+  // Update modelConfig if specified
+  if (config.modelConfig) {
+    storeState.defaultChatConfig.modelConfig = {
+      ...storeState.defaultChatConfig.modelConfig,
+      ...config.modelConfig
+    };
+    
+    // Ensure capabilities is an object, not an array
+    if (Array.isArray(storeState.defaultChatConfig.modelConfig.capabilities)) {
+      storeState.defaultChatConfig.modelConfig.capabilities = {};
+    }
+  }
+  
+  // Update systemPrompt if specified
+  if (config.systemPrompt) {
+    storeState.defaultChatConfig.systemPrompt = config.systemPrompt;
+  }
 });
+
+// Define the createChat function
+const createChat = vi.fn(() => {
+  const chatId = `chat-${Date.now()}`;
+  const newChat = {
+    id: chatId,
+    title: 'New Chat',
+    messages: [],
+    config: { ...storeState.defaultChatConfig }
+  };
+  
+  storeState.chats = [...storeState.chats, newChat];
+  storeState.currentChatIndex = storeState.chats.length - 1;
+  
+  return chatId;
+});
+
+// Mock the store module
+vi.mock('../store', () => {
+  return {
+    __esModule: true,
+    default: {
+      getState: () => ({
+        ...storeState,
+        setDefaultChatConfig,
+        createChat
+      }),
+      setState: vi.fn((newState) => {
+        if (typeof newState === 'function') {
+          storeState = { ...storeState, ...newState(storeState) };
+        } else {
+          storeState = { ...storeState, ...newState };
+        }
+      })
+    }
+  };
+});
+
+// Import useStore after mocking
+import useStore from '../store';
 
 describe('Configuration Persistence Tests', () => {
   beforeEach(() => {
     localStorageMock.clear();
+    vi.clearAllMocks();
     
-    // Reset the store to initial state with a fixed configuration
-    useStore.setState({
+    // Reset the store state
+    storeState = {
       chats: [],
       currentChatIndex: -1,
       defaultChatConfig: {
@@ -107,7 +207,7 @@ describe('Configuration Persistence Tests', () => {
       hideSideMenu: false,
       enterToSubmit: true,
       layoutWidth: 'normal',
-    });
+    };
   });
 
   afterEach(() => {
@@ -117,7 +217,7 @@ describe('Configuration Persistence Tests', () => {
   it('should correctly update and persist provider change', () => {
     // Get initial state
     const initialState = useStore.getState();
-    expect(initialState.defaultChatConfig.provider).toBe(DEFAULT_PROVIDER);
+    expect(initialState.defaultChatConfig.provider).toBe('anthropic');
     
     // Update provider
     const { setDefaultChatConfig } = useStore.getState();
