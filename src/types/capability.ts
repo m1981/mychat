@@ -136,3 +136,33 @@ export interface CapabilityRegistry {
     context: CapabilityContext
   ) => ProviderResponse;
 }
+
+/**
+ * Standard props interface for capability configuration components
+ */
+export interface CapabilityComponentProps<T = any> {
+  /**
+   * Current model configuration
+   */
+  modelConfig: ModelConfig;
+  
+  /**
+   * Function to update model configuration
+   */
+  setModelConfig: (config: ModelConfig) => void;
+  
+  /**
+   * Provider key
+   */
+  provider: ProviderKey;
+  
+  /**
+   * Model identifier
+   */
+  model: string;
+  
+  /**
+   * Capability-specific configuration
+   */
+  capabilityConfig?: T;
+}

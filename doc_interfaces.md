@@ -1199,16 +1199,237 @@ export interface ModelConfig {
 }
 ```
 
-This approach allows each capability to define its own configuration structure while maintaining type safety and avoiding conflicts between capabilities.
+## Import/Export Functionality
 
-## Overall Architecture Benefits
+The architecture supports importing and exporting chat data to enable portability and backup capabilities.
 
-1. **Decoupling**: Components are decoupled from specific provider implementations.
-2. **Testability**: Interfaces enable easy mocking for unit tests.
-3. **Maintainability**: Clear contracts make the codebase easier to understand and maintain.
-4. **Extensibility**: New providers can be added without modifying existing code.
-5. **Consistency**: Standardized interfaces ensure consistent behavior across providers.
-6. **Separation of Concerns**: Each interface has a clear, focused responsibility.
-7. **React Integration**: The architecture aligns with React's component model and hooks pattern.
+```mermaid
+graph TD
+    subgraph "Import/Export Components"
+        IE[ImportExportChat]
+        IP[ImportPrompt]
+        EP[ExportPrompt]
+    end
+    
+    subgraph "Utilities"
+        DU[downloadFile]
+        PU[promptUtils]
+        VU[validationUtils]
+    end
+    
+    subgraph "Store"
+        ZS[Zustand Store]
+        CS[ChatSlice]
+        PS[PromptSlice]
+    end
+    
+    IE -->|Uses| DU
+    IE -->|Updates| CS
+    IP -->|Uses| PU
+    IP -->|Updates| PS
+    EP -->|Uses| PU
+    EP -->|Reads| PS
+    IE -->|Uses| VU
+```
 
-This architecture successfully applies SOLID principles within the React ecosystem, creating a flexible, maintainable system for integrating multiple AI providers.
+### `ImportData` Interface
+
+Defines the structure for importing chat data.
+
+**Motivation:**
+- **Data Portability**: Enables users to move their data between instances.
+- **Backward Compatibility**: Versioned format allows for handling different export versions.
+- **Data Integrity**: Validation ensures imported data meets application requirements.
+- **Type Safety**: Strongly typed interface prevents runtime errors during import.
+
+```typescript
+export interface ImportData {
+  /**
+   * Version number of the export format
+   * Used for backward compatibility
+   */
+  version: number;
+  
+  /**
+   * Array of chat objects
+   */
+  chats: ImportChat[];
+  
+  /**
+   * Collection of folders
+   */
+  folders?: Record<string, ImportFolder>;
+}
+```
+
+### `ImportChat` Interface
+
+Defines the structure for importing individual chats.
+
+**Motivation:**
+- **SRP**: Represents a single chat with all its messages and configuration.
+- **LSP**: All chat implementations can be derived from this base structure.
+- **OCP**: Extensible through provider-specific configuration.
+
+```typescript
+export interface ImportChat {
+  /**
+   * Unique identifier for the chat
+   */
+  id: string;
+  
+  /**
+   * Display title of the chat
+   */
+  title: string;
+  
+  /**
+   * Array of messages in the chat
+   */
+  messages: ImportMessage[];
+  
+  /**
+   * Chat configuration including provider and model settings
+   */
+  config: ImportChatConfig;
+  
+  /**
+   * Optional folder ID this chat belongs to
+   */
+  folder?: string;
+}
+```
+
+### Export Contract
+
+When exporting data, the application follows this standardized format:
+
+```typescript
+interface Export {
+  /**
+   * Version number of the export format
+   */
+  version: number;
+  
+  /**
+   * Array of chat objects
+   */
+  chats: ChatInterface[];
+  
+  /**
+   * Collection of folders
+   */
+  folders: FolderCollection;
+}
+```
+
+**Motivation:**
+- **Versioning**: Enables backward compatibility for future format changes.
+- **Completeness**: Includes all necessary data for a full application state restoration.
+- **Consistency**: Standardized format ensures reliable import/export operations.
+
+## Authentication Integration
+
+The provider architecture integrates with authentication to securely manage API keys and provider access.
+
+```mermaid
+graph TD
+    subgraph "Authentication Components"
+        AK[ApiKeyInput]
+        AS[AuthSettings]
+    end
+    
+    subgraph "Store"
+        ZS[Zustand Store]
+        AuS[AuthSlice]
+    end
+    
+    subgraph "Provider Architecture"
+        PR[ProviderRegistry]
+        CSS[ChatSubmissionService]
+    end
+    
+    AK -->|Updates| AuS
+    AuS -->|Provides Keys To| CSS
+    AS -->|Configures| AuS
+    PR -->|Uses| AuS
+```
+
+### `AuthSlice` Interface
+
+Manages authentication state for provider API keys.
+
+**Motivation:**
+- **Security**: Centralizes API key management.
+- **SRP**: Separates authentication concerns from provider implementation.
+- **DIP**: Provider implementations depend on the auth abstraction rather than specific storage mechanisms.
+- **Encapsulation**: Hides the details of how API keys are stored and retrieved.
+
+```typescript
+export interface AuthSlice {
+  /**
+   * API keys for different providers
+   */
+  apiKeys: Record<ProviderKey, string>;
+  
+  /**
+   * Sets an API key for a specific provider
+   * @param provider - Provider key
+   * @param apiKey - API key value
+   */
+  setApiKey: (provider: ProviderKey, apiKey: string) => void;
+  
+  /**
+   * Removes an API key for a specific provider
+   * @param provider - Provider key
+   */
+  removeApiKey: (provider: ProviderKey) => void;
+  
+  /**
+   * Checks if a provider has an API key set
+   * @param provider - Provider key
+   * @returns Boolean indicating if the provider has an API key
+   */
+  hasApiKey: (provider: ProviderKey) => boolean;
+}
+```
+
+### Authentication Flow
+
+The authentication flow integrates with the provider architecture as follows:
+
+1. **API Key Storage**: API keys are stored in the Zustand store's `AuthSlice`.
+2. **Provider Access**: When a provider needs to make an API call, it retrieves the API key from the store.
+3. **Backend Security**: API keys are never exposed in client-side code, only sent to the backend.
+4. **Key Validation**: The application validates API keys before allowing provider operations.
+
+**Motivation:**
+- **Security**: API keys are stored securely and never exposed in client-side code.
+- **User Experience**: Seamless integration of authentication with provider operations.
+- **Flexibility**: Support for multiple providers with different authentication requirements.
+- **Separation of Concerns**: Authentication logic is separate from provider implementation.
+
+### Provider Authentication Contract
+
+When a provider needs to authenticate, it follows this pattern:
+
+```typescript
+interface ProviderAuthRequest {
+  /**
+   * Provider key
+   */
+  provider: ProviderKey;
+  
+  /**
+   * API key for the provider
+   * Retrieved from the AuthSlice
+   */
+  apiKey: string;
+}
+```
+
+This architecture ensures that:
+1. API keys are securely managed
+2. Providers can be used without exposing sensitive credentials
+3. Authentication state is persisted across sessions
+4. The system remains extensible for different authentication methods

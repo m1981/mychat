@@ -2,7 +2,7 @@ import { ProviderRegistry } from '@config/providers/provider.registry';
 import { DEFAULT_CHAT_CONFIG } from '@constants/chat';
 import { StoreApi, create } from 'zustand';
 import { persist, PersistStorage } from 'zustand/middleware';
-
+import * as Sentry from '@sentry/react';
 
 import { AuthSlice, createAuthSlice } from './auth-slice';
 import { ChatSlice, createChatSlice } from './chat-slice';
@@ -23,9 +23,9 @@ export type StoreSlice<T> = (
   get: StoreApi<StoreState>['getState']
 ) => T;
 
-// Custom storage with error handling
+// Custom storage with improved error handling
 const createCustomStorage = (): PersistStorage<Partial<StoreState>> => {
-  let isHandlingError = false;  // Add error handling flag
+  let isHandlingError = false;
   
   return {
     getItem: (name) => {
@@ -34,18 +34,31 @@ const createCustomStorage = (): PersistStorage<Partial<StoreState>> => {
         return item ? JSON.parse(item) : null;
       } catch (err: unknown) {
         const error = err as Error;
+        Sentry.withScope((scope) => {
+          scope.setTag('operation', 'store-getItem');
+          scope.setExtra('storageKey', name);
+          Sentry.captureException(error);
+        });
         console.warn('Error reading from localStorage:', error);
         return null;
       }
     },
     setItem: (name, value) => {
-      if (isHandlingError) return;  // Prevent recursive error handling
+      if (isHandlingError) return;
       
       try {
         localStorage.setItem(name, JSON.stringify(value));
       } catch (err: unknown) {
         isHandlingError = true;
         const error = err as Error;
+        
+        Sentry.withScope((scope) => {
+          scope.setTag('operation', 'store-setItem');
+          scope.setExtra('storageKey', name);
+          scope.setExtra('valueSize', JSON.stringify(value).length);
+          Sentry.captureException(error);
+        });
+        
         if (error instanceof Error && error.name === 'QuotaExceededError') {
           useStore.getState().setError(
             'Storage limit reached. Please delete some chats to continue saving new messages.'
@@ -63,6 +76,11 @@ const createCustomStorage = (): PersistStorage<Partial<StoreState>> => {
         localStorage.removeItem(name);
       } catch (err: unknown) {
         const error = err as Error;
+        Sentry.withScope((scope) => {
+          scope.setTag('operation', 'store-removeItem');
+          scope.setExtra('storageKey', name);
+          Sentry.captureException(error);
+        });
         console.warn('Error removing from localStorage:', error);
       }
     }

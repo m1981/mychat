@@ -1,7 +1,7 @@
 import { CapabilityDefinition, CapabilityContext } from '@type/capability';
 import { ProviderKey } from '@type/chat';
 import { FormattedRequest, ProviderResponse } from '@type/provider';
-import { PROVIDER_CONFIGS } from '@config/providers/provider.config';
+import { ProviderRegistry } from '@config/providers/provider.registry';
 import { ThinkingModeToggle } from '@components/ThinkingModeToggle';
 import { capabilityRegistry } from './registry';
 
@@ -11,7 +11,7 @@ export const ThinkingModeCapability: CapabilityDefinition = {
   priority: 100, // High priority - show at top
   
   isSupported: (provider: ProviderKey) => 
-    PROVIDER_CONFIGS[provider]?.capabilities?.supportsThinking || false,
+    ProviderRegistry.getProviderCapabilities(provider)?.supportsThinking || false,
   
   configComponent: ThinkingModeToggle,
   

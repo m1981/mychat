@@ -1,16 +1,9 @@
 import { useCallback } from 'react';
 import useStore from '@store/store';
-import { MessageInterface, ModelConfig } from '@type/chat';
 import { useProvider } from '@contexts/ProviderContext';
+import { MessageInterface, ModelConfig } from '@type/chat';
 import { RequestConfig } from '@type/provider';
-
-export interface UseTitleGenerationReturn {
-  generateTitle: (
-    messages: MessageInterface[], 
-    config: ModelConfig,
-    chatIndex?: number
-  ) => Promise<void>;
-}
+import { UseTitleGenerationReturn } from '@type/hooks';
 
 export function useTitleGeneration(): UseTitleGenerationReturn {
   const provider = useProvider();

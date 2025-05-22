@@ -11,6 +11,7 @@ import { Theme } from '@type/theme';
 import { getEnvVar } from '@utils/env';
 import { Toaster } from 'react-hot-toast';
 import { ProviderProvider } from '@contexts/ProviderContext';
+import { withErrorHandling, useSafeEffect } from '@utils/errorHandling';
 
 import i18n from './i18n';
 
@@ -97,36 +98,21 @@ function App() {
   const setApiKey = useStore((state) => state.setApiKey);
   const setCurrentChatIndex = useStore((state) => state.setCurrentChatIndex);
   const providerKey = useStore(state => state.currentProvider);
+  const setError = useStore(state => state.setError);
 
-  const handleErrorClick = () => {
-    try {
-      throw new Error("This is your first error 4!");
-    } catch (error) {
-      Sentry.withScope((scope) => {
-        scope.setTag("error_type", "test_error");
-      Sentry.captureException(error);
-      });
-      throw error;
-    }
-  };
-
-  useEffect(() => {
+  // Use the safe effect utility
+  useSafeEffect(() => {
     Sentry.startSpan({ name: "app-initialization" }, (span) => {
-      try {
-        document.documentElement.lang = i18n.language;
-        i18n.on('languageChanged', (lng) => {
-          document.documentElement.lang = lng;
-        });
-      } catch (error) {
-        Sentry.captureException(error);
-      } finally {
-        span.end();
-      }
+      document.documentElement.lang = i18n.language;
+      i18n.on('languageChanged', (lng) => {
+        document.documentElement.lang = lng;
+      });
+      span.end();
     });
-  }, []);
+  }, [], { component: 'App', operation: 'i18n-setup' });
 
-  useEffect(() => {
-    try {
+  // Use the safe effect utility for localStorage operations
+  useSafeEffect(() => {
     const oldChats = localStorage.getItem('chats');
     const apiKey = localStorage.getItem('apiKey');
     const theme = localStorage.getItem('theme');
@@ -150,8 +136,8 @@ function App() {
         } else {
           initialiseNewChat();
         }
-        } catch (e) {
-          Sentry.captureException(e);
+      } catch (e) {
+        Sentry.captureException(e);
         initialiseNewChat();
       }
       localStorage.removeItem('chats');
@@ -168,16 +154,26 @@ function App() {
         setCurrentChatIndex(0);
       }
     }
-    } catch (error) {
-      Sentry.captureException(error);
-    }
-  }, []);
+  }, [], { component: 'App', operation: 'load-saved-state' });
+
+  // Wrap error-generating functions
+  const handleErrorClick = () => {
+    withErrorHandling(
+      async () => {
+        throw new Error("This is your first error 4!");
+      },
+      { errorType: 'test_error', component: 'App' }
+    ).catch(error => {
+      // Handle at component level if needed
+      setError(error.message);
+    });
+  };
 
   // Use a variable for the test button visibility
   const showTestButton = true;
 
   return (
-    <ProviderProvider providerKey={providerKey}>
+    <ProviderProvider providerKey={providerKey || 'openai'}>
       <Sentry.ErrorBoundary 
         fallback={({ error, resetError }) => (
           <ErrorFallback 

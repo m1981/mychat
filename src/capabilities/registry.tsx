@@ -1,13 +1,30 @@
-import { CapabilityDefinition, CapabilityRegistry, CapabilityContext } from '@type/capability';
+import { CapabilityDefinition, CapabilityContext } from '@type/capability';
 import { ProviderKey } from '@type/chat';
 import { ModelConfig, FormattedRequest, ProviderResponse } from '@type/provider';
 import React from 'react';
+import * as Sentry from '@sentry/react';
 
 /**
  * Implementation of the CapabilityRegistry interface
  */
-class CapabilityRegistryImpl implements CapabilityRegistry {
+class CapabilityRegistryImpl {
   private capabilities: CapabilityDefinition[] = [];
+  private static instance: CapabilityRegistryImpl;
+  
+  /**
+   * Get singleton instance
+   */
+  public static getInstance(): CapabilityRegistryImpl {
+    if (!CapabilityRegistryImpl.instance) {
+      CapabilityRegistryImpl.instance = new CapabilityRegistryImpl();
+    }
+    return CapabilityRegistryImpl.instance;
+  }
+  
+  /**
+   * Private constructor for singleton
+   */
+  private constructor() {}
   
   /**
    * Registers a capability with the registry
@@ -95,8 +112,17 @@ class CapabilityRegistryImpl implements CapabilityRegistry {
           try {
             return capability.formatRequestMiddleware(modifiedRequest, context);
           } catch (error) {
+            Sentry.withScope((scope) => {
+              scope.setTag('capability', capability.id);
+              scope.setTag('operation', 'request-middleware');
+              scope.setContext('request', { 
+                provider, 
+                model,
+                requestSample: JSON.stringify(modifiedRequest).substring(0, 500) 
+              });
+              Sentry.captureException(error);
+            });
             console.error(`Error in ${capability.id} request middleware:`, error);
-            // Return unmodified request on error
             return modifiedRequest;
           }
         }
@@ -107,7 +133,7 @@ class CapabilityRegistryImpl implements CapabilityRegistry {
   }
   
   /**
-   * Applies all capability middleware to a response
+   * Applies all capability middleware to a response with error handling
    */
   applyResponseMiddleware(
     response: ProviderResponse, 
@@ -120,27 +146,46 @@ class CapabilityRegistryImpl implements CapabilityRegistry {
     return supportedCapabilities.reduce(
       (modifiedResponse, capability) => {
         if (capability.parseResponseMiddleware) {
-          return capability.parseResponseMiddleware(modifiedResponse, context);
+          try {
+            return capability.parseResponseMiddleware(modifiedResponse, context);
+          } catch (error) {
+            Sentry.withScope((scope) => {
+              scope.setTag('capability', capability.id);
+              scope.setTag('operation', 'response-middleware');
+              scope.setContext('response', { 
+                provider, 
+                model,
+                responseSample: typeof modifiedResponse === 'string' 
+                  ? modifiedResponse.substring(0, 500)
+                  : JSON.stringify(modifiedResponse).substring(0, 500)
+              });
+              Sentry.captureException(error);
+            });
+            console.error(`Error in ${capability.id} response middleware:`, error);
+            return modifiedResponse;
+          }
         }
         return modifiedResponse;
       }, 
       response
     );
   }
+  
+  /**
+   * Creates a capability context object
+   */
+  createContext(
+    provider: ProviderKey,
+    model: string,
+    modelConfig: ModelConfig
+  ): CapabilityContext {
+    return {
+      provider,
+      model,
+      modelConfig
+    };
+  }
 }
 
-// Create singleton instance
-export const capabilityRegistry = new CapabilityRegistryImpl();
-
-// Export a function to create context objects
-export function createCapabilityContext(
-  provider: ProviderKey,
-  model: string,
-  modelConfig: ModelConfig
-): CapabilityContext {
-  return {
-    provider,
-    model,
-    modelConfig
-  };
-}
+// Export singleton instance
+export const capabilityRegistry = CapabilityRegistryImpl.getInstance();
