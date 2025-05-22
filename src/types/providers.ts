@@ -43,7 +43,7 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
       
       const formattedRequest = {
         messages: messages
-          .filter(m => m.content.trim() !== '')
+          .filter(m => m.content && m.content.trim() !== '')
           .map(m => ({
             role: m.role,
             content: m.content
