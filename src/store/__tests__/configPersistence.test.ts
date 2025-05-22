@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import useStore from '../store';
 import { DEFAULT_PROVIDER } from '@config/defaults/ChatDefaults';
-import { DEFAULT_CHAT_CONFIG } from '@constants/chat';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -21,6 +20,65 @@ const localStorageMock = (() => {
   };
 })();
 
+// Mock ProviderRegistry
+vi.mock('@config/providers/provider.registry', () => ({
+  ProviderRegistry: {
+    getDefaultModelForProvider: (provider: string) => {
+      if (provider === 'openai') return 'gpt-4o';
+      if (provider === 'anthropic') return 'claude-3-7-sonnet-20250219';
+      throw new Error(`Provider ${provider} not found`);
+    },
+    getProvider: (provider: string) => {
+      if (provider === 'openai') {
+        return {
+          id: 'openai',
+          name: 'OpenAI',
+          defaultModel: 'gpt-4o',
+          endpoints: ['/api/chat/openai'],
+          models: ['gpt-4o']
+        };
+      }
+      if (provider === 'anthropic') {
+        return {
+          id: 'anthropic',
+          name: 'Anthropic',
+          defaultModel: 'claude-3-7-sonnet-20250219',
+          endpoints: ['/api/chat/anthropic'],
+          models: ['claude-3-7-sonnet-20250219']
+        };
+      }
+      throw new Error(`Provider ${provider} not found`);
+    }
+  }
+}));
+
+// Mock ModelRegistry
+vi.mock('@config/models/model.registry', () => ({
+  ModelRegistry: {
+    getModelCapabilities: (modelId: string) => {
+      if (modelId === 'gpt-4o') {
+        return {
+          modelId: 'gpt-4o',
+          provider: 'openai',
+          maxResponseTokens: 4096,
+          defaultResponseTokens: 1024
+        };
+      }
+      if (modelId === 'claude-3-7-sonnet-20250219') {
+        return {
+          modelId: 'claude-3-7-sonnet-20250219',
+          provider: 'anthropic',
+          maxResponseTokens: 8192,
+          defaultResponseTokens: 4096,
+          supportsThinking: true,
+          defaultThinkingBudget: 16000
+        };
+      }
+      throw new Error(`Model ${modelId} not found in registry`);
+    }
+  }
+}));
+
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 });
@@ -29,19 +87,27 @@ describe('Configuration Persistence Tests', () => {
   beforeEach(() => {
     localStorageMock.clear();
     
-    // Reset the store to initial state
-    const store = useStore.getState();
-    if (typeof store.resetState === 'function') {
-      store.resetState();
-    } else {
-      // Manual reset if resetState is not available
-      useStore.setState({
-        chats: [],
-        currentChatIndex: -1,
-        defaultChatConfig: DEFAULT_CHAT_CONFIG,
-        // Add other default values as needed
-      });
-    }
+    // Reset the store to initial state with a fixed configuration
+    useStore.setState({
+      chats: [],
+      currentChatIndex: -1,
+      defaultChatConfig: {
+        provider: 'anthropic',
+        modelConfig: {
+          model: 'claude-3-7-sonnet-20250219',
+          max_tokens: 4096,
+          temperature: 0.7,
+          capabilities: {}
+        },
+        systemPrompt: 'Be my helpful and honest advisor.'
+      },
+      theme: 'dark',
+      autoTitle: true,
+      hideMenuOptions: false,
+      hideSideMenu: false,
+      enterToSubmit: true,
+      layoutWidth: 'normal',
+    });
   });
 
   afterEach(() => {
@@ -58,8 +124,9 @@ describe('Configuration Persistence Tests', () => {
     setDefaultChatConfig({
       provider: 'openai',
       modelConfig: {
-        ...initialState.defaultChatConfig.modelConfig,
-        model: 'gpt-4o'
+        model: 'gpt-4o',
+        max_tokens: 4096,
+        temperature: 0.7
       }
     });
     
@@ -71,12 +138,18 @@ describe('Configuration Persistence Tests', () => {
     // Check if localStorage was updated
     expect(localStorageMock.setItem).toHaveBeenCalled();
     
-    // Create a new chat and verify it uses the new default provider
-    const { createChat, chats } = useStore.getState();
-    createChat();
+    // Create a new chat
+    const { createChat } = useStore.getState();
+    const chatId = createChat();
     
-    expect(chats[0].config.provider).toBe('openai');
-    expect(chats[0].config.modelConfig.model).toBe('gpt-4o');
+    // Get the updated chats
+    const { chats } = useStore.getState();
+    const newChat = chats.find(chat => chat.id === chatId);
+    
+    // Verify the new chat has the correct config
+    expect(newChat).toBeDefined();
+    expect(newChat?.config.provider).toBe('openai');
+    expect(newChat?.config.modelConfig.model).toBe('gpt-4o');
   });
 
   it('should correctly apply default config to new chats', () => {
@@ -98,16 +171,21 @@ describe('Configuration Persistence Tests', () => {
     });
     
     // Create a new chat
-    const { createChat, chats } = useStore.getState();
-    createChat();
+    const { createChat } = useStore.getState();
+    const chatId = createChat();
+    
+    // Get the updated chats
+    const { chats } = useStore.getState();
+    const newChat = chats.find(chat => chat.id === chatId);
     
     // Verify the new chat has the correct config
-    expect(chats[0].config.provider).toBe('openai');
-    expect(chats[0].config.modelConfig.model).toBe('gpt-4o');
-    expect(chats[0].config.modelConfig.max_tokens).toBe(2000);
-    expect(chats[0].config.modelConfig.temperature).toBe(0.8);
-    expect(chats[0].config.modelConfig.capabilities?.thinking_mode?.enabled).toBe(true);
-    expect(chats[0].config.modelConfig.capabilities?.thinking_mode?.budget_tokens).toBe(5000);
+    expect(newChat).toBeDefined();
+    expect(newChat?.config.provider).toBe('openai');
+    expect(newChat?.config.modelConfig.model).toBe('gpt-4o');
+    expect(newChat?.config.modelConfig.max_tokens).toBe(2000);
+    expect(newChat?.config.modelConfig.temperature).toBe(0.8);
+    expect(newChat?.config.modelConfig.capabilities?.thinking_mode?.enabled).toBe(true);
+    expect(newChat?.config.modelConfig.capabilities?.thinking_mode?.budget_tokens).toBe(5000);
   });
 
   it('should handle capabilities as an object, not an array', () => {
@@ -126,12 +204,17 @@ describe('Configuration Persistence Tests', () => {
     setDefaultChatConfig(badConfig);
     
     // Create a new chat
-    const { createChat, chats } = useStore.getState();
-    createChat();
+    const { createChat } = useStore.getState();
+    const chatId = createChat();
+    
+    // Get the updated chats
+    const { chats } = useStore.getState();
+    const newChat = chats.find(chat => chat.id === chatId);
     
     // Verify the capabilities is an object, not an array
-    expect(Array.isArray(chats[0].config.modelConfig.capabilities)).toBe(false);
-    expect(typeof chats[0].config.modelConfig.capabilities).toBe('object');
+    expect(newChat).toBeDefined();
+    expect(Array.isArray(newChat?.config.modelConfig.capabilities)).toBe(false);
+    expect(typeof newChat?.config.modelConfig.capabilities).toBe('object');
   });
 
   it('should correctly update model when provider changes', () => {
