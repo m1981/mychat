@@ -197,10 +197,9 @@ export interface AIProviderInterface {
   formatRequest: (messages: MessageInterface[], config: RequestConfig) => FormattedRequest;
   parseResponse: (response: any) => string;
   
-  // Optional advanced functionality
-  parseStreamingResponse?: (response: any) => string;
-  getCapabilities?: (model: string) => string[];
-  validateConfig?: (config: RequestConfig) => RequestConfig;
+  parseStreamingResponse: (response: any) => string;
+  getCapabilities: (model: string) => string[];
+  validateConfig: (config: RequestConfig) => RequestConfig;
 }
 ```
 

@@ -12,7 +12,7 @@ import useStore from '@store/store';
 export class ConfigurationService {
   constructor(
     private store = useStore,
-    private capabilityRegistry = CapabilityRegistry.getInstance()
+    private capabilityRegistry = capabilityRegistry
   ) {}
 
   /**
@@ -185,6 +185,101 @@ export class ConfigurationService {
     }
     
     return validatedUpdate;
+  }
+
+  /**
+   * Update configuration for a specific chat with validation
+   */
+  validateAndUpdateConfig(chatId: string, update: ChatConfigUpdate): void {
+    // Validate configuration
+    const validatedUpdate = this.validateConfig(update);
+    
+    // Check capability compatibility
+    if (validatedUpdate.modelConfig?.capabilities) {
+      this.validateCapabilities(
+        chatId, 
+        validatedUpdate.provider || this.store.getState().getChatConfig(chatId).provider,
+        validatedUpdate.modelConfig.model || this.store.getState().getChatConfig(chatId).modelConfig.model,
+        validatedUpdate.modelConfig.capabilities
+      );
+    }
+    
+    // Update store
+    this.store.getState().updateChatConfig(chatId, validatedUpdate);
+  }
+
+  /**
+   * Basic config validation
+   */
+  private validateConfig(update: ChatConfigUpdate): ChatConfigUpdate {
+    // Clone to avoid modifying original
+    const validated = { ...update };
+    
+    // Validate numeric parameters
+    if (validated.modelConfig?.temperature !== undefined) {
+      validated.modelConfig.temperature = Math.max(0, Math.min(1, validated.modelConfig.temperature));
+    }
+    
+    // Add other validations as needed
+    
+    return validated;
+  }
+
+  private validateCapabilities(
+    chatId: string, 
+    provider: ProviderKey, 
+    model: string, 
+    capabilities: Record<string, any>
+  ): void {
+    // Validate each capability
+    Object.keys(capabilities).forEach(capabilityId => {
+      if (!this.capabilityRegistry.isCapabilitySupported(capabilityId, provider, model)) {
+        throw new Error(`Capability ${capabilityId} is not supported by ${provider}/${model}`);
+      }
+    });
+  }
+
+  // Add missing methods from the spec
+  getCapabilitiesForChat(chatId: string): string[] {
+    const config = this.getChatConfig(chatId);
+    return this.capabilityRegistry.getSupportedCapabilities(
+      config.provider,
+      config.modelConfig.model
+    ).map(cap => cap.id);
+  }
+  
+  getCapabilityConfig<T>(chatId: string, capabilityId: string): T | null {
+    const config = this.getChatConfig(chatId);
+    return (config.modelConfig.capabilities?.[capabilityId] as T) || null;
+  }
+  
+  // Implement error handling as per spec
+  private handleError(error: any): never {
+    // Determine error type
+    const appError = this.normalizeError(error);
+    
+    // Set in store
+    this.store.getState().setError(appError);
+    
+    // Rethrow with normalized structure
+    throw appError;
+  }
+  
+  private normalizeError(error: any): AppError {
+    // Logic to normalize different error types
+    if (error.response) {
+      return {
+        type: ErrorType.NETWORK,
+        message: 'Network error occurred',
+        details: error.response
+      };
+    }
+    
+    // Default unknown error
+    return {
+      type: ErrorType.UNKNOWN,
+      message: error.message || 'An unknown error occurred'
+    };
   }
 }
 

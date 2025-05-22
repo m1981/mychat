@@ -8,6 +8,7 @@ import React from 'react';
  */
 class CapabilityRegistryImpl implements CapabilityRegistry {
   private capabilities: CapabilityDefinition[] = [];
+  private middlewareCache: Map<string, Array<(request: FormattedRequest, context: CapabilityContext) => FormattedRequest>> = new Map();
   
   /**
    * Registers a capability with the registry
@@ -19,6 +20,9 @@ class CapabilityRegistryImpl implements CapabilityRegistry {
     this.capabilities.sort((a, b) => 
       (b.priority || 0) - (a.priority || 0)
     );
+    
+    // Clear cache when registering new capabilities
+    this.middlewareCache.clear();
   }
   
   /**
@@ -81,29 +85,36 @@ class CapabilityRegistryImpl implements CapabilityRegistry {
   /**
    * Applies all capability middleware to a request with error handling
    */
-  applyRequestMiddleware(
-    request: FormattedRequest, 
-    context: CapabilityContext
-  ): FormattedRequest {
-    const { provider, model } = context;
-    const supportedCapabilities = this.getSupportedCapabilities(provider, model);
+  applyRequestMiddleware(request: FormattedRequest, context: CapabilityContext): FormattedRequest {
+    const cacheKey = `${context.provider}:${context.model}`;
     
-    // Apply middleware from each supported capability
-    return supportedCapabilities.reduce(
-      (modifiedRequest, capability) => {
-        if (capability.formatRequestMiddleware) {
-          try {
-            return capability.formatRequestMiddleware(modifiedRequest, context);
-          } catch (error) {
-            console.error(`Error in ${capability.id} request middleware:`, error);
-            // Return unmodified request on error
-            return modifiedRequest;
-          }
+    // Get or create middleware chain
+    let middlewareChain = this.middlewareCache.get(cacheKey);
+    if (!middlewareChain) {
+      middlewareChain = this.buildMiddlewareChain(context.provider, context.model);
+      this.middlewareCache.set(cacheKey, middlewareChain);
+    }
+    
+    // Apply middleware chain
+    return middlewareChain.reduce(
+      (req, middleware) => {
+        try {
+          return middleware(req, context);
+        } catch (error) {
+          console.error(`Error in middleware:`, error);
+          return req;
         }
-        return modifiedRequest;
-      }, 
+      },
       request
     );
+  }
+  
+  // Build middleware chain (called only when needed)
+  private buildMiddlewareChain(provider: ProviderKey, model: string): Array<(request: FormattedRequest, context: CapabilityContext) => FormattedRequest> {
+    return this.getSupportedCapabilities(provider, model)
+      .filter(cap => !!cap.formatRequestMiddleware)
+      .sort((a, b) => (b.priority || 0) - (a.priority || 0))
+      .map(cap => cap.formatRequestMiddleware!);
   }
   
   /**
@@ -142,5 +153,33 @@ export function createCapabilityContext(
     provider,
     model,
     modelConfig
+  };
+}
+
+// Consider adding a hook like this to match the spec:
+export function useCapability(capabilityId: string, chatId?: string) {
+  // Get current chat ID if not provided
+  const currentChatId = useStore(state => {
+    if (chatId) return chatId;
+    const { chats, currentChatIndex } = state;
+    return chats[currentChatIndex]?.id;
+  });
+  
+  // Get chat config
+  const chatConfig = useStore(state => state.getChatConfig(currentChatId));
+  
+  // Check if capability is enabled
+  const isEnabled = useCallback(() => {
+    return !!chatConfig.modelConfig.capabilities?.[capabilityId]?.enabled;
+  }, [chatConfig, capabilityId]);
+  
+  // Toggle capability
+  const toggleCapability = useCallback((enabled: boolean) => {
+    useStore.getState().updateCapabilityConfig(currentChatId, capabilityId, { enabled });
+  }, [currentChatId, capabilityId]);
+  
+  return {
+    isEnabled: isEnabled(),
+    toggleCapability
   };
 }
