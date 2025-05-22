@@ -1,808 +1,644 @@
-# Provider Architecture Interfaces
+# Balanced Provider Architecture
 
-This document outlines the key interfaces in our provider architecture design, along with the motivation behind each interface based on SOLID principles and React patterns.
+This document outlines a balanced approach to our provider architecture, combining SOLID principles with pragmatic implementation concerns.
+
+## Core Architecture Principles
+
+1. **Simplicity for Common Cases**:
+   - Direct access patterns for frequent operations
+   - Simplified hooks for common UI needs
+   - Sensible defaults that work out-of-the-box
+
+2. **Extensibility for Complex Cases**:
+   - Full middleware pipeline for advanced scenarios
+   - Registry patterns for adding new providers/capabilities
+   - Service abstractions for complex business logic
+
+3. **Performance by Default**:
+   - Selective store subscriptions to minimize re-renders
+   - Memoization of expensive computations
+   - Lazy initialization of heavy resources
+
+4. **Developer Experience**:
+   - Consistent error handling and validation
+   - Clear documentation of patterns and contracts
+   - Type safety without excessive verbosity
+
+## Simplified Architecture Diagram
 
 ```mermaid
 graph TD
-    subgraph "React Components"
-        App[App.tsx]
-        Chat[Chat Component]
-        Menu[Menu Component]
+    subgraph "UI Layer"
+        UI[UI Components]
+        SimpleHooks[Simple Hooks]
     end
 
-    subgraph "Context"
-        PC[ProviderContext]
+    subgraph "Business Logic Layer"
+        ComplexHooks[Complex Hooks]
+        Services[Services]
     end
 
-    subgraph "Hooks"
-        UCC[useChatCompletion]
-        UTG[useTitleGeneration]
-        UP[useProvider]
-        US[useSubmit]
-        UMM[useMessageManager]
+    subgraph "Data Layer"
+        Store[Zustand Store]
+        Registries[Provider/Capability Registries]
     end
 
-    subgraph "Services"
-        CSS[ChatSubmissionService]
-        TGS[TitleGenerationService]
+    subgraph "External Layer"
+        API[External APIs]
     end
 
-    subgraph "Providers"
-        PR[ProviderRegistry]
-        OP[OpenAI Provider]
-        AP[Anthropic Provider]
-    end
-
-    subgraph "Interfaces"
-        API[AIProviderInterface]
-        RC[RequestConfig]
-        FR[FormattedRequest]
-        PR_R[ProviderResponse]
-        MI[MessageInterface]
-        MC[ModelConfig]
-    end
-
-    subgraph "Store"
-        ZS[Zustand Store]
-        CS[ChatSlice]
-        IS[InputSlice]
-        AS[AuthSlice]
-        CfS[ConfigSlice]
-        PS[PromptSlice]
-        RS[RequestSlice]
-    end
-
-    %% Store relationships
-    ZS --> CS
-    ZS --> IS
-    ZS --> AS
-    ZS --> CfS
-    ZS --> PS
-    ZS --> RS
-
-    %% Provider context flow
-    App --> PC
-    PC --> PR
-    PR --> OP
-    PR --> AP
-    OP -.implements.-> API
-    AP -.implements.-> API
-
-    %% Hook dependencies
-    Chat --> UCC
-    Chat --> UTG
-    Chat --> US
-    UCC --> UP
-    UTG --> UP
-    UP --> PC
-    
-    %% Service connections
-    US --> CSS
-    UTG --> TGS
-    CSS --> API
-    TGS --> API
-    
-    %% Interface relationships
-    API --> RC
-    API --> FR
-    API --> PR_R
-    RC --> MC
-
-    %% Store connections
-    Chat --> ZS
-    Menu --> ZS
-    US --> ZS
-    UMM --> ZS
-    US --> UMM
-    
-    %% Additional connections
-    CSS -.uses.-> UP
-    TGS -.uses.-> UP
+    UI --> SimpleHooks
+    UI --> Store
+    SimpleHooks --> Store
+    UI --> ComplexHooks
+    ComplexHooks --> Services
+    Services --> Store
+    Services --> Registries
+    Store --> Registries
+    Services --> API
 ```
 
-## Core Interfaces
+## Balanced API Contracts
 
-### `AIProviderInterface`
+### Store Design
 
-The main interface that all AI providers must implement.
+The store follows a slice pattern with direct selectors for common operations:
 
-**Motivation:**
-- **Single Responsibility Principle (SRP)**: Each provider implementation focuses solely on handling communication with a specific AI service.
-- **Open/Closed Principle (OCP)**: New providers can be added without modifying existing code.
-- **Interface Segregation Principle (ISP)**: The interface defines only the essential methods needed by all providers.
-- **Dependency Inversion Principle (DIP)**: Components depend on abstractions (the interface) rather than concrete implementations.
-- **React Context Pattern**: Enables dependency injection through React's context system.
+```typescript
+// Store creation with slices
+const useStore = create<StoreState>()(
+  persist(
+    (...a) => ({
+      ...createChatSlice(...a),
+      ...createConfigSlice(...a),
+      ...createAuthSlice(...a),
+      // Other slices
+    }),
+    {
+      name: 'chat-store',
+      partialize: (state) => ({
+        // Only persist necessary state
+        chats: state.chats,
+        defaultChatConfig: state.defaultChatConfig,
+        // Other persisted state
+      })
+    }
+  )
+);
+
+// Direct selectors for common operations
+export const useCurrentChat = () => useStore(state => {
+  const { chats, currentChatIndex } = state;
+  return chats[currentChatIndex];
+});
+
+export const useCurrentChatConfig = () => useStore(state => {
+  const { chats, currentChatIndex } = state;
+  return chats[currentChatIndex]?.config;
+});
+```
+
+### Simplified Hooks
+
+For common operations, provide simplified hooks that access the store directly:
+
+```typescript
+// Simple hook for model temperature
+export function useModelTemperature(chatId?: string) {
+  // Get current chat ID if not provided
+  const currentChatId = useStore(state => {
+    if (chatId) return chatId;
+    const { chats, currentChatIndex } = state;
+    return chats[currentChatIndex]?.id;
+  });
+  
+  // Get and set temperature with memoization
+  const temperature = useStore(
+    state => state.getChatConfig(currentChatId)?.modelConfig.temperature
+  );
+  
+  const setTemperature = useCallback((value: number) => {
+    useStore.getState().updateChatConfig(currentChatId, {
+      modelConfig: { temperature: value }
+    });
+  }, [currentChatId]);
+  
+  return [temperature, setTemperature] as const;
+}
+```
+
+### Service Layer for Complex Logic
+
+Reserve the service layer for complex operations that require business logic:
+
+```typescript
+export class ConfigurationService {
+  constructor(
+    private store = useStore,
+    private capabilityRegistry: CapabilityRegistry
+  ) {}
+  
+  // Complex operations that require business logic
+  validateAndUpdateConfig(chatId: string, update: ChatConfigUpdate): void {
+    // Validate configuration
+    const validatedUpdate = this.validateConfig(update);
+    
+    // Check capability compatibility
+    if (validatedUpdate.modelConfig?.capabilities) {
+      this.validateCapabilities(
+        chatId, 
+        validatedUpdate.provider || this.store.getState().getChatConfig(chatId).provider,
+        validatedUpdate.modelConfig.model || this.store.getState().getChatConfig(chatId).modelConfig.model,
+        validatedUpdate.modelConfig.capabilities
+      );
+    }
+    
+    // Update store
+    this.store.getState().updateChatConfig(chatId, validatedUpdate);
+  }
+  
+  // Private helper methods
+  private validateConfig(update: ChatConfigUpdate): ChatConfigUpdate {
+    // Validation logic
+    return update;
+  }
+  
+  private validateCapabilities(
+    chatId: string, 
+    provider: ProviderKey, 
+    model: string, 
+    capabilities: Record<string, any>
+  ): void {
+    // Validate each capability
+    Object.keys(capabilities).forEach(capabilityId => {
+      if (!this.capabilityRegistry.isCapabilitySupported(capabilityId, provider, model)) {
+        throw new Error(`Capability ${capabilityId} is not supported by ${provider}/${model}`);
+      }
+    });
+  }
+}
+```
+
+### Balanced Provider Interface
+
+Simplify the provider interface while maintaining extensibility:
 
 ```typescript
 export interface AIProviderInterface {
-    /**
-     * Unique identifier for the provider
-     */
-    id: string;
-
-    /**
-     * Display name of the provider
-     */
-    name: string;
-
-    /**
-     * List of API endpoints this provider can use
-     */
-    endpoints: string[];
-
-    /**
-     * List of model IDs supported by this provider
-     */
-    models: string[];
-
-    /**
-     * Converts application request format to provider-specific format
-     * @param config - Configuration for the request
-     * @param messages - Array of messages to send to the AI
-     * @returns Formatted request ready to send to the provider's API
-     */
-    formatRequest: (config: RequestConfig, messages: MessageInterface[]) => FormattedRequest;
-
-    /**
-     * Extracts content from a provider's non-streaming response
-     * @param response - Raw response from the provider's API
-     * @returns Extracted content as a string
-     */
-    parseResponse: (response: any) => string;
-
-    /**
-     * Extracts content from a provider's streaming response chunk
-     * @param response - Raw response chunk from the provider's API
-     * @returns Extracted content as a string
-     */
-    parseStreamingResponse: (response: any) => string;
-
-    /**
-     * Submits a completion request to the provider
-     * @param formattedRequest - Request formatted for the provider's API
-     * @returns Promise resolving to the provider's response
-     */
-    submitCompletion: (formattedRequest: FormattedRequest) => Promise<ProviderResponse>;
-
-    /**
-     * Submits a streaming request to the provider
-     * @param formattedRequest - Request formatted for the provider's API
-     * @returns Promise resolving to a ReadableStream of response chunks
-     */
-    submitStream: (formattedRequest: FormattedRequest) => Promise<ReadableStream>;
-}
-```
-
-### `RequestConfig`
-
-Configuration for AI requests, extending the base model config.
-
-**Motivation:**
-- **SRP**: Encapsulates all configuration parameters for a request.
-- **OCP**: Extensible through optional fields for provider-specific features.
-- **Composition over Inheritance**: Extends `ModelConfig` to reuse common configuration.
-- **React Props Pattern**: Follows React's pattern of passing configuration as structured objects.
-
-```typescript
-export interface RequestConfig extends ModelConfig {
-    /**
-     * Whether to stream the response (true) or receive it all at once (false)
-     * Optional in incoming config, defaults to false
-     */
-    stream?: boolean;
-
-    /**
-     * Configuration for thinking mode, which allows the AI to "think" before responding
-     * This enables more thoughtful and comprehensive responses by allocating tokens for reasoning
-     */
-    thinking_mode?: {
-        /**
-         * Whether thinking mode is enabled for this request
-         */
-        enabled: boolean;
-
-        /**
-         * Maximum number of tokens to allocate for thinking
-         * Higher values allow for more complex reasoning but consume more tokens
-         */
-        budget_tokens: number;
-    };
-}
-```
-
-### `FormattedRequest`
-
-The standardized request format that providers convert to their specific API format.
-
-**Motivation:**
-- **SRP**: Represents the standardized request format across providers.
-- **Liskov Substitution Principle (LSP)**: All provider-specific request formats can be derived from this base structure.
-- **OCP**: Extensible through the index signature for provider-specific fields.
-- **Information Hiding**: Abstracts provider-specific request details from components.
-
-```typescript
-export interface FormattedRequest {
-    /**
-     * Array of messages in provider-specific format
-     * Each provider may have different message structure requirements
-     */
-    messages: any[];
-
-    /**
-     * Model identifier to use for this request (e.g., "gpt-4o", "claude-3-7-sonnet")
-     */
-    model: string;
-
-    /**
-     * Maximum number of tokens to generate in the response
-     */
-    max_tokens: number;
-
-    /**
-     * Controls randomness: 0 = deterministic, 1 = maximum randomness
-     * Lower values make output more focused and deterministic
-     * Higher values introduce more randomness and creativity
-     */
-    temperature: number;
-
-    /**
-     * Controls diversity via nucleus sampling
-     * 0.1 = only consider tokens comprising the top 10% probability mass
-     * 1.0 = consider all tokens (but still weighted by probability)
-     */
-    top_p?: number;
-
-    /**
-     * Whether to stream the response
-     * When true, the response will be delivered in chunks
-     * When false, the response will be delivered all at once
-     */
-    stream: boolean;
-
-    /**
-     * Thinking configuration for providers that support it (e.g., Anthropic)
-     * Enables the AI to reason through complex problems before responding
-     */
-    thinking?: {
-        /**
-         * Type of thinking mode
-         * - "enabled": AI will use thinking capabilities
-         * - "disabled": AI will not use thinking capabilities
-         */
-        type: "enabled" | "disabled";
-
-        /**
-         * Maximum number of tokens to allocate for thinking
-         * Higher values allow for more complex reasoning but consume more tokens
-         */
-        budget_tokens: number;
-    };
-
-    /**
-     * System message for providers that support it separately from messages
-     * (e.g., Anthropic treats system messages differently)
-     */
-    system?: string;
-
-    /**
-     * Reduces repetition of the same tokens
-     * Higher values decrease likelihood of repeating the same phrases
-     * Optional, as not all providers support this
-     */
-    presence_penalty?: number;
-
-    /**
-     * Reduces repetition of the same topics
-     * Higher values decrease likelihood of discussing the same topics
-     * Optional, as not all providers support this
-     */
-    frequency_penalty?: number;
-
-    /**
-     * Allow additional provider-specific request fields
-     * Enables extensibility for provider-specific parameters
-     */
-    [key: string]: unknown;
-}
-```
-
-### `ProviderResponse`
-
-A standardized response format that providers convert their API responses to.
-
-**Motivation:**
-- **SRP**: Standardizes response formats across different providers.
-- **LSP**: All provider-specific responses can be mapped to this common structure.
-- **OCP**: Extensible through the index signature for provider-specific fields.
-- **Adapter Pattern**: Acts as an adapter between provider-specific responses and application-wide format.
-
-```typescript
-export interface ProviderResponse {
-    /**
-     * Main content of the response
-     * Can be a string or an array of content blocks (for providers like Anthropic)
-     */
-    content?: string | Array<{text: string}>;
-
-    /**
-     * Array of choices (for providers like OpenAI)
-     * Each choice contains a message or delta with content
-     */
-    choices?: Array<{
-        /**
-         * Complete message in non-streaming responses
-         */
-        message?: {
-            /**
-             * Content of the message
-             */
-            content?: string
-        };
-
-        /**
-         * Delta in streaming responses
-         */
-        delta?: {
-            /**
-             * Content chunk in the delta
-             */
-            content?: string
-        };
-    }>;
-
-    /**
-     * Type of response (for providers like Anthropic)
-     * E.g., "content_block_delta" for streaming responses
-     */
-    type?: string;
-
-    /**
-     * Delta information for streaming responses (for providers like Anthropic)
-     */
-    delta?: {
-        /**
-         * Text chunk in the delta
-         */
-        text?: string;
-
-        /**
-         * Additional provider-specific delta fields
-         */
-        [key: string]: unknown;
-    };
-
-    /**
-     * Allow additional provider-specific response fields
-     * Enables extensibility for provider-specific response data
-     */
-    [key: string]: unknown;
-}
-```
-
-### `MessageInterface`
-
-Represents a message in a conversation.
-
-**Motivation:**
-- **SRP**: Encapsulates the structure of a single message.
-- **Common Data Structure**: Provides a consistent format for messages across the application.
-- **Data Transfer Object Pattern**: Acts as a pure data container for message information.
-
-```typescript
-export interface MessageInterface {
-    /**
-     * Role of the message sender
-     * - system: Instructions or context for the AI
-     * - user: Messages from the human user
-     * - assistant: Messages from the AI assistant
-     */
-    role: 'system' | 'user' | 'assistant';
-
-    /**
-     * Content of the message
-     */
-    content: string;
-
-    /**
-     * Optional unique identifier for the message
-     */
-    id?: string;
-
-    /**
-     * Optional timestamp when the message was created
-     * Stored as milliseconds since epoch
-     */
-    timestamp?: number;
-}
-```
-
-### `ModelConfig`
-
-Base configuration for AI models.
-
-**Motivation:**
-- **SRP**: Centralizes model-specific configuration parameters.
-- **Separation of Concerns**: Separates model configuration from provider configuration.
-- **Configuration Object Pattern**: Follows the pattern of grouping related configuration parameters.
-
-```typescript
-export interface ModelConfig {
-    /**
-     * Model identifier to use (e.g., "gpt-4o", "claude-3-7-sonnet")
-     */
-    model: string;
-
-    /**
-     * Controls randomness: 0 = deterministic, 1 = maximum randomness
-     * Lower values make output more focused and deterministic
-     * Higher values introduce more randomness and creativity
-     */
-    temperature: number;
-
-    /**
-     * Controls diversity via nucleus sampling
-     * 0.1 = only consider tokens comprising the top 10% probability mass
-     * 1.0 = consider all tokens (but still weighted by probability)
-     */
-    top_p?: number;
-
-    /**
-     * Maximum number of tokens to generate in the response
-     */
-    max_tokens: number;
-
-    /**
-     * Reduces repetition of the same tokens
-     * Higher values decrease likelihood of repeating the same phrases
-     * Optional, as not all providers support this
-     */
-    presence_penalty?: number;
-
-    /**
-     * Reduces repetition of the same topics
-     * Higher values decrease likelihood of discussing the same topics
-     * Optional, as not all providers support this
-     */
-    frequency_penalty?: number;
-
-    /**
-     * Whether thinking capability is enabled for this model
-     * Thinking allows the AI to reason through complex problems before responding
-     */
-    thinking_mode?: {
-    /**
-         * Whether thinking is enabled
-     */
-        enabled: boolean;
-
-        /**
-         * Maximum number of tokens to allocate for thinking
-         * Higher values allow for more complex reasoning but consume more tokens
-         */
-        budget_tokens: number;
-    };
-}
-```
-
-## Provider Registry Types
-
-### `ProviderKey`
-
-Type for supported providers.
-
-**Motivation:**
-- **Type Safety**: Ensures provider keys are valid throughout the application.
-- **Extensibility**: Allows for adding new providers while maintaining type safety.
-
-```typescript
-/**
- * Identifier for supported AI providers
- * - 'openai': OpenAI API (GPT models)
- * - 'anthropic': Anthropic API (Claude models)
- * - string: Allows for future provider extensions
- */
-export type ProviderKey = 'openai' | 'anthropic' | string;
-```
-
-### `ProviderConfig`
-
-Configuration for a provider in the registry.
-
-**Motivation:**
-- **SRP**: Centralizes provider configuration management.
-- **OCP**: New providers can be added by extending the registry.
-- **DIP**: Components depend on the registry abstraction rather than specific providers.
-- **Factory Pattern**: The registry acts as a factory for provider instances.
-- **React Configuration Pattern**: Follows React's pattern of centralized configuration.
-
-```typescript
-export interface ProviderConfig {
-    /**
-     * Display name of the provider
-     */
-    name: string;
-
-    /**
-     * List of API endpoints this provider can use
-     */
-    endpoints: string[];
-
-    /**
-     * List of model IDs supported by this provider
-         */
-    models: string[];
-
-        /**
-     * Optional default model to use for this provider
-         */
-    defaultModel?: string;
-
-        /**
-     * Optional configuration for provider-specific features
-                 */
-    features?: {
-                /**
-         * Whether this provider supports thinking mode
-                 */
-        supportsThinking?: boolean;
-
-            /**
-         * Whether this provider supports streaming responses
-                 */
-        supportsStreaming?: boolean;
-
-                /**
-         * Additional provider-specific feature flags
-                 */
-        [key: string]: boolean | undefined;
-            };
-        }
-```
-
-## Context Types
-
-### `ProviderContextType`
-
-Type for the provider context.
-
-**Motivation:**
-- **DIP**: Components depend on the provider abstraction through context.
-- **React Context API**: Leverages React's built-in dependency injection mechanism.
-- **Inversion of Control**: Control over provider selection is moved to the context provider.
-- **Composition Pattern**: Enables composition of components with provider capabilities.
-
-```typescript
-/**
- * Type for the provider context
- * - AIProviderInterface: When a provider is selected and available
- * - null: When no provider is selected or available
- *
- * Used with React's Context API to make the current provider available throughout the component tree
- */
-export type ProviderContextType = AIProviderInterface | null;
-```
-
-## Hook Return Types
-
-### `UseTitleGenerationReturn`
-
-Return type for the useTitleGeneration hook.
-
-**Motivation:**
-- **SRP**: The hook has a single, focused responsibility.
-- **ISP**: Hook interface exposes only the methods needed by consumers.
-- **React Hooks Pattern**: Follows React's pattern of encapsulating logic in hooks.
-- **Command Pattern**: Each method represents a specific command operation.
-
-```typescript
-export interface UseTitleGenerationReturn {
-    /**
-     * Generates a title for a chat based on its messages
-     *
-     * @param messages - Array of messages in the chat
-     * @param config - Model configuration to use for title generation
-     * @param chatIndex - Optional index of the chat to update (defaults to current chat)
-     * @returns Promise that resolves when title generation is complete
-     *
-     * The function will:
-     * 1. Check if the chat already has a title
-     * 2. Create a special prompt for title generation
-     * 3. Submit the request to the AI provider
-     * 4. Update the chat with the generated title
-     */
-    generateTitle: (
-        messages: MessageInterface[],
-        config: ModelConfig,
-        chatIndex?: number
-    ) => Promise<void>;
-}
-```
-
-### `UseChatCompletionReturn`
-
-Return type for the useChatCompletion hook.
-
-**Motivation:**
-- **SRP**: The hook has a single, focused responsibility.
-- **ISP**: Hook interface exposes only the methods needed by consumers.
-- **React Hooks Pattern**: Follows React's pattern of encapsulating logic in hooks.
-- **Facade Pattern**: Provides a simplified interface to the underlying provider complexity.
-
-```typescript
-export interface UseChatCompletionReturn {
-    /**
-     * Generates a completion for a chat conversation
-     *
-     * @param messages - Array of messages in the conversation
-     * @param config - Model configuration to use for completion
-     * @returns Promise resolving to the generated completion text
-     *
-     * This method handles the entire completion process:
-     * 1. Formatting the request for the provider
-     * 2. Submitting the request
-     * 3. Parsing the response
-     */
-    generateCompletion: (
-        messages: MessageInterface[],
-        config: ModelConfig
-    ) => Promise<string>;
-
-    /**
-     * Generates a streaming completion for a chat conversation
-     *
-     * @param messages - Array of messages in the conversation
-     * @param config - Model configuration to use for completion
-     * @param onChunk - Callback function that receives each chunk of the response
-     * @returns Promise that resolves when the stream is complete
-     *
-     * This method handles the streaming completion process:
-     * 1. Formatting the request for the provider with streaming enabled
-     * 2. Submitting the streaming request
-     * 3. Processing each chunk and calling the onChunk callback
-     */
-    generateCompletionStream: (
-        messages: MessageInterface[],
-        config: ModelConfig,
-        onChunk: (chunk: string) => void
-    ) => Promise<void>;
-}
-```
-
-## API Contracts
-
-### Frontend-Backend Communication
-
-The communication between the frontend and backend follows a standardized contract pattern to ensure consistency, security, and maintainability.
-
-```mermaid
-sequenceDiagram
-    participant FC as Frontend Client
-    participant PR as ProviderRegistry
-    participant API as AIProviderInterface
-    participant BE as Backend API Routes
-    participant EP as External Provider APIs
-    
-    FC->>PR: Get provider for current chat
-    PR-->>FC: Return provider implementation
-    FC->>API: Call formatRequest()
-    API-->>FC: Return FormattedRequest
-    FC->>BE: POST /api/chat/{provider} with FormattedRequest
-    BE->>EP: Forward request to external API
-    EP-->>BE: Return provider-specific response
-    BE-->>FC: Return standardized ProviderResponse
-    FC->>API: Call parseResponse() or parseStreamingResponse()
-    API-->>FC: Return extracted content
-```
-
-**Motivation:**
-- **Security**: API keys are never exposed to the client, only stored and used on the server
-- **Standardization**: Consistent request and response formats across different providers
-- **Separation of Concerns**: Each component has a clear, focused responsibility
-- **Maintainability**: Changes to provider APIs only require updates in one place
-- **Extensibility**: New providers can be added with minimal changes to the architecture
-
-### Request Contract
-
-When the frontend makes a request to the backend, it follows this standardized format:
-
-```typescript
-interface BackendRequestBody {
-  /**
-   * Provider-specific formatted request created by AIProviderInterface.formatRequest
-   * Contains all necessary parameters for the AI provider API
-   */
-  formattedRequest: FormattedRequest;
+  // Core identity
+  id: string;
+  name: string;
   
-  /**
-   * API key for the provider
-   * Retrieved from secure storage and sent to the backend
-   * Never exposed in client-side code
-   */
-  apiKey: string;
+  // Available options
+  endpoints: string[];
+  models: string[];
+  
+  // Core functionality - keep simple
+  formatRequest: (messages: MessageInterface[], config: RequestConfig) => FormattedRequest;
+  parseResponse: (response: any) => string;
+  
+  // Optional advanced functionality
+  parseStreamingResponse?: (response: any) => string;
+  getCapabilities?: (model: string) => string[];
+  validateConfig?: (config: RequestConfig) => RequestConfig;
 }
 ```
 
-**Motivation:**
-- **Single Responsibility Principle (SRP)**: The frontend is responsible only for formatting the request according to the provider's requirements, while the backend is responsible for securely communicating with the external API.
-- **Dependency Inversion Principle (DIP)**: Both frontend and backend depend on the shared `FormattedRequest` interface rather than specific implementation details.
-- **Information Hiding**: The details of how requests are formatted are encapsulated within the provider implementation.
-- **Consistency**: All providers use the same request structure, making the code more maintainable.
+### Middleware with Performance Considerations
 
-### Response Contract
-
-The backend returns responses in a standardized format that matches the `ProviderResponse` interface:
+Optimize middleware chains for performance:
 
 ```typescript
-interface ProviderResponse {
-  content?: string | Array<{text: string}>;
-  choices?: Array<{
-    message?: { content?: string };
-    delta?: { content?: string };
-  }>;
-  type?: string;
-  delta?: { 
-    text?: string;
-    [key: string]: unknown;
+export class CapabilityRegistry {
+  private capabilities: Map<string, CapabilityDefinition> = new Map();
+  private middlewareCache: Map<string, Array<MiddlewareFunction>> = new Map();
+  
+  // Register a capability
+  registerCapability(capability: CapabilityDefinition): void {
+    this.capabilities.set(capability.id, capability);
+    // Clear cache when registering new capabilities
+    this.middlewareCache.clear();
+  }
+  
+  // Apply middleware with caching
+  applyRequestMiddleware(request: FormattedRequest, context: CapabilityContext): FormattedRequest {
+    const cacheKey = `${context.provider}:${context.model}`;
+    
+    // Get or create middleware chain
+    let middlewareChain = this.middlewareCache.get(cacheKey);
+    if (!middlewareChain) {
+      middlewareChain = this.buildMiddlewareChain(context.provider, context.model);
+      this.middlewareCache.set(cacheKey, middlewareChain);
+    }
+    
+    // Apply middleware chain
+    return middlewareChain.reduce(
+      (req, middleware) => middleware(req, context),
+      request
+    );
+  }
+  
+  // Build middleware chain (called only when needed)
+  private buildMiddlewareChain(provider: ProviderKey, model: string): Array<MiddlewareFunction> {
+    return Array.from(this.capabilities.values())
+      .filter(cap => cap.isSupported(provider, model) && cap.formatRequestMiddleware)
+      .sort((a, b) => (b.priority || 0) - (a.priority || 0))
+      .map(cap => cap.formatRequestMiddleware!);
+  }
+}
+```
+
+## Practical Implementation Guidelines
+
+### 1. Store Implementation
+
+Use a balanced approach to store implementation:
+
+```typescript
+// ConfigSlice.ts
+export const createConfigSlice: StateCreator<
+  StoreState,
+  [],
+  [],
+  ConfigSlice
+> = (set, get) => ({
+  defaultChatConfig: DEFAULT_CHAT_CONFIG,
+  
+  // Simple setter for direct updates
+  setDefaultChatConfig: (config) => set({ defaultChatConfig: config }),
+  
+  // More complex update with deep merging
+  updateDefaultChatConfig: (update) => {
+    const current = get().defaultChatConfig;
+    set({ 
+      defaultChatConfig: {
+        ...current,
+        ...update,
+        modelConfig: {
+          ...current.modelConfig,
+          ...(update.modelConfig || {}),
+          capabilities: {
+            ...(current.modelConfig.capabilities || {}),
+            ...(update.modelConfig?.capabilities || {})
+          }
+        }
+      }
+    });
+  },
+  
+  // Get chat config with fallback to default
+  getChatConfig: (chatId) => {
+    const chat = get().chats.find(c => c.id === chatId);
+    return chat?.config || get().defaultChatConfig;
+  },
+  
+  // Update chat config with optimized implementation
+  updateChatConfig: (chatId, update) => {
+    set(state => {
+      const chatIndex = state.chats.findIndex(c => c.id === chatId);
+      if (chatIndex === -1) return state;
+      
+      const updatedChats = [...state.chats];
+      const currentConfig = updatedChats[chatIndex].config;
+      
+      updatedChats[chatIndex] = {
+        ...updatedChats[chatIndex],
+        config: {
+          ...currentConfig,
+          ...update,
+          modelConfig: {
+            ...currentConfig.modelConfig,
+            ...(update.modelConfig || {}),
+            capabilities: {
+              ...(currentConfig.modelConfig.capabilities || {}),
+              ...(update.modelConfig?.capabilities || {})
+            }
+          }
+        }
+      };
+      
+      return { chats: updatedChats };
+    });
+  },
+  
+  // Capability-specific helpers
+  isCapabilityEnabled: (chatId, capabilityId) => {
+    const config = get().getChatConfig(chatId);
+    return !!config.modelConfig.capabilities?.[capabilityId]?.enabled;
+  },
+  
+  updateCapabilityConfig: (chatId, capabilityId, config) => {
+    const currentConfig = get().getChatConfig(chatId);
+    
+    get().updateChatConfig(chatId, {
+      modelConfig: {
+        capabilities: {
+          [capabilityId]: {
+            ...(currentConfig.modelConfig.capabilities?.[capabilityId] || {}),
+            ...config
+          }
+        }
+      }
+    });
+  }
+});
+```
+
+### 2. Hook Composition
+
+Balance between direct store access and abstraction:
+
+```typescript
+// Simple hook for common operations
+export function useChat(chatId?: string) {
+  // Get current chat ID if not provided
+  const id = useChatId(chatId);
+  
+  // Get chat with memoization
+  const chat = useStore(
+    state => state.chats.find(c => c.id === id) || null
+  );
+  
+  // Common operations as simple methods
+  const updateTitle = useCallback((title: string) => {
+    useStore.getState().updateChat(id, { title });
+  }, [id]);
+  
+  const addMessage = useCallback((message: MessageInterface) => {
+    useStore.getState().addMessage(id, message);
+  }, [id]);
+  
+  return {
+    chat,
+    updateTitle,
+    addMessage,
+    // Other common operations
   };
-  [key: string]: unknown;
+}
+
+// Complex hook for advanced operations
+export function useChatCompletion(chatId?: string) {
+  const { chat } = useChat(chatId);
+  const provider = useProvider(chat?.config.provider);
+  const submissionService = useMemo(() => 
+    new ChatSubmissionService(provider), [provider]);
+  
+  // Complex operation with service
+  const submitCompletion = useCallback(async () => {
+    if (!chat) return;
+    
+    try {
+      // Start loading state
+      useStore.getState().setGenerating(true);
+      
+      // Use service for complex logic
+      await submissionService.submitChat(
+        chat.messages,
+        chat.config.modelConfig
+      );
+      
+      // End loading state
+      useStore.getState().setGenerating(false);
+    } catch (error) {
+      // Handle error
+      useStore.getState().setError(error.message);
+      useStore.getState().setGenerating(false);
+    }
+  }, [chat, submissionService]);
+  
+  return {
+    submitCompletion,
+    isGenerating: useStore(state => state.generating),
+    error: useStore(state => state.error)
+  };
 }
 ```
 
-**Motivation:**
-- **Adapter Pattern**: The backend acts as an adapter between provider-specific response formats and the standardized format used by the application.
-- **Liskov Substitution Principle (LSP)**: All provider responses can be treated uniformly by the frontend.
-- **Open/Closed Principle (OCP)**: The response format is extensible through the index signature for provider-specific fields.
-- **Abstraction**: The frontend doesn't need to know the details of each provider's response format.
+### 3. Component Integration
 
-### Streaming Response Contract
+Keep components simple by using the right level of abstraction:
 
-For streaming responses, the backend uses Server-Sent Events (SSE) with a standardized event format:
+```tsx
+// Simple component with direct hook
+function TemperatureSlider() {
+  const [temperature, setTemperature] = useModelTemperature();
+  
+  return (
+    <Slider
+      value={temperature}
+      onChange={setTemperature}
+      min={0}
+      max={1}
+      step={0.1}
+      label="Temperature"
+    />
+  );
+}
 
+// Complex component with service integration
+function CapabilityToggle({ capabilityId }: { capabilityId: string }) {
+  const { chat } = useChat();
+  const configService = useConfigurationService();
+  
+  // Check if capability is supported
+  const isSupported = configService.isCapabilitySupported(
+    capabilityId,
+    chat.config.provider,
+    chat.config.modelConfig.model
+  );
+  
+  // Get current enabled state
+  const isEnabled = useStore(
+    state => state.isCapabilityEnabled(chat.id, capabilityId)
+  );
+  
+  // Toggle with validation
+  const toggleCapability = () => {
+    try {
+      configService.updateCapabilityConfig(
+        chat.id,
+        capabilityId,
+        { enabled: !isEnabled }
+      );
+    } catch (error) {
+      // Handle error
+    }
+  };
+  
+  if (!isSupported) return null;
+  
+  return (
+    <Switch
+      checked={isEnabled}
+      onChange={toggleCapability}
+      label={capabilityId}
+    />
+  );
+}
 ```
-data: {"type":"content_block_delta","delta":{"text":"Hello"}}
 
-data: {"type":"content_block_delta","delta":{"text":" world"}}
+## Error Handling Strategy
 
-data: [DONE]
-```
-
-**Motivation:**
-- **Real-time Updates**: Allows for incremental updates to the UI as responses are generated.
-- **Efficiency**: Reduces perceived latency by showing partial responses immediately.
-- **Standardization**: Uses the well-established SSE protocol for streaming data.
-- **Compatibility**: Works across all modern browsers and with server frameworks.
-
-### Error Handling Contract
-
-Errors are returned in a consistent format:
+Implement consistent error handling throughout the architecture:
 
 ```typescript
-interface ErrorResponse {
-  error: string;
-  status: number;
-  type?: string;
-  details?: string;
+// Error types
+export enum ErrorType {
+  VALIDATION = 'validation',
+  NETWORK = 'network',
+  PROVIDER = 'provider',
+  CAPABILITY = 'capability',
+  UNKNOWN = 'unknown'
+}
+
+export interface AppError {
+  type: ErrorType;
+  message: string;
+  details?: any;
+}
+
+// Error handling in store
+export interface ErrorSlice {
+  error: AppError | null;
+  setError: (error: AppError | null) => void;
+  clearError: () => void;
+}
+
+// Error handling in services
+export class BaseService {
+  protected handleError(error: any): never {
+    // Determine error type
+    const appError: AppError = this.normalizeError(error);
+    
+    // Set in store
+    useStore.getState().setError(appError);
+    
+    // Rethrow with normalized structure
+    throw appError;
+  }
+  
+  private normalizeError(error: any): AppError {
+    // Logic to normalize different error types
+    if (error.response) {
+      return {
+        type: ErrorType.NETWORK,
+        message: 'Network error occurred',
+        details: error.response
+      };
+    }
+    
+    // Default unknown error
+    return {
+      type: ErrorType.UNKNOWN,
+      message: error.message || 'An unknown error occurred'
+    };
+  }
+}
+
+// Error handling in UI
+function ErrorBoundary({ children }: { children: React.ReactNode }) {
+  const error = useStore(state => state.error);
+  const clearError = useStore(state => state.clearError);
+  
+  if (!error) return <>{children}</>;
+  
+  return (
+    <ErrorDisplay
+      error={error}
+      onDismiss={clearError}
+    />
+  );
 }
 ```
 
-**Motivation:**
-- **Robustness**: Proper error handling improves application reliability.
-- **User Experience**: Meaningful error messages help users understand and resolve issues.
-- **Debugging**: Detailed error information aids in troubleshooting.
-- **Consistency**: Standardized error format makes error handling more maintainable.
+## Performance Optimization Strategy
 
-## Capability Registry Interfaces
+Implement consistent performance optimizations:
 
-### `CapabilityDefinition`
+```typescript
+// Memoization helpers
+export function createSelector<State, Result>(
+  selector: (state: State) => Result,
+  equalityFn: (a: Result, b: Result) => boolean = Object.is
+) {
+  let lastState: State | undefined;
+  let lastResult: Result | undefined;
+  
+  return (state: State): Result => {
+    if (lastState === undefined || !equalityFn(selector(lastState), selector(state))) {
+      lastResult = selector(state);
+      lastState = state;
+    }
+    return lastResult!;
+  };
+}
 
-Defines a provider capability with its UI component and detection logic.
+// Optimized store subscriptions
+export function useStoreSelector<T>(
+  selector: (state: StoreState) => T,
+  equalityFn?: (a: T, b: T) => boolean
+) {
+  return useStore(selector, equalityFn);
+}
 
-**Motivation:**
-- **Single Responsibility Principle (SRP)**: Each capability encapsulates its own detection logic and UI component.
-- **Open/Closed Principle (OCP)**: New capabilities can be added without modifying existing code.
-- **Interface Segregation Principle (ISP)**: The interface defines only the essential methods needed for capability detection and rendering.
-- **Dependency Inversion Principle (DIP)**: Components depend on the capability abstraction rather than concrete implementations.
-- **Plugin Pattern**: Enables extensibility through a registry of capabilities.
+// Batch updates
+export function batchUpdates(updates: () => void) {
+  // Use React's batching or a custom implementation
+  ReactDOM.unstable_batchedUpdates(updates);
+}
+```
+
+## Configuration Types
+
+Our configuration system uses the following type definitions:
+
+```typescript
+// Base configuration interface
+export interface BaseModelConfig {
+  model: string;
+  max_tokens: number;
+  temperature: number;
+  top_p: number;
+  presence_penalty: number;
+  frequency_penalty: number;
+}
+
+// Capability-specific configuration interfaces
+export interface ThinkingModeConfig {
+  enabled: boolean;
+  budget_tokens: number;
+}
+
+export interface FileUploadConfig {
+  enabled: boolean;
+  maxFiles: number;
+  maxSizePerFile: number;
+}
+
+// Complete model configuration with all capabilities
+export interface ModelConfig extends BaseModelConfig {
+  capabilities?: {
+    thinking_mode?: ThinkingModeConfig;
+    file_upload?: FileUploadConfig;
+    // Add other capabilities here
+  };
+}
+
+// Chat configuration
+export interface ChatConfig {
+  provider: ProviderKey;
+  modelConfig: ModelConfig;
+  systemPrompt: string;
+}
+
+// Configuration update types (for partial updates)
+export type ModelConfigUpdate = Partial<ModelConfig>;
+export type ChatConfigUpdate = Partial<ChatConfig>;
+```
+
+## Capability Definition
+
+Capabilities are defined using the following interface:
 
 ```typescript
 export interface CapabilityDefinition {
@@ -812,403 +648,249 @@ export interface CapabilityDefinition {
   id: string;
   
   /**
-   * Display name of the capability for UI presentation
+   * Display name of the capability
    */
   name: string;
   
   /**
-   * Determines if this capability is supported by a specific provider and model
-   * @param provider - Provider key (e.g., 'openai', 'anthropic')
-   * @param model - Model identifier (e.g., 'gpt-4o', 'claude-3-7-sonnet')
-   * @returns Boolean indicating if the capability is supported
+   * Description of what the capability does
+   */
+  description?: string;
+  
+  /**
+   * Determines if this capability is supported by a provider/model
    */
   isSupported: (provider: ProviderKey, model: string) => boolean;
   
   /**
    * React component for configuring this capability
-   * Receives model configuration and setter function
    */
   configComponent: React.ComponentType<{
-    modelConfig: ModelConfig;
-    setModelConfig: (config: ModelConfig) => void;
+    chatId: string;
   }>;
   
   /**
-   * Optional priority for UI rendering order
-   * Higher numbers appear first in the UI
+   * Priority for UI rendering (higher numbers appear first)
    */
   priority?: number;
   
   /**
-   * Optional middleware to modify requests for this capability
-   * @param request - The formatted request
-   * @param config - The model configuration
-   * @returns Modified request with capability-specific adjustments
+   * Middleware to modify requests for this capability
    */
-  formatRequestMiddleware?: (request: FormattedRequest, config: ModelConfig) => FormattedRequest;
-  
-  /**
-   * Optional middleware to modify responses for this capability
-   * @param response - The provider response
-   * @param config - The model configuration
-   * @returns Modified response with capability-specific processing
-   */
-  parseResponseMiddleware?: (response: ProviderResponse, config: ModelConfig) => ProviderResponse;
-}
-```
-
-### `CapabilityRegistry`
-
-Registry that manages provider capabilities and their detection.
-
-**Motivation:**
-- **SRP**: Centralizes capability management.
-- **OCP**: New capabilities can be registered without modifying existing code.
-- **DIP**: Components depend on the registry abstraction rather than specific capabilities.
-- **Factory Pattern**: The registry acts as a factory for capability instances.
-- **React Configuration Pattern**: Follows React's pattern of centralized configuration.
-
-```typescript
-export interface CapabilityRegistry {
-  /**
-   * Registers a new capability in the registry
-   * @param capability - Capability definition to register
-   */
-  registerCapability: (capability: CapabilityDefinition) => void;
-  
-  /**
-   * Gets all capabilities supported by a specific provider and model
-   * @param provider - Provider key
-   * @param model - Model identifier
-   * @returns Array of supported capabilities
-   */
-  getSupportedCapabilities: (provider: ProviderKey, model: string) => CapabilityDefinition[];
-  
-  /**
-   * Checks if a specific capability is supported by a provider and model
-   * @param capabilityId - Capability identifier
-   * @param provider - Provider key
-   * @param model - Model identifier
-   * @returns Boolean indicating if the capability is supported
-   */
-  isCapabilitySupported: (capabilityId: string, provider: ProviderKey, model: string) => boolean;
-  
-  /**
-   * Gets UI components for all capabilities supported by a provider and model
-   * @param provider - Provider key
-   * @param model - Model identifier
-   * @returns Array of capability UI components with their props
-   */
-  getCapabilityComponents: (
-    provider: ProviderKey, 
-    model: string, 
-    modelConfig: ModelConfig, 
-    setModelConfig: (config: ModelConfig) => void
-  ) => React.ReactNode[];
-  
-  /**
-   * Applies all capability middleware to a request
-   * @param request - The formatted request
-   * @param provider - Provider key
-   * @param model - Model identifier
-   * @param config - The model configuration
-   * @returns Request with all applicable capability middleware applied
-   */
-  applyRequestMiddleware: (
+  formatRequestMiddleware?: (
     request: FormattedRequest, 
-    provider: ProviderKey, 
-    model: string, 
-    config: ModelConfig
+    context: CapabilityContext
   ) => FormattedRequest;
   
   /**
-   * Applies all capability middleware to a response
-   * @param response - The provider response
-   * @param provider - Provider key
-   * @param model - Model identifier
-   * @param config - The model configuration
-   * @returns Response with all applicable capability middleware applied
+   * Middleware to modify responses for this capability
    */
-  applyResponseMiddleware: (
+  parseResponseMiddleware?: (
     response: ProviderResponse, 
-    provider: ProviderKey, 
-    model: string, 
-    config: ModelConfig
+    context: CapabilityContext
   ) => ProviderResponse;
 }
 ```
 
-## Capability Registry Implementation
+## Configuration Service Implementation
 
-The implementation of the Capability Registry follows a singleton pattern to ensure consistent access throughout the application.
+The `ConfigurationService` provides a facade for all configuration operations:
+
+```typescript
+export class ConfigurationService {
+  constructor(
+    private store = useStore,
+    private capabilityRegistry = CapabilityRegistry.getInstance()
+  ) {}
+
+  /**
+   * Get global default configuration
+   */
+  getDefaultConfig(): ChatConfig {
+    return this.store.getState().defaultChatConfig;
+  }
+
+  /**
+   * Update global default configuration
+   */
+  updateDefaultConfig(update: ChatConfigUpdate): void {
+    this.store.getState().updateDefaultChatConfig(update);
+  }
+
+  /**
+   * Get configuration for a specific chat
+   */
+  getChatConfig(chatId: string): ChatConfig {
+    return this.store.getState().getChatConfig(chatId);
+  }
+
+  /**
+   * Update configuration for a specific chat
+   */
+  updateChatConfig(chatId: string, update: ChatConfigUpdate): void {
+    this.store.getState().updateChatConfig(chatId, update);
+  }
+
+  /**
+   * Check if a capability is supported for a given provider/model
+   */
+  isCapabilitySupported(
+    capability: string,
+    provider: ProviderKey,
+    model: string
+  ): boolean {
+    return this.capabilityRegistry.isCapabilitySupported(capability, provider, model);
+  }
+
+  /**
+   * Check if a capability is enabled for a specific chat
+   */
+  isCapabilityEnabled(chatId: string, capability: string): boolean {
+    const config = this.getChatConfig(chatId);
+    return !!config.modelConfig.capabilities?.[capability]?.enabled;
+  }
+
+  /**
+   * Update a specific capability's configuration for a chat
+   */
+  updateCapabilityConfig(
+    chatId: string,
+    capability: string,
+    config: any
+  ): void {
+    this.store.getState().updateCapabilityConfig(chatId, capability, config);
+  }
+
+  /**
+   * Reset a chat's configuration to the default
+   */
+  resetConfig(chatId: string): void {
+    const defaultConfig = this.getDefaultConfig();
+    this.updateChatConfig(chatId, { ...defaultConfig, provider: this.getChatConfig(chatId).provider });
+  }
+
+  /**
+   * Validate and update a chat's configuration
+   */
+  validateAndUpdateConfig(chatId: string, update: ChatConfigUpdate): void {
+    // Validate configuration
+    const validatedUpdate = this.validateConfig(update);
+    
+    // Check capability compatibility
+    if (validatedUpdate.modelConfig?.capabilities) {
+      this.validateCapabilities(
+        chatId, 
+        validatedUpdate.provider || this.store.getState().getChatConfig(chatId).provider,
+        validatedUpdate.modelConfig.model || this.store.getState().getChatConfig(chatId).modelConfig.model,
+        validatedUpdate.modelConfig.capabilities
+      );
+    }
+    
+    // Update store
+    this.store.getState().updateChatConfig(chatId, validatedUpdate);
+  }
+
+  private validateConfig(update: ChatConfigUpdate): ChatConfigUpdate {
+    // Implement validation logic here
+    return update;
+  }
+
+  private validateCapabilities(
+    chatId: string,
+    provider: ProviderKey,
+    model: string,
+    capabilities: Record<string, any>
+  ): void {
+    Object.keys(capabilities).forEach(capabilityId => {
+      if (!this.capabilityRegistry.isCapabilitySupported(capabilityId, provider, model)) {
+        throw new Error(`Capability ${capabilityId} is not supported by ${provider}/${model}`);
+      }
+    });
+  }
+}
+```
+
+## Store and Service Integration Diagram
 
 ```mermaid
 classDiagram
-    class CapabilityDefinition {
-        +string id
-        +string name
-        +isSupported(provider, model) boolean
-        +React.ComponentType configComponent
-        +number? priority
-        +formatRequestMiddleware?(request, config) FormattedRequest
-        +parseResponseMiddleware?(response, config) ProviderResponse
+    class ConfigSlice {
+        +ChatConfig defaultChatConfig
+        +setDefaultChatConfig(config) void
+        +updateDefaultChatConfig(update) void
+        +updateChatConfig(chatId, update) void
+        +getChatConfig(chatId) ChatConfig
+        +isCapabilityEnabled(chatId, capability) boolean
+        +updateCapabilityConfig(chatId, capability, config) void
+    }
+    
+    class ConfigurationService {
+        +getDefaultConfig() ChatConfig
+        +updateDefaultConfig(update) void
+        +getChatConfig(chatId) ChatConfig
+        +updateChatConfig(chatId, update) void
+        +isCapabilitySupported(capability, provider, model) boolean
+        +isCapabilityEnabled(chatId, capability) boolean
+        +updateCapabilityConfig(chatId, capability, config) void
+        +formatForProvider(config) FormattedRequest
     }
     
     class CapabilityRegistry {
         +registerCapability(capability) void
         +getSupportedCapabilities(provider, model) CapabilityDefinition[]
-        +isCapabilitySupported(capabilityId, provider, model) boolean
-        +getCapabilityComponents(provider, model, modelConfig, setModelConfig) React.ReactNode[]
-        +applyRequestMiddleware(request, provider, model, config) FormattedRequest
-        +applyResponseMiddleware(response, provider, model, config) ProviderResponse
+        +isCapabilitySupported(capability, provider, model) boolean
+        +getCapabilityComponents(provider, model, config, updateConfig) React.ReactNode[]
+        +applyRequestMiddleware(request, context) FormattedRequest
+        +applyResponseMiddleware(response, context) ProviderResponse
     }
     
-    class CapabilityRegistryImpl {
-        -CapabilityDefinition[] capabilities
-        +registerCapability(capability) void
-        +getSupportedCapabilities(provider, model) CapabilityDefinition[]
-        +isCapabilitySupported(capabilityId, provider, model) boolean
-        +getCapabilityComponents(provider, model, modelConfig, setModelConfig) React.ReactNode[]
-        +applyRequestMiddleware(request, provider, model, config) FormattedRequest
-        +applyResponseMiddleware(response, provider, model, config) ProviderResponse
+    class ZustandStore {
+        +getState() StoreState
+        +setState(partial) void
+        +subscribe(listener) Unsubscribe
     }
     
-    CapabilityRegistry <|.. CapabilityRegistryImpl
-    CapabilityRegistryImpl o-- CapabilityDefinition
+    class ReactHooks {
+        +useConfiguration() UseConfigurationResult
+        +useChatConfig(chatId) UseChatConfigResult
+    }
+    
+    class UIComponents {
+        +ConfigMenu
+        +ModelSelector
+        +CapabilityToggle
+    }
+    
+    ZustandStore --> ConfigSlice : contains
+    ConfigurationService --> ZustandStore : uses
+    ConfigurationService --> CapabilityRegistry : uses
+    ReactHooks --> ConfigurationService : uses
+    UIComponents --> ReactHooks : uses
 ```
 
-## Integration with Provider Architecture
+## Migration Strategy
 
-The Capability Registry integrates with the existing provider architecture as follows:
+To migrate from the current store structure to the new one:
 
-```mermaid
-graph TD
-    subgraph "React Components"
-        CC[ChatConfigMenu]
-        MC[ModelSelector]
-    end
-    
-    subgraph "Capability Registry"
-        CR[CapabilityRegistry]
-        CD[CapabilityDefinition]
-    end
-    
-    subgraph "Provider Architecture"
-        PR[ProviderRegistry]
-        API[AIProviderInterface]
-    end
-    
-    CC -->|Uses| CR
-    CR -->|Registers| CD
-    CR -->|Queries| PR
-    PR -->|Provides| API
-    MC -->|Uses| PR
-    
-    subgraph "Capability Components"
-        TC[ThinkingModeToggle]
-        FC[FileUploadConfig]
-        SC[StreamingToggle]
-    end
-    
-    CD -->|References| TC
-    CD -->|References| FC
-    CD -->|References| SC
-    
-    subgraph "Request/Response Pipeline"
-        FReq[formatRequest]
-        FRes[parseResponse]
-    end
-    
-    CR -->|Enhances| FReq
-    CR -->|Enhances| FRes
-```
+1. **Create the new ConfigSlice**:
+   - Implement all required methods
+   - Ensure proper typing for all operations
 
-This architecture ensures that:
-1. New capabilities can be added without modifying existing code
-2. UI components for capabilities are dynamically rendered based on provider support
-3. Request and response processing can be enhanced by capability-specific middleware
-4. The system remains extensible for future AI model capabilities
+2. **Update the store initialization**:
+   - Add the new slice to the store
+   - Update the persist middleware configuration
 
-## Implementation Guidelines
+3. **Create the ConfigurationService**:
+   - Implement the service as a facade over the store
+   - Add integration with the CapabilityRegistry
 
-### Backend Route Handlers
+4. **Create the React hooks**:
+   - Implement useConfiguration and useChatConfig
+   - Ensure proper memoization for performance
 
-Backend route handlers should:
+5. **Update components**:
+   - Replace direct store access with the new hooks
+   - Update action calls to use the new methods
 
-1. Accept POST requests with the standardized request body
-2. Extract the `formattedRequest` and `apiKey` from the request
-3. Initialize the appropriate AI provider client
-4. Forward the request to the external API
-5. Format the response according to the standardized response contract
-6. Handle errors and return appropriate error responses
+This approach provides a clean break from the old structure while maintaining all functionality.
 
-### Frontend Provider Implementations
-
-Frontend provider implementations should:
-
-1. Implement the `AIProviderInterface`
-2. Format requests using the `formatRequest` method
-3. Send requests to the backend with the standardized request body
-4. Parse responses using the `parseResponse` or `parseStreamingResponse` methods
-5. Handle errors and provide meaningful error messages
-
-This contract-based approach ensures that the frontend and backend can evolve independently while maintaining compatibility, and that new providers can be added with minimal changes to the existing codebase.
-
-## Capability Registry Interfaces
-
-### `CapabilityContext`
-
-Context provided to capability middleware functions.
-
-**Motivation:**
-- **Information Hiding**: Encapsulates all necessary context without exposing implementation details.
-- **Dependency Injection**: Provides middleware functions with all required dependencies.
-- **Extensibility**: Can be extended with additional context information without breaking existing middleware.
-
-```typescript
-export interface CapabilityContext {
-  /**
-   * Provider key (e.g., 'openai', 'anthropic')
-   */
-  provider: ProviderKey;
-  
-  /**
-   * Model identifier (e.g., 'gpt-4o', 'claude-3-7-sonnet')
-   */
-  model: string;
-  
-  /**
-   * Current model configuration
-   */
-  modelConfig: ModelConfig;
-  
-  /**
-   * Optional capability-specific configuration
-   */
-  capabilityConfig?: Record<string, any>;
-}
-```
-
-### `CapabilityComponentProps`
-
-Standard props interface for capability configuration components.
-
-**Motivation:**
-- **Consistency**: Ensures all capability components receive the same base props.
-- **Type Safety**: Provides type checking for component props.
-- **Extensibility**: Allows for additional props through generics.
-
-```typescript
-export interface CapabilityComponentProps<T = any> {
-  /**
-   * Current model configuration
-   */
-  modelConfig: ModelConfig;
-  
-  /**
-   * Function to update model configuration
-   */
-  setModelConfig: (config: ModelConfig) => void;
-  
-  /**
-   * Provider key
-   */
-  provider: ProviderKey;
-  
-  /**
-   * Model identifier
-   */
-  model: string;
-  
-  /**
-   * Capability-specific configuration
-   */
-  capabilityConfig?: T;
-}
-```
-
-## Middleware Execution
-
-### Request Middleware Pipeline
-
-The request middleware pipeline processes requests in the following order:
-
-1. **Base request formatting**: The provider's `formatRequest` method creates the initial request.
-2. **Capability middleware application**: Each capability's `formatRequestMiddleware` is applied in order of priority (highest first).
-3. **Final request validation**: The request is validated before being sent to the API.
-
-```mermaid
-flowchart LR
-    FR[formatRequest] --> C1[Capability 1 Middleware]
-    C1 --> C2[Capability 2 Middleware]
-    C2 --> C3[Capability 3 Middleware]
-    C3 --> V[Validation]
-    V --> API[API Request]
-```
-
-### Response Middleware Pipeline
-
-The response middleware pipeline processes responses in the following order:
-
-1. **Initial response parsing**: The provider's `parseResponse` method extracts the basic content.
-2. **Capability middleware application**: Each capability's `parseResponseMiddleware` is applied in order of priority (highest first).
-3. **Final response formatting**: The response is formatted for display in the UI.
-
-```mermaid
-flowchart LR
-    API[API Response] --> PR[parseResponse]
-    PR --> C1[Capability 1 Middleware]
-    C1 --> C2[Capability 2 Middleware]
-    C2 --> C3[Capability 3 Middleware]
-    C3 --> F[Final Formatting]
-```
-
-## Capability Configuration
-
-Each capability can define its own configuration structure, which is stored within the `ModelConfig` object. The configuration should follow these guidelines:
-
-1. **Namespace**: Use the capability ID as the configuration key.
-2. **Type Safety**: Define TypeScript interfaces for the configuration.
-3. **Defaults**: Provide sensible default values.
-4. **Validation**: Include validation logic for configuration values.
-
-Example for Thinking Mode capability:
-
-```typescript
-// In ModelConfig interface
-export interface ModelConfig {
-  model: string;
-  max_tokens: number;
-  temperature: number;
-  // ... other standard fields
-  
-  // Capability-specific configurations
-  thinking_mode?: {
-    enabled: boolean;
-    budget_tokens: number;
-  };
-  
-  file_upload?: {
-    enabled: boolean;
-    maxFiles: number;
-    maxSizePerFile: number;
-  };
-  
-  // Allow for future capabilities
-  [key: string]: any;
-}
-```
-
-This approach allows each capability to define its own configuration structure while maintaining type safety and avoiding conflicts between capabilities.
-
-## Overall Architecture Benefits
-
-1. **Decoupling**: Components are decoupled from specific provider implementations.
-2. **Testability**: Interfaces enable easy mocking for unit tests.
-3. **Maintainability**: Clear contracts make the codebase easier to understand and maintain.
-4. **Extensibility**: New providers can be added without modifying existing code.
-5. **Consistency**: Standardized interfaces ensure consistent behavior across providers.
-6. **Separation of Concerns**: Each interface has a clear, focused responsibility.
-7. **React Integration**: The architecture aligns with React's component model and hooks pattern.
-
-This architecture successfully applies SOLID principles within the React ecosystem, creating a flexible, maintainable system for integrating multiple AI providers.
