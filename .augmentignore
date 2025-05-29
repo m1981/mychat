@@ -13,3 +13,14 @@ public
 .env
 .venv
 venv
+# Project related
+src/assets
+public
+src/components/LanguageSelector
+src/components/Menu
+src/components/MobileBar
+src/components/PromptLibraryMenu
+src/components/SearchBar
+src/components/StopGeneratingButton
+src/components/Toggle
+src/components/TokenCount
