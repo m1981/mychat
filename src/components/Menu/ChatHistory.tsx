@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 
-import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
+import { useInitialiseNewChat } from '@hooks/useInitialiseNewChat';
 import CancelIcon from '@icon/CancelIcon';
 import CrossIcon from '@icon/CrossIcon';
 import DeleteIcon from '@icon/DeleteIcon';

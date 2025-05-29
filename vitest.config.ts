@@ -173,6 +173,7 @@ export default defineConfig({
       '@type': resolve(__dirname, './src/types'),
       '@contexts': resolve(__dirname, './src/contexts'),
       '@capabilities': resolve(__dirname, './src/capabilities'),
+      '@services': resolve(__dirname, './src/services'),
       '@hooks': resolve(__dirname, './src/hooks'),
       '@store': resolve(__dirname, './src/store'),
       '@config': resolve(__dirname, './src/config'),

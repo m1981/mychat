@@ -3,7 +3,7 @@ import React from 'react';
 import Chat from '@components/Chat';
 import Debug from '@components/Debug';
 import Menu from '@components/Menu';
-import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
+import { useInitialiseNewChat } from '@hooks/useInitialiseNewChat';
 import * as Sentry from '@sentry/react';
 import useStore from '@store/store';
 import { ChatInterface } from '@type/chat';
@@ -93,12 +93,14 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({error, resetError: _resetE
 
 function App() {
   const initialiseNewChat = useInitialiseNewChat();
-  const setChats = useStore((state) => state.setChats);
+  const addChat = useStore((state) => state.addChat);
+  const setCurrentChatIndex = useStore((state) => state.setCurrentChatIndex);
   const setTheme = useStore((state) => state.setTheme);
   const setApiKey = useStore((state) => state.setApiKey);
-  const setCurrentChatIndex = useStore((state) => state.setCurrentChatIndex);
   const providerKey = useStore(state => state.currentProvider);
   const setError = useStore(state => state.setError);
+  const chats = useStore(state => state.chats);
+  const currentChatIndex = useStore(state => state.currentChatIndex);
 
   // Use the safe effect utility
   useSafeEffect(() => {
@@ -131,7 +133,8 @@ function App() {
       try {
         const chats: ChatInterface[] = JSON.parse(oldChats);
         if (chats.length > 0) {
-          setChats(chats);
+          // Use the store's actions to update state
+          chats.forEach(chat => addChat(chat));
           setCurrentChatIndex(0);
         } else {
           initialiseNewChat();
@@ -142,15 +145,13 @@ function App() {
       }
       localStorage.removeItem('chats');
     } else {
-      const chats = useStore.getState().chats;
-      const currentChatIndex = useStore.getState().currentChatIndex;
+      // Check if we need to initialize a new chat
       if (!chats || chats.length === 0) {
         initialiseNewChat();
       }
-      if (
-        chats &&
-        !(currentChatIndex >= 0 && currentChatIndex < chats.length)
-      ) {
+      // Make sure we have a valid current chat index
+      if (chats && chats.length > 0 && 
+          !(currentChatIndex >= 0 && currentChatIndex < chats.length)) {
         setCurrentChatIndex(0);
       }
     }

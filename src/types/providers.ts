@@ -7,39 +7,26 @@ import { AIProviderInterface, ProviderResponse, RequestConfig, FormattedRequest 
 import store from '@store/store';
 
 // Provider-specific request formatters using strategy pattern
-const requestFormatters = {
+const requestFormatterStrategies = {
   openai: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => {
-    // Validate inputs
-    if (!Array.isArray(messages)) {
-      console.error('Invalid messages parameter in OpenAI formatRequest:', messages);
-      // Return a minimal valid request to avoid crashing
-      return {
-        model: config.model || 'gpt-4o',
-        max_tokens: config.max_tokens || 1000,
-        temperature: config.temperature || 0.7,
-        top_p: config.top_p || 1,
-        stream: config.stream || false,
-        messages: []
-      };
-    }
-    
-    const formattedRequest = {
-      messages: messages
-        .filter(m => m.content && m.content.trim() !== '')
-        .map(m => ({
-          role: m.role,
-          content: m.content
-        })),
-      model: config.model,
-      max_tokens: ModelRegistry.getModelCapabilities(config.model).maxResponseTokens,
-      temperature: config.temperature,
-      presence_penalty: config.presence_penalty,
-      top_p: config.top_p,
-      frequency_penalty: config.frequency_penalty,
-      stream: config.stream ?? false
+    // Create base request
+    const baseRequest = {
+      model: config.model || 'gpt-4o',
+      max_tokens: config.max_tokens || 1000,
+      temperature: config.temperature || 0.7,
+      top_p: config.top_p || 1,
+      presence_penalty: config.presence_penalty || 0,
+      frequency_penalty: config.frequency_penalty || 0,
+      stream: config.stream || false,
+      messages: messages.map(m => ({
+        role: m.role,
+        content: m.content
+      }))
     };
     
-    return formattedRequest;
+    // Apply capability middleware
+    const context = createCapabilityContext('openai', config.model, config);
+    return capabilityRegistry.applyRequestMiddleware(baseRequest, context);
   },
   
   anthropic: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => {
@@ -157,7 +144,7 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
     name: PROVIDER_CONFIGS.openai.name,
     endpoints: PROVIDER_CONFIGS.openai.endpoints,
     models: PROVIDER_CONFIGS.openai.models.map(m => m.id),
-    formatRequest: requestFormatters.openai,
+    formatRequest: requestFormatterStrategies.openai,
     parseResponse: responseParserStrategies.openai.parseResponse,
     parseStreamingResponse: responseParserStrategies.openai.parseStreamingResponse,
     submitCompletion: async (formattedRequest: FormattedRequest): Promise<ProviderResponse> => {
@@ -219,7 +206,7 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
     name: PROVIDER_CONFIGS.anthropic.name,
     endpoints: PROVIDER_CONFIGS.anthropic.endpoints,
     models: PROVIDER_CONFIGS.anthropic.models.map(m => m.id),
-    formatRequest: requestFormatters.anthropic,
+    formatRequest: requestFormatterStrategies.anthropic,
     parseResponse: responseParserStrategies.anthropic.parseResponse,
     parseStreamingResponse: responseParserStrategies.anthropic.parseStreamingResponse,
     submitCompletion: async (formattedRequest: FormattedRequest): Promise<ProviderResponse> => {

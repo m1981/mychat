@@ -1,8 +1,10 @@
 import { ProviderRegistry } from '@config/providers/provider.registry';
-import { createDefaultChatConfig, DEFAULT_SYSTEM_MESSAGE } from '@constants/chat';
+import { DEFAULT_SYSTEM_MESSAGE } from '@constants/chat';
 import { StoreApi, create } from 'zustand';
 import { persist, PersistStorage } from 'zustand/middleware';
 import * as Sentry from '@sentry/react';
+import { capabilityRegistry } from '@capabilities/registry';
+import { DEFAULT_CHAT_CONFIG } from '@config/chat/ChatConfig';
 
 import { AuthSlice, createAuthSlice } from './auth-slice';
 import { ChatSlice, createChatSlice } from './chat-slice';
@@ -24,6 +26,16 @@ export type StoreSlice<T> = (
   set: StoreApi<StoreState>['setState'],
   get: StoreApi<StoreState>['getState']
 ) => T;
+
+// Define the store actions interface
+export interface StoreActions {
+  addChat: (chat: ChatInterface) => void;
+  updateChat: (index: number, chat: Partial<ChatInterface>) => void;
+  setCurrentChatIndex: (index: number) => void;
+  updateCapabilityConfig: (chatId: string, capabilityId: string, config: any) => void;
+  setError: (error: string | null) => void;
+  // Add other actions as needed
+}
 
 // Custom storage with improved error handling
 const createCustomStorage = (): PersistStorage<Partial<StoreState>> => {
@@ -89,7 +101,7 @@ const createCustomStorage = (): PersistStorage<Partial<StoreState>> => {
   };
 };
 
-const useStore = create<StoreState>()(
+const useStore = create<StoreState & StoreActions>()(
   persist(
     (set, get) => ({
       ...createChatSlice(set, get),
@@ -99,13 +111,27 @@ const useStore = create<StoreState>()(
       ...createPromptSlice(set, get),
       ...createRequestSlice(set, get),
       
+      // Add explicit action for adding a chat
+      addChat: (chat: ChatInterface) => {
+        const { chats } = get();
+        set({ 
+          chats: [chat, ...chats],
+          currentChatIndex: 0
+        });
+      },
+      
+      // Add explicit action for setting current chat index
+      setCurrentChatIndex: (index: number) => {
+        set({ currentChatIndex: index });
+      },
+      
       // Add resetState function to reset the store to initial values
       resetState: () => {
         console.log('Resetting store state to defaults');
         set({
           chats: [],
           currentChatIndex: -1,
-          defaultChatConfig: createDefaultChatConfig(),
+          defaultChatConfig: DEFAULT_CHAT_CONFIG,
           // Reset other state properties as needed
           apiKeys: {},
           apiEndpoints: {},
@@ -120,10 +146,56 @@ const useStore = create<StoreState>()(
           enterToSubmit: true,
           layoutWidth: 'normal',
         });
+      },
+      
+      // Add capability-related actions
+      updateCapabilityConfig: (chatId: string, capabilityId: string, config: any) => {
+        const { chats } = get();
+        const chatIndex = chats.findIndex(c => c.id === chatId);
+        
+        if (chatIndex === -1) return;
+        
+        const chat = chats[chatIndex];
+        const currentCapabilities = chat.config.modelConfig.capabilities || {};
+        
+        set({
+          chats: chats.map((c, i) => 
+            i === chatIndex 
+              ? {
+                  ...c,
+                  config: {
+                    ...c.config,
+                    modelConfig: {
+                      ...c.config.modelConfig,
+                      capabilities: {
+                        ...currentCapabilities,
+                        [capabilityId]: {
+                          ...(currentCapabilities[capabilityId] || {}),
+                          ...config
+                        }
+                      }
+                    }
+                  }
+                }
+              : c
+          )
+        });
+      },
+      
+      // Add error handling action
+      setError: (error: string | null) => {
+        set({ error });
+      },
+      
+      // Initialize capabilities on store creation
+      initializeCapabilities: () => {
+        // This will be called when the store is created
+        console.log('Initializing capabilities');
+        // Any initialization logic for capabilities
       }
     }),
     {
-      name: 'free-chat-gpt',
+      name: 'chat-storage',
       version: 2, // Increment version for new provider implementation
       storage: createCustomStorage(),
       partialize: (state) => ({
@@ -171,5 +243,8 @@ const useStore = create<StoreState>()(
       },
     })
   );
+
+// Initialize capabilities when the store is first created
+useStore.getState().initializeCapabilities();
 
 export default useStore;

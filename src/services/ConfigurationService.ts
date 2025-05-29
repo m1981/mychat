@@ -268,6 +268,89 @@ export class ConfigurationService {
     
     return result;
   }
+
+  /**
+   * Updates a specific capability configuration
+   */
+  updateCapabilityConfig(
+    chatId: string,
+    capabilityId: string,
+    config: any
+  ): void {
+    const store = useStore.getState();
+    store.updateCapabilityConfig(chatId, capabilityId, config);
+  }
+
+  /**
+   * Resets all configurations to defaults
+   */
+  resetAllConfigurations(): void {
+    const store = useStore.getState();
+    store.resetState();
+  }
+
+  /**
+   * Gets default configuration for a capability
+   */
+  getDefaultCapabilityConfig(capabilityId: string): any {
+    // Get default configs from constants
+    const defaultConfig = DEFAULT_CHAT_CONFIG.modelConfig.capabilities || {};
+    return defaultConfig[capabilityId] || {};
+  }
+
+  /**
+   * Validates a capability configuration
+   */
+  validateCapabilityConfig(capabilityId: string, config: any): { success: boolean; errors?: string[] } {
+    // Validate based on capability type
+    switch (capabilityId) {
+      case 'thinking_mode':
+        const thinkingResult = thinkingModeSchema.safeParse(config);
+        return {
+          success: thinkingResult.success,
+          errors: thinkingResult.success ? undefined : thinkingResult.error.errors.map(e => e.message)
+        };
+      case 'file_upload':
+        const fileUploadResult = fileUploadSchema.safeParse(config);
+        return {
+          success: fileUploadResult.success,
+          errors: fileUploadResult.success ? undefined : fileUploadResult.error.errors.map(e => e.message)
+        };
+      default:
+        // For unknown capabilities, just return success
+        return { success: true };
+    }
+  }
+
+  /**
+   * Validates a complete model configuration
+   */
+  validateModelConfig(config: ModelConfig): { success: boolean; errors?: string[] } {
+    const result = modelConfigSchema.safeParse(config);
+    
+    if (!result.success) {
+      return {
+        success: false,
+        errors: result.error.errors.map(e => e.message)
+      };
+    }
+    
+    // Also validate each capability config
+    const errors: string[] = [];
+    const capabilities = config.capabilities || {};
+    
+    for (const [capabilityId, capabilityConfig] of Object.entries(capabilities)) {
+      const capabilityResult = this.validateCapabilityConfig(capabilityId, capabilityConfig);
+      if (!capabilityResult.success) {
+        errors.push(`Invalid ${capabilityId} configuration`);
+      }
+    }
+    
+    return {
+      success: errors.length === 0,
+      errors: errors.length > 0 ? errors : undefined
+    };
+  }
 }
 
 // Export singleton instance

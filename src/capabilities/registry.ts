@@ -4,24 +4,22 @@ import { ProviderKey } from '@type/chat';
 import { ModelRegistry } from '@config/models/model.registry';
 import { ProviderRegistry } from '@config/providers/provider.registry';
 
-export class CapabilityRegistryImpl {
-  private capabilities: CapabilityDefinition[] = [];
+export class CapabilityRegistryImpl implements CapabilityRegistry {
   private static instance: CapabilityRegistryImpl;
-  
-  /**
-   * Get singleton instance
-   */
-  public static getInstance(): CapabilityRegistryImpl {
-    if (!CapabilityRegistryImpl.instance) {
-      CapabilityRegistryImpl.instance = new CapabilityRegistryImpl();
-    }
-    return CapabilityRegistryImpl.instance;
-  }
-  
-  /**
-   * Private constructor for singleton
-   */
+  private capabilities: CapabilityDefinition[] = [];
+
   private constructor() {}
+
+  static getInstance(): CapabilityRegistryImpl {
+    if (!this.instance) {
+      this.instance = new CapabilityRegistryImpl();
+    }
+    return this.instance;
+  }
+
+  createContext(provider: ProviderKey, model: string, modelConfig: ModelConfig): CapabilityContext {
+    return { provider, model, modelConfig };
+  }
   
   /**
    * Registers a capability with the registry

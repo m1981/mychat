@@ -2,6 +2,7 @@ import useAddChat from '@hooks/useAddChat';
 import PlusIcon from '@icon/PlusIcon';
 import useStore from '@store/store';
 import { useTranslation } from 'react-i18next';
+import { useInitialiseNewChat } from '@hooks/useInitialiseNewChat';
 
 const NewChat = ({ folder }: { folder?: string }) => {
   const { t } = useTranslation();

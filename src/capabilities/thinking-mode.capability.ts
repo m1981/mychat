@@ -2,7 +2,7 @@ import { CapabilityDefinition, CapabilityContext } from '@type/capability';
 import { ProviderKey } from '@type/chat';
 import { FormattedRequest, ProviderResponse } from '@type/provider';
 import { ProviderRegistry } from '@config/providers/provider.registry';
-import { ThinkingModeToggle } from '@components/ThinkingModeToggle';
+import { ThinkingModeToggle } from '@components/ConfigMenu/ThinkingModeToggle';
 import { capabilityRegistry } from './registry';
 
 export const ThinkingModeCapability: CapabilityDefinition = {

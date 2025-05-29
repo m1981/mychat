@@ -791,69 +791,90 @@ interface ErrorResponse {
 - **Debugging**: Detailed error information aids in troubleshooting.
 - **Consistency**: Standardized error format makes error handling more maintainable.
 
-## Capability Registry Interfaces
+## Capability System
+
+The capability system allows for extensible provider features without modifying core code.
+
+```mermaid
+graph TD
+    subgraph "Capability System"
+        CR[CapabilityRegistry]
+        CD[CapabilityDefinition]
+        CC[CapabilityContext]
+        TM[ThinkingModeCapability]
+        FU[FileUploadCapability]
+    end
+
+    subgraph "Request Processing"
+        RM[Request Middleware]
+        RSM[Response Middleware]
+    end
+
+    subgraph "Configuration"
+        CFS[ConfigurationService]
+        CF[createDefaultChatConfig]
+    end
+
+    %% Capability relationships
+    CR --> CD
+    CR --> CC
+    TM -.implements.-> CD
+    FU -.implements.-> CD
+    
+    %% Middleware flow
+    CD --> RM
+    CD --> RSM
+    RM --> API
+    RSM --> API
+    
+    %% Configuration connections
+    CFS --> CF
+    CFS --> CR
+```
 
 ### `CapabilityDefinition`
 
-Defines a provider capability with its UI component and detection logic.
-
-**Motivation:**
-- **Single Responsibility Principle (SRP)**: Each capability encapsulates its own detection logic and UI component.
-- **Open/Closed Principle (OCP)**: New capabilities can be added without modifying existing code.
-- **Interface Segregation Principle (ISP)**: The interface defines only the essential methods needed for capability detection and rendering.
-- **Dependency Inversion Principle (DIP)**: Components depend on the capability abstraction rather than concrete implementations.
-- **Plugin Pattern**: Enables extensibility through a registry of capabilities.
+The interface that all capabilities must implement.
 
 ```typescript
 export interface CapabilityDefinition {
-  /**
-   * Unique identifier for the capability
-   */
-  id: string;
-  
-  /**
-   * Display name of the capability for UI presentation
-   */
-  name: string;
-  
-  /**
-   * Determines if this capability is supported by a specific provider and model
-   * @param provider - Provider key (e.g., 'openai', 'anthropic')
-   * @param model - Model identifier (e.g., 'gpt-4o', 'claude-3-7-sonnet')
-   * @returns Boolean indicating if the capability is supported
-   */
-  isSupported: (provider: ProviderKey, model: string) => boolean;
-  
-  /**
-   * React component for configuring this capability
-   * Receives model configuration and setter function
-   */
-  configComponent: React.ComponentType<{
-    modelConfig: ModelConfig;
-    setModelConfig: (config: ModelConfig) => void;
-  }>;
-  
-  /**
-   * Optional priority for UI rendering order
-   * Higher numbers appear first in the UI
-   */
-  priority?: number;
-  
-  /**
-   * Optional middleware to modify requests for this capability
-   * @param request - The formatted request
-   * @param config - The model configuration
-   * @returns Modified request with capability-specific adjustments
-   */
-  formatRequestMiddleware?: (request: FormattedRequest, config: ModelConfig) => FormattedRequest;
-  
-  /**
-   * Optional middleware to modify responses for this capability
-   * @param response - The provider response
-   * @param config - The model configuration
-   * @returns Modified response with capability-specific processing
-   */
-  parseResponseMiddleware?: (response: ProviderResponse, config: ModelConfig) => ProviderResponse;
+    /**
+     * Unique identifier for the capability
+     */
+    id: string;
+    
+    /**
+     * Display name of the capability
+     */
+    name: string;
+    
+    /**
+     * Priority for ordering in UI (higher = shown first)
+     */
+    priority: number;
+    
+    /**
+     * Determines if this capability is supported by a provider/model
+     */
+    isSupported: (provider: ProviderKey, model: string) => boolean;
+    
+    /**
+     * React component for configuring this capability
+     */
+    configComponent: React.ComponentType<{
+        modelConfig: ModelConfig;
+        setModelConfig: (config: ModelConfig) => void;
+    }>;
+    
+    /**
+     * Optional middleware to modify outgoing requests
+     */
+    formatRequestMiddleware?: (request: FormattedRequest, context: CapabilityContext) => FormattedRequest;
+    
+    /**
+     * Optional middleware to modify incoming responses
+     */
+    parseResponseMiddleware?: (response: ProviderResponse, context: CapabilityContext) => ProviderResponse;
 }
 ```
 
