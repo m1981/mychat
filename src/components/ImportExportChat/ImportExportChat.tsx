@@ -2,7 +2,7 @@
 import { useRef, useState } from 'react';
 
 import PopupModal from '@components/PopupModal';
-import { ProviderRegistry } from '@config/providers/provider.registry';
+import { ProviderRegistry } from '@config/providers/registry';
 import ExportIcon from '@icon/ExportIcon';
 import useStore from '@store/store';
 import { ChatInterface, FolderCollection, ProviderKey } from '@type/chat';

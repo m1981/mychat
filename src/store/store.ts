@@ -1,8 +1,7 @@
-import { ProviderRegistry } from '@config/providers/provider.registry';
-import { DEFAULT_CHAT_CONFIG } from '../config/store-compat';
+import { ProviderRegistry } from '@config/providers/registry';
+import { DEFAULT_CHAT_CONFIG } from '@config/store-compat';
 import { StoreApi, create } from 'zustand';
 import { persist, PersistStorage } from 'zustand/middleware';
-
 
 import { AuthSlice, createAuthSlice } from './auth-slice';
 import { ChatSlice, createChatSlice } from './chat-slice';

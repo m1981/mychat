@@ -1,6 +1,6 @@
-import { ModelRegistry } from '@config/models/model.registry';
-import { ProviderModel } from '@config/providers/provider.config';
-import { ProviderRegistry } from '@config/providers/provider.registry';
+import { ProviderModel } from '@config/types/provider.types';
+import { ProviderRegistry } from '@config/providers/registry';
+import { ModelRegistry } from '@config/models/registry';
 import { MessageInterface, ProviderKey } from '@type/chat';
 import { AIProvider, ProviderResponse, RequestConfig, FormattedRequest } from '@type/provider';
 

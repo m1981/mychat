@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react';
 
-import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
+import { DEFAULT_MODEL_CONFIG } from '@config/chat/config';
 import { getChatCompletion } from '@src/api/api';
 import { TitleGenerationService } from '@src/services/TitleGenerationService';
 import { TitleGenerator } from '@src/services/TitleGenerator';

@@ -1,8 +1,8 @@
-import { DEFAULT_SYSTEM_MESSAGE } from '@config/chat/ChatConfig';
-import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
-import { ChatConfig, ProviderKey } from '@type/chat';
-import { Theme } from '@type/theme';
-
+import { ChatConfig } from '@config/types/chat.types';
+import { DEFAULT_MODEL_CONFIG } from '@config/store-compat';
+import { DEFAULT_SYSTEM_MESSAGE } from '@config/constants';
+import { ProviderKey } from '@config/types/provider.types';
+import { Theme } from '../types/theme';
 import { StoreSlice } from './store';
 
 export type LayoutWidth = 'normal' | 'wide';

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-
-import { ProviderRegistry } from '@config/providers/provider.registry';
+import { ProviderRegistry } from '@config/providers/registry';
+import { ProviderModel } from '@config/types/provider.types';
 import useStore from '@store/store';
 import countTokens from '@utils/messageUtils';
 import { shallow } from 'zustand/shallow';
@@ -30,7 +30,7 @@ const TokenCount = React.memo(() => {
 
   const cost = useMemo(() => {
     const providerConfig = ProviderRegistry.getProvider(provider);
-    const modelConfig = providerConfig.models.find(m => m.id === model);
+    const modelConfig = providerConfig.models.find((m: ProviderModel) => m.id === model);
     
     if (!modelConfig?.cost) {
       return '0.00';

@@ -21,6 +21,13 @@ export class ProviderRegistry {
   }
 
   /**
+   * Validate if a model is available for a provider
+   */
+  static validateModelForProvider(provider: ProviderKey, modelId: string): boolean {
+    return this.getProvider(provider).models.some(model => model.id === modelId);
+  }
+
+  /**
    * Get provider capabilities
    */
   static getProviderCapabilities(provider: ProviderKey): ProviderCapabilities {

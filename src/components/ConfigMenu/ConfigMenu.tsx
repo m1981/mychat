@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
-
-
 import PopupModal from '@components/PopupModal';
-import { ProviderModel } from '@config/providers/provider.config';
-import { ProviderRegistry } from '@config/providers/provider.registry';
+import { ProviderModel } from '@config/types/provider.types';
+import { ProviderRegistry } from '@config/providers/registry';
 import DownChevronArrow from '@icon/DownChevronArrow';
 import { ChatConfig, ModelConfig, ProviderKey } from '@type/chat';
 import { providers } from '@type/providers';
@@ -167,7 +165,7 @@ export const MaxTokenSlider = ({
 }) => {
   const { t } = useTranslation('model');
   const providerConfig = ProviderRegistry.getProvider(provider);
-  const currentModelConfig = providerConfig.models.find(m => m.id === modelConfig.model);
+  const currentModelConfig = providerConfig.models.find((m: ProviderModel) => m.id === modelConfig.model);
 
   const MIN_TOKENS = 100;
   // Ensure max_tokens doesn't exceed model's maxCompletionTokens
