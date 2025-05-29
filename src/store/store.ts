@@ -1,5 +1,5 @@
 import { ProviderRegistry } from '@config/providers/provider.registry';
-import { DEFAULT_CHAT_CONFIG } from '@constants/chat';
+import { DEFAULT_CHAT_CONFIG } from '../config/store-compat';
 import { StoreApi, create } from 'zustand';
 import { persist, PersistStorage } from 'zustand/middleware';
 
