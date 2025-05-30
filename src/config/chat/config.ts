@@ -10,7 +10,8 @@ import { v4 as uuidv4 } from 'uuid';
  */
 export function createDefaultModelConfig(provider = DEFAULT_PROVIDER): ModelConfig {
   const defaultProvider = ProviderRegistry.getProvider(provider);
-  const defaultModel = defaultProvider.defaultModel;
+  const providerCapabilities = ProviderRegistry.getProviderCapabilities(defaultProvider.id);
+  const defaultModel = providerCapabilities.defaultModel;
   const modelCapabilities = ModelRegistry.getModelCapabilities(defaultModel);
 
   return {

@@ -61,7 +61,7 @@ const ApiMenu = ({
               </label>
               <input
                 type='password'
-                value={tempApiKeys[p.id] || ''}
+                value={tempApiKeys[p.id as ProviderKey] || ''}
                 onChange={(e) => setTempApiKeys({
                   ...tempApiKeys,
                   [p.id]: e.target.value

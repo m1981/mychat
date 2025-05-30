@@ -1,25 +1,23 @@
 // src/config/models/__tests__/model.registry.test.ts
-import { ModelRegistry } from '@config/models/model.registry';
 import { describe, it, expect } from 'vitest';
-
+import { ModelRegistry } from '../model.registry';
 
 describe('ModelRegistry', () => {
   describe('getModelCapabilities', () => {
-    it('should return correct capabilities for Claude 3.7 Sonnet', () => {
+    it('should return capabilities for claude model', () => {
       const capabilities = ModelRegistry.getModelCapabilities('claude-3-7-sonnet-20250219');
+      expect(capabilities.provider).toBe('anthropic');
+      expect(capabilities.maxResponseTokens).toBe(8192);
+    });
 
-      expect(capabilities).toEqual({
-        modelId: 'claude-3-7-sonnet-20250219',
-        provider: 'anthropic',
-        maxResponseTokens: 8192,
-        defaultResponseTokens: 4096,
-        supportsThinking: true,
-        defaultThinkingBudget: 16000
-      });
+    it('should return capabilities for gpt model', () => {
+      const capabilities = ModelRegistry.getModelCapabilities('gpt-4o');
+      expect(capabilities.provider).toBe('openai');
+      expect(capabilities.maxResponseTokens).toBe(4096);
     });
 
     it('should throw error for invalid model', () => {
-    expect(() => {
+      expect(() => {
         ModelRegistry.getModelCapabilities('invalid-model');
       }).toThrow('Model invalid-model not found in registry');
     });

@@ -98,15 +98,16 @@ export const ModelSelector = ({
   // Ensure selected model is valid for current provider
   useEffect(() => {
     if (!currentProvider.models.includes(modelConfig.model)) {
-      const defaultModel = providerConfig.models[0];
+      const defaultModelId = providerConfig.capabilities.defaultModel;
+      const defaultModel = providerConfig.models.find(m => m.id === defaultModelId) || providerConfig.models[0];
       const modelCapabilities = ModelRegistry.getModelCapabilities(defaultModel.id);
       
       setModelConfig({
         ...modelConfig,
         model: defaultModel.id,
-        max_tokens: defaultModel.maxCompletionTokens,
+        max_tokens: defaultModel.maxCompletionTokens || 4096, // Add fallback
         // Ensure thinking mode properties are preserved, but only if supported
-        enableThinking: modelCapabilities.supportsThinking ? modelConfig.enableThinking : false,
+        enableThinking: modelCapabilities.supportsThinking ? !!modelConfig.enableThinking : false,
         thinkingConfig: {
           budget_tokens: modelConfig.thinkingConfig?.budget_tokens || 
                          (modelCapabilities.supportsThinking ? modelCapabilities.defaultThinkingBudget || 1000 : 0)
@@ -199,7 +200,7 @@ export const MaxTokenSlider = ({
             // Ensure thinking budget doesn't exceed max_tokens
             thinkingConfig: {
               budget_tokens: Math.min(
-                modelConfig.thinkingConfig.budget_tokens,
+                modelConfig.thinkingConfig?.budget_tokens || 0,
                 newMaxTokens
               )
             }

@@ -112,7 +112,7 @@ const useStore = create<StoreState>()(
               provider: chat.config?.provider || 'anthropic',
               modelConfig: {
                 ...chat.config?.modelConfig,
-                model: ProviderRegistry.getProvider('anthropic').defaultModel,
+                model: ProviderRegistry.getProviderCapabilities('anthropic').defaultModel,
               },
             },
           }));

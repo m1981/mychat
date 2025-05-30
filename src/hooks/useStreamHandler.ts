@@ -1,10 +1,24 @@
 import { useRef, useEffect } from 'react';
 
 import { ChatStreamHandler } from '@src/handlers/ChatStreamHandler';
-import { providers } from '@type/providers';
+import { ProviderKey, AIProvider } from '../types';
+import { providers } from '../types/providers';
+
+// Add type guard for provider key
+const isProviderKey = (key: string): key is ProviderKey => 
+  key === 'openai' || key === 'anthropic';
+
+// Use type guard before accessing providers
+const getProvider = (key: string): AIProvider => {
+  if (isProviderKey(key)) {
+    return providers[key];
+  }
+  // Default to anthropic if invalid
+  return providers['anthropic'];
+};
 
 export function useStreamHandler(providerKey: string) {
-  const provider = providers[providerKey];
+  const provider = getProvider(providerKey);
   
   // Create stream handler ref
   const streamHandlerRef = useRef<ChatStreamHandler>(

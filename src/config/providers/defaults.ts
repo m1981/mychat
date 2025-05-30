@@ -1,40 +1,28 @@
-import { ProviderKey, ProviderConfig } from '../types/provider.types';
+import { ProviderKey } from '../../types';
 
-export const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
+// Define provider capabilities
+export const providerCapabilities = {
   anthropic: {
-    id: 'anthropic',
-    name: 'Anthropic',
+    supportsThinking: true,
+    defaultThinkingModel: 'claude-3-7-sonnet-20250219',
+    maxCompletionTokens: 8192,
     defaultModel: 'claude-3-7-sonnet-20250219',
-    endpoints: ['/chat/anthropic'],
-    models: [
-      {
-        id: 'claude-3-7-sonnet-20250219',
-        name: 'Claude 3.7 Sonnet',
-        maxCompletionTokens: 8192,
-        cost: {
-          input: { price: 0.003, unit: 1000 },
-          output: { price: 0.015, unit: 1000 }
-        }
-      },
-      // Other models...
-    ]
+    defaultThinkingBudget: 16000
   },
   openai: {
-    id: 'openai',
-    name: 'OpenAI',
+    supportsThinking: false,
+    defaultThinkingModel: undefined,
+    maxCompletionTokens: 4096,
     defaultModel: 'gpt-4o',
-    endpoints: ['chat/openai'],
-    models: [
-      {
-        id: 'gpt-4o',
-        name: 'GPT-4o',
-        maxCompletionTokens: 4096,
-        cost: {
-          input: { price: 0.01, unit: 1000 },
-          output: { price: 0.03, unit: 1000 }
-        }
-      }
-      // Other models...
-    ]
+    defaultThinkingBudget: 0
   }
 };
+
+// Get provider capabilities
+export function getProviderCapabilities(provider: ProviderKey) {
+  const capabilities = providerCapabilities[provider];
+  if (!capabilities) {
+    throw new Error(`Provider ${provider} not found`);
+  }
+  return capabilities;
+}
