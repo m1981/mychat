@@ -58,7 +58,7 @@ export const providers: Record<ProviderKey, AIProvider> = {
         stream: config.stream ?? false,
         thinking: config.enableThinking ? {
           type: 'enabled',
-          budget_tokens: thinkingConfig.budget_tokens
+          budget_tokens: thinkingConfig?.budget_tokens || 16000
         } : undefined,
         messages: messages.map(m => ({
           role: m.role === 'assistant' ? 'assistant' : 'user',

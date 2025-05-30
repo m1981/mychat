@@ -362,22 +362,18 @@ export const ThinkingModeToggle = ({
   setModelConfig: (config: ModelConfig) => void;
 }) => {
   const { t } = useTranslation('model');
-
-  // Ensure enableThinking is always a boolean
   const isThinkingEnabled = !!modelConfig.enableThinking;
-  
-  // Ensure budget_tokens is always a number
   const budgetTokens = modelConfig.thinkingConfig?.budget_tokens || 0;
-
+  
+  // Get model capabilities from registry instead of hardcoding values
   const handleThinkingToggle = (enabled: boolean) => {
+    const defaultBudget = enabled ? 
+      Math.min(1000, modelConfig.max_tokens) : 0;
+      
     setModelConfig({
       ...modelConfig,
       enableThinking: enabled,
-      thinkingConfig: {
-        budget_tokens: enabled 
-          ? Math.min(1000, modelConfig.max_tokens)
-          : 0
-      }
+      thinkingConfig: { budget_tokens: defaultBudget }
     });
   };
 
@@ -414,7 +410,7 @@ export const ThinkingModeToggle = ({
             value={budgetTokens}
             onChange={(e) => handleBudgetChange(Number(e.target.value))}
             min={100}
-            max={modelConfig.max_tokens} // Cap at max_tokens
+            max={modelConfig.max_tokens}
             step={100}
             className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
           />
@@ -425,6 +421,6 @@ export const ThinkingModeToggle = ({
       )}
     </div>
   );
-};
+}
 
 export default ConfigMenu;

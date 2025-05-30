@@ -1,6 +1,7 @@
 import { MessageInterface } from '@config/types/chat.types';
 import { ModelConfig } from '@config/types/model.types';
-// import { ProviderKey } from '@config/types/provider.types';
+
+export type ProviderKey = 'openai' | 'anthropic';
 
 export interface RequestConfig extends ModelConfig {
   stream?: boolean;

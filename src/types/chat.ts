@@ -1,31 +1,18 @@
 // Re-export all types from the new location
-import { ChatInterface, MessageInterface, Role } from '@config/types/chat.types';
+import { 
+  ChatInterface, 
+  MessageInterface, 
+  Role, 
+  ChatConfig,
+  // Import these from the updated chat.types.ts
+  Folder,
+  FolderCollection,
+  ChatHistoryInterface,
+  ModelOptions,
+  // Import ProviderKey from the re-export in chat.types.ts
+  ProviderKey
+} from '@config/types/chat.types';
 import { ModelConfig } from '@config/types/model.types';
-import { ProviderKey } from '@config/types/provider.types';
-import { ChatConfig } from '@config/types/chat.types';
-
-// Additional types that might not be in the new structure
-export interface ChatHistoryInterface {
-  id: string;
-  title: string;
-  timestamp: number;
-  folder?: string;
-  index?: number; // Add index property
-}
-
-export interface Folder {
-  id: string;
-  name: string;
-  expanded: boolean;
-  order: number;
-  color?: string; // Add color property
-}
-
-export interface FolderCollection {
-  [key: string]: Folder;
-}
-
-export type ModelOptions = string;
 
 // Re-export types from new location using 'export type'
 export type {
@@ -34,5 +21,9 @@ export type {
   Role,
   ModelConfig,
   ProviderKey,
-  ChatConfig
+  ChatConfig,
+  Folder,
+  FolderCollection,
+  ChatHistoryInterface,
+  ModelOptions
 };

@@ -1,14 +1,11 @@
 import { ChatInterface } from '@config/types/chat.types';
-import { FolderCollection } from './chat';
+import { FolderCollection } from '@config/types/chat.types';
 
-export interface ExportBase {
-  version: number;
-}
-
-export interface ExportV1 extends ExportBase {
-  chats: ChatInterface[];
+export interface ExportFormat {
   folders: FolderCollection;
+  version: number;
+  chats: ChatInterface[];
 }
 
-export type Export = ExportV1;
+export type Export = ExportFormat;
 export type LegacyExport = ChatInterface[];
