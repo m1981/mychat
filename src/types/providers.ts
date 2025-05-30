@@ -1,8 +1,9 @@
 import { ProviderModel } from '@config/types/provider.types';
 import { ProviderRegistry } from '@config/providers/registry';
 import { ModelRegistry } from '@config/models/registry';
-import { MessageInterface, ProviderKey } from '@type/chat';
-import { AIProvider, ProviderResponse, RequestConfig, FormattedRequest } from '@type/provider';
+import { MessageInterface } from '@config/types/chat.types';
+import { ProviderKey } from '@config/types/provider.types';
+import { AIProvider, ProviderResponse, RequestConfig, FormattedRequest } from './provider';
 
 export const providers: Record<ProviderKey, AIProvider> = {
   openai: {
@@ -44,21 +45,27 @@ export const providers: Record<ProviderKey, AIProvider> = {
     name: ProviderRegistry.getProvider('anthropic').name,
     endpoints: ProviderRegistry.getProvider('anthropic').endpoints,
     models: ProviderRegistry.getProvider('anthropic').models.map((m: ProviderModel) => m.id),
-    formatRequest: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => ({
-      model: config.model,
-      max_tokens: config.max_tokens,
-      temperature: config.temperature,
-      top_p: config.top_p,
-      stream: config.stream ?? false,
-      thinking: config.enableThinking ? {
-        type: 'enabled',
-        budget_tokens: config.thinkingConfig.budget_tokens
-      } : undefined,
-      messages: messages.map(m => ({
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content,
-      }))
-    }),
+    formatRequest: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => {
+      // Initialize default thinking config if needed
+      const thinkingConfig = config.enableThinking ? 
+        (config.thinkingConfig || { budget_tokens: 16000 }) : undefined;
+      
+      return {
+        model: config.model,
+        max_tokens: config.max_tokens,
+        temperature: config.temperature,
+        top_p: config.top_p,
+        stream: config.stream ?? false,
+        thinking: config.enableThinking ? {
+          type: 'enabled',
+          budget_tokens: thinkingConfig.budget_tokens
+        } : undefined,
+        messages: messages.map(m => ({
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: m.content,
+        }))
+      };
+    },
     parseResponse: (response: ProviderResponse): string => {
       // Handle non-streaming response
       if (response.content && Array.isArray(response.content) && response.content.length > 0 && 'text' in response.content[0]) {

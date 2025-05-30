@@ -1,49 +1,29 @@
-import { MessageInterface, ModelConfig, ProviderKey } from '@type/chat';
+import { MessageInterface } from '@config/types/chat.types';
+import { ModelConfig } from '@config/types/model.types';
+// import { ProviderKey } from '@config/types/provider.types';
 
 export interface RequestConfig extends ModelConfig {
-  stream?: boolean;  // Optional in incoming config
-  thinking_mode?: {
-    enabled: boolean;
-    budget_tokens: number;
-  };
+  stream?: boolean;
 }
 
 export interface FormattedRequest {
-  messages: MessageInterface[];
+  messages: any[];
   model: string;
-  max_tokens: number;
-  temperature: number;
-  top_p: number;
-  stream: boolean;
-  thinking?: {
-    type: 'enabled';
-    budget_tokens: number;
-  };
-  presence_penalty?: number;
-  frequency_penalty?: number;
+  [key: string]: any;
 }
 
-// Define a generic response type
 export interface ProviderResponse {
-  content?: string | Array<{text: string}>;
-  choices?: Array<{
-    message?: { content?: string };
-    delta?: { content?: string };
-  }>;
-  type?: string;
-  delta?: { 
-    text?: string;
-    [key: string]: unknown;
-  };
-  [key: string]: unknown;
+  content?: string | any[];
+  choices?: any[];
+  [key: string]: any;
 }
 
 export interface AIProvider {
-  id: ProviderKey;
+  id: string;
   name: string;
   endpoints: string[];
   models: string[];
   formatRequest: (messages: MessageInterface[], config: RequestConfig) => FormattedRequest;
   parseResponse: (response: ProviderResponse) => string;
-  parseStreamingResponse: (chunk: ProviderResponse) => string;
+  parseStreamingResponse: (response: ProviderResponse) => string;
 }

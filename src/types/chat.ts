@@ -1,49 +1,16 @@
-export type Role = 'user' | 'assistant' | 'system';
-export type ProviderKey = 'anthropic' | 'openai' | string;
+// Re-export all types from the new location
+import { ChatInterface, MessageInterface, Role } from '@config/types/chat.types';
+import { ModelConfig } from '@config/types/model.types';
+import { ProviderKey } from '@config/types/provider.types';
+import { ChatConfig } from '@config/types/chat.types';
 
-export interface ModelConfig {
-  model: string;
-  max_tokens: number;
-  temperature: number;
-  presence_penalty: number;
-  top_p: number;
-  frequency_penalty: number;
-  // Added in v1.x.x: Support for thinking mode
-  enableThinking: boolean;
-  thinkingConfig: {
-    budget_tokens: number;
-  };
-}
-
-export interface ChatConfig {
-  provider: ProviderKey;
-  modelConfig: ModelConfig;
-}
-
-export interface MessageInterface {
-  role: Role;
-  content: string;
-}
-
-export interface ChatInterface {
-  id: string;
-  title: string;
-  folder?: string;
-  messages: MessageInterface[];
-  config: ChatConfig;
-  titleSet: boolean;
-  currentChatTokenCount?: number;
-  timestamp?: number;
-}
-
+// Additional types that might not be in the new structure
 export interface ChatHistoryInterface {
-  title: string;
-  index: number;
   id: string;
-}
-
-export interface FolderCollection {
-  [folderId: string]: Folder;
+  title: string;
+  timestamp: number;
+  folder?: string;
+  index?: number; // Add index property
 }
 
 export interface Folder {
@@ -51,7 +18,21 @@ export interface Folder {
   name: string;
   expanded: boolean;
   order: number;
-  color?: string;
+  color?: string; // Add color property
+}
+
+export interface FolderCollection {
+  [key: string]: Folder;
 }
 
 export type ModelOptions = string;
+
+// Re-export types from new location using 'export type'
+export type {
+  ChatInterface,
+  MessageInterface,
+  Role,
+  ModelConfig,
+  ProviderKey,
+  ChatConfig
+};

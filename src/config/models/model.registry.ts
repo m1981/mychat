@@ -1,6 +1,7 @@
 // src/config/models/model.registry.ts
-import { ProviderKey } from '@type/chat';
-import { ModelCapabilities } from '@type/model';
+import { ModelCapabilities } from '../types/model.types';
+import { ProviderKey } from '../types/provider.types';
+// Use MODEL_CAPABILITIES or remove if not needed
 
 export class ModelRegistry {
   private static modelCapabilities: Map<string, ModelCapabilities> = new Map([

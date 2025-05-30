@@ -28,7 +28,9 @@ const inputClass = 'focus:outline-blue-600 text-sm border-none bg-transparent p-
 const actionButtonClass = 'p-1 text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100';
 
 const ChatHistory = React.memo(
-  ({ title, chatIndex }: { title: string; chatIndex: number }) => {
+  ({ title, chatIndex = -1 }: { title: string; chatIndex?: number }) => {
+    // Now chatIndex has a default value of -1 if undefined
+    
     const initialiseNewChat = useInitialiseNewChat();
     const setCurrentChatIndex = useStore((state) => state.setCurrentChatIndex);
     const setChats = useStore((state) => state.setChats);

@@ -1,8 +1,3 @@
-export interface ModelCapabilities {
-  modelId: string;
-  provider: string;
-  maxResponseTokens: number;
-  defaultResponseTokens: number;
-  supportsThinking?: boolean;
-  defaultThinkingBudget?: number;
-}
+// This file is now deprecated
+// Import types from @config/types/model.types.ts instead
+export * from '@config/types/model.types';

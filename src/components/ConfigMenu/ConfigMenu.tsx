@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import PopupModal from '@components/PopupModal';
 import { ProviderModel } from '@config/types/provider.types';
 import { ProviderRegistry } from '@config/providers/registry';
+import { ModelRegistry } from '@config/models/registry';
 import DownChevronArrow from '@icon/DownChevronArrow';
 import { ChatConfig, ModelConfig, ProviderKey } from '@type/chat';
 import { providers } from '@type/providers';
@@ -17,7 +18,15 @@ const ConfigMenu = ({
   setConfig: (config: ChatConfig) => void;
 }) => {
   const [_provider, _setProvider] = useState<ProviderKey>(config.provider);
-  const [_modelConfig, _setModelConfig] = useState<ModelConfig>(config.modelConfig);
+  
+  // Ensure modelConfig has all required properties
+  const initialModelConfig = {
+    ...config.modelConfig,
+    enableThinking: config.modelConfig.enableThinking || false,
+    thinkingConfig: config.modelConfig.thinkingConfig || { budget_tokens: 0 }
+  };
+  
+  const [_modelConfig, _setModelConfig] = useState<ModelConfig>(initialModelConfig);
   const { t } = useTranslation('model');
 
   const handleConfirm = () => {
@@ -90,14 +99,17 @@ export const ModelSelector = ({
   useEffect(() => {
     if (!currentProvider.models.includes(modelConfig.model)) {
       const defaultModel = providerConfig.models[0];
+      const modelCapabilities = ModelRegistry.getModelCapabilities(defaultModel.id);
+      
       setModelConfig({
         ...modelConfig,
         model: defaultModel.id,
         max_tokens: defaultModel.maxCompletionTokens,
-        // Ensure thinking mode properties are preserved
-        enableThinking: modelConfig.enableThinking,
+        // Ensure thinking mode properties are preserved, but only if supported
+        enableThinking: modelCapabilities.supportsThinking ? modelConfig.enableThinking : false,
         thinkingConfig: {
-          budget_tokens: modelConfig.thinkingConfig.budget_tokens
+          budget_tokens: modelConfig.thinkingConfig?.budget_tokens || 
+                         (modelCapabilities.supportsThinking ? modelCapabilities.defaultThinkingBudget || 1000 : 0)
         }
       });
     }
@@ -351,6 +363,12 @@ export const ThinkingModeToggle = ({
 }) => {
   const { t } = useTranslation('model');
 
+  // Ensure enableThinking is always a boolean
+  const isThinkingEnabled = !!modelConfig.enableThinking;
+  
+  // Ensure budget_tokens is always a number
+  const budgetTokens = modelConfig.thinkingConfig?.budget_tokens || 0;
+
   const handleThinkingToggle = (enabled: boolean) => {
     setModelConfig({
       ...modelConfig,
@@ -380,20 +398,20 @@ export const ThinkingModeToggle = ({
         </label>
         <input
           type='checkbox'
-          checked={modelConfig.enableThinking}
+          checked={isThinkingEnabled}
           onChange={(e) => handleThinkingToggle(e.target.checked)}
           className='toggle toggle-primary'
         />
       </div>
       
-      {modelConfig.enableThinking && (
+      {isThinkingEnabled && (
         <div className='mt-4'>
           <label className='block text-sm font-medium text-gray-900 dark:text-white'>
-            {t('thinking.budget')}: {modelConfig.thinkingConfig.budget_tokens}
+            {t('thinking.budget')}: {budgetTokens}
           </label>
           <input
             type='range'
-            value={modelConfig.thinkingConfig.budget_tokens}
+            value={budgetTokens}
             onChange={(e) => handleBudgetChange(Number(e.target.value))}
             min={100}
             max={modelConfig.max_tokens} // Cap at max_tokens

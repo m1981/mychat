@@ -5,6 +5,7 @@ import {
   ChatInterface,
   Folder,
   FolderCollection,
+  ChatHistoryInterface
 } from '@type/chat';
 import { debug } from '@utils/debug';
 import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
@@ -269,7 +270,7 @@ const ChatHistoryList = ({ searchFilter }: ChatHistoryListProps) => {
                     .map(([folderId, chats]) => (
                       <ChatFolder
                         key={folderId}
-                        folderChats={chats}
+                        folderChats={chats as unknown as ChatHistoryInterface[]}
                         folderId={folderId}
                       />
                     ))}

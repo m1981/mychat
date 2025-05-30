@@ -3,7 +3,7 @@ import { ProviderKey } from '@type/chat';
 import { describe, it, expect } from 'vitest';
 
 
-import { ProviderRegistry } from '../provider.registry';
+import { ProviderRegistry } from '../registry';
 
 describe('ProviderRegistry', () => {
   describe('getDefaultModelForProvider', () => {
@@ -57,7 +57,8 @@ describe('ProviderRegistry', () => {
       const capabilities = ProviderRegistry.getProviderCapabilities('openai');
       expect(capabilities).toEqual({
         supportsThinking: false,
-        maxCompletionTokens: 16384,
+        defaultThinkingModel: undefined,
+        maxCompletionTokens: 4096,
         defaultModel: 'gpt-4o'
       });
     });
