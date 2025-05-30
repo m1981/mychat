@@ -4,20 +4,26 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import Anthropic from '@anthropic-ai/sdk';
 
 // Get current file's directory (ES module equivalent of __dirname)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Configuration
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const TEST_RESULTS_DIR = path.join(process.cwd(), 'test-results');
 
 async function main() {
-  if (!OPENAI_API_KEY) {
-    console.error('Error: OPENAI_API_KEY environment variable is required');
+  if (!ANTHROPIC_API_KEY) {
+    console.error('Error: ANTHROPIC_API_KEY environment variable is required');
     process.exit(1);
   }
+
+  // Initialize Anthropic client
+  const anthropic = new Anthropic({
+    apiKey: ANTHROPIC_API_KEY,
+  });
 
   // Find test result directories
   const testDirs = fs.readdirSync(TEST_RESULTS_DIR)
@@ -56,8 +62,14 @@ async function main() {
       console.log(`Screenshot available at: ${path.join(fullPath, screenshots[0])}`);
     }
     
-    // Prepare prompt for AI analysis
-    const prompt = `
+    // Prepare system prompt for AI analysis
+    const systemPrompt = `You are an expert Playwright test debugging assistant. 
+Your job is to analyze test failures and provide actionable solutions.
+Focus on identifying the root cause and suggesting specific fixes.
+Be concise but thorough in your analysis.`;
+
+    // Prepare user prompt with test context
+    const userPrompt = `
 I'm debugging a Playwright test failure. Here's the context:
 
 ## Test Information
@@ -79,19 +91,41 @@ Based on this information, please:
 4. Provide any additional debugging steps I should take
 `;
 
-    // Call AI API (simplified example - implement actual API call)
-    console.log('Sending to AI for analysis...');
-    console.log('Prompt:', prompt);
+    console.log('Sending to Claude for analysis...');
     
-    // In a real implementation, you would call the OpenAI API here
-    // For example using the OpenAI Node.js SDK:
-    // import OpenAI from 'openai';
-    // const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
-    // const response = await openai.chat.completions.create({
-    //   model: "gpt-4",
-    //   messages: [{ role: "user", content: prompt }],
-    // });
-    // console.log(response.choices[0].message.content);
+    try {
+      // Call Anthropic API with Claude 3.5 Sonnet
+      const response = await anthropic.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 1000,
+        temperature: 0.2,
+        system: systemPrompt,
+        messages: [
+          {
+            role: "user",
+            content: userPrompt
+          }
+        ]
+      });
+      
+      // Extract and display the analysis
+      console.log('\n===== CLAUDE ANALYSIS =====\n');
+      console.log(response.content[0].text);
+      console.log('\n===========================\n');
+      
+      // Save the analysis to a file
+      const analysisPath = path.join(fullPath, 'ai-analysis.md');
+      fs.writeFileSync(analysisPath, response.content[0].text);
+      console.log(`Analysis saved to: ${analysisPath}`);
+    } catch (error) {
+      console.error('Error calling Anthropic API:', error.message);
+      if (error.status) {
+        console.error(`Status: ${error.status}`);
+      }
+      if (error.error?.type) {
+        console.error(`Error type: ${error.error.type}`);
+      }
+    }
     
     console.log('\nTo analyze this test failure manually:');
     console.log(`- View the HTML report: npx playwright show-report`);
