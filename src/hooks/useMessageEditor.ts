@@ -22,7 +22,16 @@ export function useMessageEditor({
   // Get the submit function from the useSubmit hook
   const { handleSubmit } = useSubmit();
   
-  // Define utility functions first
+  // Define resetTextAreaHeight first since it's used by handleSaveAndSubmit
+  const resetTextAreaHeight = useCallback(() => {
+    if (textareaRef.current) {
+      // Reset height logic
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, []);
+  
+  // Define utility functions
   const removeSubsequentMessages = useCallback((index: number) => {
     // Get current state to avoid race conditions
     const state = useStore.getState();
@@ -49,14 +58,6 @@ export function useMessageEditor({
   
   // Handle saving content
   const handleSave = useCallback(() => {
-    console.log('handleSave called with:', {
-      isComposer,
-      messageIndex,
-      editContent,
-      currentChatIndex: useStore.getState().currentChatIndex,
-      messagesCount: useStore.getState().chats[useStore.getState().currentChatIndex]?.messages?.length
-    });
-    
     // Update the message in the global store
     const state = useStore.getState();
     const chats = state.chats;
@@ -108,10 +109,13 @@ export function useMessageEditor({
     if (!isComposer) {
       setIsEdit(false);
       setIsEditing(false);
+      // Clear the global editing state
+      const state = useStore.getState();
+      state.setCurrentEditingMessageIndex(null);
     }
   }, [editContent, messageIndex, isComposer, setIsEdit, setIsEditing]);
   
-  // Handle save and submit - now defined after the utility functions
+  // Handle save and submit - now defined after resetTextAreaHeight
   const handleSaveAndSubmit = useCallback(async () => {
     // Save the content first
     handleSave();
@@ -121,6 +125,8 @@ export function useMessageEditor({
       await handleSubmit();
       // Clear the content if we're in the composer
       setEditContent('');
+      // Reset textarea height
+      resetTextAreaHeight();
     } else {
       // In edit mode:
       // 1. Update message content (already done by handleSave)
@@ -130,17 +136,12 @@ export function useMessageEditor({
       await triggerRegeneration(messageIndex);
       // 4. Exit edit mode
       setIsEdit(false);
+      if (setIsEditing) setIsEditing(false);
+      // Clear the global editing state
+      const state = useStore.getState();
+      state.setCurrentEditingMessageIndex(null);
     }
-  }, [handleSave, handleSubmit, isComposer, messageIndex, removeSubsequentMessages, setEditContent, setIsEdit, triggerRegeneration]);
-  
-  // Handle textarea height adjustments
-  const resetTextAreaHeight = useCallback(() => {
-    if (textareaRef.current) {
-      // Reset height logic
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  }, []);
+  }, [handleSave, handleSubmit, isComposer, messageIndex, removeSubsequentMessages, resetTextAreaHeight, setEditContent, setIsEdit, setIsEditing, triggerRegeneration]);
   
   // Return all state and methods
   return {

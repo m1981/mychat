@@ -49,6 +49,11 @@ const Message = React.memo(
     };
 
     const handleEdit = () => {
+      console.log('Edit button clicked for message:', {
+        messageIndex,
+        isComposer,
+        content
+      });
       setIsEdit(true);
       setIsEditing(true);
     };
@@ -152,6 +157,8 @@ const Message = React.memo(
         className={`w-full border-b border-black/10 dark:border-gray-900/50 text-gray-800 dark:text-gray-100 group ${
           backgroundStyle[messageIndex % 2]
         }`}
+        role={role} // Add the role attribute here
+        data-message-index={messageIndex} // Add a data attribute for easier testing
       >
         <div
           className={`text-base gap-4 md:gap-6 m-auto p-4 md:py-6 flex transition-all ease-in-out 

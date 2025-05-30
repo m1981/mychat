@@ -8,13 +8,13 @@ interface JumpToEditButtonProps {
 }
 
 const JumpToEditButton: React.FC<JumpToEditButtonProps> = ({ editAreaId, visible }) => {
-  if (!visible) return null;
-  
   // Use a ref to store the last known cursor position
   const lastKnownPositionRef = useRef<{ start: number; end: number } | null>(null);
   
   // Set up an effect to track cursor position changes
   useEffect(() => {
+    if (!visible) return;
+    
     const editArea = document.getElementById(editAreaId);
     if (!editArea) return;
     
@@ -43,7 +43,7 @@ const JumpToEditButton: React.FC<JumpToEditButtonProps> = ({ editAreaId, visible
       textarea.removeEventListener('click', updatePosition);
       textarea.removeEventListener('keyup', updatePosition);
     };
-  }, [editAreaId]);
+  }, [editAreaId, visible]);
   
   const handleClick = () => {
     // Don't prevent default - let the browser handle the anchor navigation
@@ -76,6 +76,9 @@ const JumpToEditButton: React.FC<JumpToEditButtonProps> = ({ editAreaId, visible
       }
     }, 100); // Short delay to allow scroll to complete
   };
+  
+  // Return null early if not visible
+  if (!visible) return null;
   
   return (
     <a 

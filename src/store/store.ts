@@ -15,7 +15,11 @@ export type StoreState = ChatSlice &
   AuthSlice &
   ConfigSlice &
   PromptSlice &
-  RequestSlice;
+  RequestSlice & {
+    // Global edit state
+    currentEditingMessageIndex: number | null;
+    setCurrentEditingMessageIndex: (index: number | null) => void;
+  };
 
 export type StoreSlice<T> = (
   set: StoreApi<StoreState>['setState'],
@@ -77,6 +81,9 @@ const useStore = create<StoreState>()(
       ...createConfigSlice(set, get),
       ...createPromptSlice(set, get),
       ...createRequestSlice(set, get),
+      // Global edit state
+      currentEditingMessageIndex: null,
+      setCurrentEditingMessageIndex: (index) => set({ currentEditingMessageIndex: index }),
     }),
     {
       name: 'free-chat-gpt',

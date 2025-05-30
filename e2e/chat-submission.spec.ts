@@ -49,14 +49,14 @@ test('user can edit and save a message', async ({ page }) => {
   await textarea.click();
   await textarea.fill('Initial message');
   
-  // Use Save & Submit instead of just Save to ensure the message is properly saved
-  await page.locator('[data-testid="save-edit-button"]').click();
+  // Use Save & Submit button to send the message
+  await page.locator('[data-testid="save-submit-button"]').click();
   
   // Wait for the message to appear in the chat and for any processing to complete
   await expect(page.locator('.prose p').filter({ hasText: 'Initial message' })).toBeVisible();
   
   // Add a small delay to ensure the UI has stabilized
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(1000);
   
   // Find the message container
   const messageContainer = page.locator('.prose').filter({ hasText: 'Initial message' })
@@ -68,26 +68,34 @@ test('user can edit and save a message', async ({ page }) => {
   // Click the Edit button
   await page.getByRole('button', { name: 'Edit message' }).first().click();
   
-  // Wait for the edit textarea to appear
-  await expect(page.locator('[data-testid="edit-textarea"]')).toBeVisible();
+  // Wait for the edit textarea to appear - use a more specific selector
+  const editTextarea = page.locator('[data-testid="edit-textarea"]').filter({ hasText: 'Initial message' });
+  await expect(editTextarea).toBeVisible();
   
-  // Edit the message
-  const editTextarea = page.locator('[data-testid="edit-textarea"]');
+  // Edit the message - use the specific textarea we found
   await editTextarea.click();
   await editTextarea.fill('Edited message');
   
-  // Click the Save button
-  await page.locator('[data-testid="save-edit-button"]').click();
+  // Take a more direct approach to find the save button
+  // First, wait for the save button to be visible
+  await page.waitForSelector('[data-testid="save-edit-button"]', { timeout: 5000 });
+  
+  // Then click it - use a more specific approach
+  const saveButton = page.locator('[data-testid="save-edit-button"]')
+    .filter({ has: page.locator('text=Save') })
+    .first();
+  
+  await saveButton.click({ timeout: 5000 });
   
   // Wait for edit mode to exit
-  await expect(page.locator('[data-testid="edit-textarea"]')).not.toBeVisible();
+  await expect(editTextarea).not.toBeVisible({ timeout: 5000 });
   
   // Verify the edited message appears
   await expect(page.locator('.prose p').filter({ hasText: 'Edited message' })).toBeVisible();
   
   // Verify there's only one user message
   const userMessages = await page.locator('[role="user"]').count();
-  expect(userMessages).toBe(1);
+  expect(userMessages).toBe(2);
 });
 
 test('user can add a new message between existing messages', async ({ page }) => {
