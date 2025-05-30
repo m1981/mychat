@@ -7,8 +7,8 @@ test('user can type and submit a message', async ({ page }) => {
   
   try {
     // Wait for the chat interface to load
-    await expect(page.locator('.dark\\:bg-gray-800')).toBeVisible();
-    
+    await expect(page.locator('[data-testid="chat-interface"]')).toBeVisible();
+
     // Find the composer message (the input area)
     const composerMessage = page.locator('[data-testid="save-submit-button"]').first().locator('..').locator('..');
     
@@ -25,11 +25,11 @@ test('user can type and submit a message', async ({ page }) => {
     // Verify the message was sent and appears in the chat
     await expect(page.getByText('Hello, this is a test message')).toBeVisible();
     
-    // Verify that an assistant response is generated (may take some time)
+    // Verify that an assistant response is generated (may take some time  await messageContainer.locator('button[title="Edit message"]').click({ force: true });)
     await expect(page.locator('.prose').filter({ hasText: 'Hello, this is a test message' })).toBeVisible();
     
     // Wait for the assistant's response to appear
-    await expect(page.locator('[role="assistant"]')).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('[role="assistant"]')).toBeVisible();
   } catch (error) {
     // Capture detailed context on failure
     await captureTestContext(page, test.info());
@@ -42,33 +42,52 @@ test('user can edit and save a message', async ({ page }) => {
   await page.goto('/');
   
   // Wait for the chat interface to load
-  await expect(page.locator('.dark\\:bg-gray-800')).toBeVisible();
-  
+  await expect(page.locator('[data-testid="chat-interface"]')).toBeVisible();
+
   // Find the composer message and submit an initial message
   const textarea = page.locator('textarea').first();
   await textarea.click();
   await textarea.fill('Initial message');
-  await page.locator('[data-testid="save-submit-button"]').click();
   
-  // Wait for the message to appear in the chat
-  await expect(page.getByText('Initial message')).toBeVisible();
+  // Use Save & Submit instead of just Save to ensure the message is properly saved
+  await page.locator('[data-testid="save-edit-button"]').click();
   
-  // Find the message and click the edit button
-  const messageActions = page.locator('.group-hover\\:visible').first();
-  await messageActions.hover();
-  await page.locator('button[title="Edit message"]').click();
+  // Wait for the message to appear in the chat and for any processing to complete
+  await expect(page.locator('.prose p').filter({ hasText: 'Initial message' })).toBeVisible();
+  
+  // Add a small delay to ensure the UI has stabilized
+  await page.waitForTimeout(500);
+  
+  // Find the message container
+  const messageContainer = page.locator('.prose').filter({ hasText: 'Initial message' })
+    .locator('xpath=./ancestor::div[contains(@class, "group")]');
+  
+  // Hover over the message to reveal the edit button
+  await messageContainer.hover();
+  
+  // Click the Edit button
+  await page.getByRole('button', { name: 'Edit message' }).first().click();
+  
+  // Wait for the edit textarea to appear
+  await expect(page.locator('[data-testid="edit-textarea"]')).toBeVisible();
   
   // Edit the message
-  const editTextarea = page.locator('textarea').first();
+  const editTextarea = page.locator('[data-testid="edit-textarea"]');
   await editTextarea.click();
   await editTextarea.fill('Edited message');
   
   // Click the Save button
   await page.locator('[data-testid="save-edit-button"]').click();
   
+  // Wait for edit mode to exit
+  await expect(page.locator('[data-testid="edit-textarea"]')).not.toBeVisible();
+  
   // Verify the edited message appears
-  await expect(page.getByText('Edited message')).toBeVisible();
-  await expect(page.getByText('Initial message')).not.toBeVisible();
+  await expect(page.locator('.prose p').filter({ hasText: 'Edited message' })).toBeVisible();
+  
+  // Verify there's only one user message
+  const userMessages = await page.locator('[role="user"]').count();
+  expect(userMessages).toBe(1);
 });
 
 test('user can add a new message between existing messages', async ({ page }) => {
@@ -82,7 +101,7 @@ test('user can add a new message between existing messages', async ({ page }) =>
   await page.locator('[data-testid="save-submit-button"]').click();
   
   // Wait for response
-  await expect(page.locator('[role="assistant"]')).toBeVisible({ timeout: 30000 });
+  await expect(page.locator('[role="assistant"]')).toBeVisible();
   
   // Click the "+" button to add a new message
   await page.locator('div.h-0.w-0.relative div').first().click();

@@ -90,6 +90,8 @@ export interface UseMessageEditorReturn {
   handleSave: () => void;
   handleSaveAndSubmit: () => Promise<void>;
   resetTextAreaHeight: () => void;
+  removeSubsequentMessages: (index: number) => void;
+  triggerRegeneration: (index: number) => Promise<void>;
 }
 
 export interface UseKeyboardShortcutsReturn {

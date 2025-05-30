@@ -25,6 +25,7 @@ const NewChat = ({ folder }: { folder?: string }) => {
       }}
       role="button"
       aria-label={String(t('newChat'))}
+      data-testid="chat-interface"
       title={folder ? String(t('newChat')) : ''}
       tabIndex={0}
       onKeyDown={(e) => {

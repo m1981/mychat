@@ -19,6 +19,7 @@ const MessageButton: React.FC<MessageButtonProps> = ({ onClick, icon, title }) =
     className="invisible group-hover:visible p-1 hover:text-white"
     onClick={onClick}
     title={title}
+
   >
     {icon}
   </button>
@@ -45,6 +46,7 @@ const EditButton: React.FC<ToggleButtonProps> = ({ setIsActive }) => (
     icon={<EditIcon2 />} 
     onClick={() => setIsActive(true)}
     title="Edit message"
+    data-testid="edit-message-button"
   />
 );
 
