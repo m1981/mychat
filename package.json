@@ -34,7 +34,12 @@
     "format": "pnpm lint:format:fix",
     "validate": "pnpm type:check:all && pnpm lint:all",
     "precommit": "pnpm lint-staged",
-    "vercel-build": "pnpm build"
+    "vercel-build": "pnpm build",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:analyze": "node scripts/analyze-test-failures.js"
   },
   "build": {
     "appId": "better-chatgpt",
@@ -96,6 +101,7 @@
     "zustand": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "@tailwindcss/typography": "^0.5.9",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^14.2.1",
