@@ -1,10 +1,10 @@
-import { DEFAULT_PROVIDER } from '../config/constants';
-import { ModelConfig } from '../types/chat';
-import { ProviderKey } from '../types/provider';
+import { DEFAULT_PROVIDER } from '../constants';
+import { ChatConfig, ModelConfig } from '../types';
+import { ProviderRegistry } from '../registry';
 
-// Remove direct imports of registries to break circular dependencies
+// Import from centralized constants
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  model: 'claude-3-7-sonnet-20250219',
+  model: ProviderRegistry.getDefaultModelForProvider(DEFAULT_PROVIDER),
   temperature: 0.7,
   top_p: 1,
   presence_penalty: 0,
@@ -13,11 +13,6 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   enableThinking: false,
   thinkingConfig: { budget_tokens: 0 }
 };
-
-export interface ChatConfig {
-  provider: ProviderKey;
-  modelConfig: ModelConfig;
-}
 
 export const DEFAULT_CHAT_CONFIG: ChatConfig = {
   provider: DEFAULT_PROVIDER,

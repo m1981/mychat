@@ -1,7 +1,7 @@
-import { ProviderKey } from '../../types';
+import { ProviderKey, ProviderCapabilities } from '../../types';
 
-// Define provider capabilities
-export const providerCapabilities = {
+// Single source of truth for provider capabilities
+export const PROVIDER_CAPABILITIES: Record<ProviderKey, ProviderCapabilities> = {
   anthropic: {
     supportsThinking: true,
     defaultThinkingModel: 'claude-3-7-sonnet-20250219',
@@ -19,8 +19,8 @@ export const providerCapabilities = {
 };
 
 // Get provider capabilities
-export function getProviderCapabilities(provider: ProviderKey) {
-  const capabilities = providerCapabilities[provider];
+export function getProviderCapabilities(provider: ProviderKey): ProviderCapabilities {
+  const capabilities = PROVIDER_CAPABILITIES[provider];
   if (!capabilities) {
     throw new Error(`Provider ${provider} not found`);
   }

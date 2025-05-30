@@ -9,8 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
  * Create default model configuration based on provider
  */
 export function createDefaultModelConfig(provider = DEFAULT_PROVIDER): ModelConfig {
-  const defaultProvider = ProviderRegistry.getProvider(provider);
-  const providerCapabilities = ProviderRegistry.getProviderCapabilities(defaultProvider.id);
+  const providerCapabilities = ProviderRegistry.getProviderCapabilities(provider);
   const defaultModel = providerCapabilities.defaultModel;
   const modelCapabilities = ModelRegistry.getModelCapabilities(defaultModel);
 
@@ -21,9 +20,9 @@ export function createDefaultModelConfig(provider = DEFAULT_PROVIDER): ModelConf
     presence_penalty: 0,
     top_p: 1,
     frequency_penalty: 0,
-    enableThinking: false,
+    enableThinking: providerCapabilities.supportsThinking,
     thinkingConfig: {
-      budget_tokens: modelCapabilities.defaultThinkingBudget || 1000,
+      budget_tokens: providerCapabilities.defaultThinkingBudget || 0,
     },
   };
 }

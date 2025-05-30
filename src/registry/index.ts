@@ -6,6 +6,7 @@
  */
 
 import { ProviderKey, ModelCapabilities, ProviderConfig } from '../types';
+import { PROVIDER_CAPABILITIES } from '../config/providers/defaults';
 
 // Model Registry
 export class ModelRegistry {
@@ -66,30 +67,17 @@ export class ModelRegistry {
 // Provider Registry
 export class ProviderRegistry {
   static getProviderCapabilities(provider: ProviderKey) {
-    switch (provider) {
-      case 'anthropic':
-        return {
-          supportsThinking: true,
-          defaultThinkingModel: 'claude-3-7-sonnet-20250219',
-          maxCompletionTokens: 8192,
-          defaultModel: 'claude-3-7-sonnet-20250219',
-          defaultThinkingBudget: 16000
-        };
-      case 'openai':
-        return {
-          supportsThinking: false,
-          defaultThinkingModel: undefined,
-          maxCompletionTokens: 4096,
-          defaultModel: 'gpt-4o',
-          defaultThinkingBudget: 0
-        };
-      default:
-        throw new Error(`Provider ${provider} not found`);
+    const capabilities = PROVIDER_CAPABILITIES[provider];
+    if (!capabilities) {
+      throw new Error(`Provider ${provider} not found`);
     }
+    return capabilities;
   }
 
   static getDefaultModelForProvider(provider: ProviderKey): string {
-    return this.getProviderCapabilities(provider).defaultModel;
+    // This will throw the appropriate error if provider doesn't exist
+    const capabilities = this.getProviderCapabilities(provider);
+    return capabilities.defaultModel;
   }
 
   static validateModelForProvider(provider: ProviderKey, modelId: string): boolean {

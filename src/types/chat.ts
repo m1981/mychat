@@ -1,20 +1,18 @@
-// Re-export all types from the new location
-import { 
-  ChatInterface, 
-  MessageInterface, 
-  Role, 
+// Import all types from the central types/index.ts
+import {
+  ChatInterface,
+  MessageInterface,
+  Role,
   ChatConfig,
-  // Import these from the updated chat.types.ts
   Folder,
   FolderCollection,
   ChatHistoryInterface,
   ModelOptions,
-  // Import ProviderKey from the re-export in chat.types.ts
-  ProviderKey
-} from '@config/types/chat.types';
-import { ModelConfig } from '@config/types/model.types';
+  ProviderKey,
+  ModelConfig
+} from '../types';
 
-// Re-export types from new location using 'export type'
+// Re-export types
 export type {
   ChatInterface,
   MessageInterface,

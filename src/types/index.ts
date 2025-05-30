@@ -8,6 +8,15 @@
 // Provider types
 export type ProviderKey = 'openai' | 'anthropic';
 
+// Standardized provider capabilities interface
+export interface ProviderCapabilities {
+  supportsThinking: boolean;
+  defaultThinkingModel: string | undefined;
+  maxCompletionTokens: number;
+  defaultModel: string;
+  defaultThinkingBudget: number;
+}
+
 export interface ProviderModel {
   id: string;
   name: string;
@@ -29,13 +38,7 @@ export interface ProviderConfig {
   name: string;
   models: ProviderModel[];
   endpoints: any[];
-  capabilities: {
-    supportsThinking: boolean;
-    defaultThinkingModel: string | undefined;
-    maxCompletionTokens: number;
-    defaultModel: string;
-    defaultThinkingBudget?: number;
-  };
+  capabilities: ProviderCapabilities;
 }
 
 export interface AIProvider {

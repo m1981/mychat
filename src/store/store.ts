@@ -106,16 +106,29 @@ const useStore = create<StoreState>()(
       migrate: (persistedState: any, version: number) => {
         if (version === 1) {
           // Migrate old provider configuration to new format
-          const chats = persistedState.chats?.map((chat: any) => ({
-            ...chat,
-            config: {
-              provider: chat.config?.provider || 'anthropic',
-              modelConfig: {
-                ...chat.config?.modelConfig,
-                model: ProviderRegistry.getProviderCapabilities('anthropic').defaultModel,
+          const chats = persistedState.chats?.map((chat: any) => {
+            // Skip if chat is already in the new format
+            if (chat.config?.modelConfig?.model) {
+              return chat;
+            }
+            
+            // Get default model for provider or use anthropic as fallback
+            const provider = chat.config?.provider || 'anthropic';
+            const defaultModel = ProviderRegistry.getDefaultModelForProvider(
+              provider as ProviderKey
+            );
+            
+            return {
+              ...chat,
+              config: {
+                provider,
+                modelConfig: {
+                  ...DEFAULT_MODEL_CONFIG,
+                  model: defaultModel,
+                },
               },
-            },
-          }));
+            };
+          });
 
           return {
             ...persistedState,

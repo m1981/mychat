@@ -6,30 +6,35 @@
  */
 
 import { ProviderKey, ModelConfig, ChatConfig } from '../types';
+import { PROVIDER_CAPABILITIES } from '../config/providers/defaults';
+import { ProviderRegistry } from '../registry';
 
 // Provider constants
 export const DEFAULT_PROVIDER: ProviderKey = 'anthropic';
 
-// Model constants
+// Chat constants
+export const DEFAULT_SYSTEM_MESSAGE = 'You are a helpful assistant.';
+
+// Get default model based on provider
+export function getDefaultModel(provider: ProviderKey = DEFAULT_PROVIDER): string {
+  return ProviderRegistry.getDefaultModelForProvider(provider);
+}
+
+// Model constants - derive from provider capabilities
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  model: 'claude-3-7-sonnet-20250219',
+  model: getDefaultModel(),
   temperature: 0.7,
   top_p: 1,
   presence_penalty: 0,
   frequency_penalty: 0,
-  max_tokens: 4096,
-  enableThinking: false,
-  thinkingConfig: { budget_tokens: 0 }
+  max_tokens: PROVIDER_CAPABILITIES[DEFAULT_PROVIDER].maxCompletionTokens,
+  enableThinking: PROVIDER_CAPABILITIES[DEFAULT_PROVIDER].supportsThinking,
+  thinkingConfig: { 
+    budget_tokens: PROVIDER_CAPABILITIES[DEFAULT_PROVIDER].defaultThinkingBudget || 0 
+  }
 };
-
-// Chat constants
-export const DEFAULT_SYSTEM_MESSAGE = 'You are a helpful assistant.';
 
 export const DEFAULT_CHAT_CONFIG: ChatConfig = {
   provider: DEFAULT_PROVIDER,
   modelConfig: DEFAULT_MODEL_CONFIG,
 };
-
-// For backward compatibility
-export const ENABLE_THINKING_BY_DEFAULT = false;
-export const DEFAULT_THINKING_BUDGET = 1000;
