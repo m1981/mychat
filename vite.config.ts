@@ -78,16 +78,19 @@ function createDevConfig(): UserConfig {
       },
       proxy: {
         '/api': {
-          target: 'http://localhost:3000',
+          target: 'http://127.0.0.1:3000', // Use IP instead of localhost
           changeOrigin: true,
-          secure: false
-        },
-        '/api/chat/anthropic': {
-          target: 'http://localhost:3000',
-          changeOrigin: true,
+          secure: false,
           configure: (proxy, _options) => {
             proxy.on('error', (err, _req, _res) => {
               console.log('proxy error', err);
+            });
+            // Add logging for proxy requests
+            proxy.on('proxyReq', (proxyReq, req, _res) => {
+              console.log(`\n[PROXY] ${req.method} ${req.url} -> ${proxyReq.path}`);
+            });
+            proxy.on('proxyRes', (proxyRes, req, _res) => {
+              console.log(`\n[PROXY] ${req.method} ${req.url} <- ${proxyRes.statusCode}`);
             });
           },
         }
@@ -96,7 +99,21 @@ function createDevConfig(): UserConfig {
     optimizeDeps: {
       exclude: ['@webassembly/*']
     },
-    logLevel: 'info'
+    logLevel: 'warn', // Change to 'warn' or 'error' to reduce Vite's output
+    customLogger: {
+      info: (msg) => {
+        // Filter out some of the verbose HMR messages
+        if (!msg.includes('hmr update') && !msg.includes('page reload')) {
+          console.log(msg);
+        }
+      },
+      warn: console.warn,
+      warnOnce: console.warn,
+      error: console.error,
+      clearScreen: () => {},
+      hasErrorLogged: () => false,
+      hasWarned: false
+    }
   };
 }
 
