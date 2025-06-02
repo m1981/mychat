@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 
 import Chat from '@components/Chat';
+import Debug from '@components/Debug';
 import Menu from '@components/Menu';
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
 import * as Sentry from '@sentry/react';
@@ -193,6 +194,7 @@ function App() {
         <Menu />
         <Chat />
         <Toaster />
+        {process.env.NODE_ENV === 'development' && <Debug />}
         {showTestButton && (
           <button 
             className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded"
