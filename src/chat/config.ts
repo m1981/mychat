@@ -1,6 +1,6 @@
 import { DEFAULT_PROVIDER } from '../constants';
-import { ChatConfig, ModelConfig } from '../types';
 import { ProviderRegistry } from '../registry';
+import { ChatConfig, ModelConfig } from '../types';
 
 // Import from centralized constants
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {

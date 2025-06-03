@@ -3,6 +3,7 @@ import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
 import importPlugin from 'eslint-plugin-import';
 import unusedImports from 'eslint-plugin-unused-imports';
+import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
   js.configs.recommended,
@@ -22,6 +23,7 @@ export default [
       '@typescript-eslint': typescript,
       'import': importPlugin,
       'unused-imports': unusedImports,
+      'react-refresh': reactRefresh,
     },
     languageOptions: {
       parser: typescriptParser,
@@ -35,6 +37,7 @@ export default [
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       'unused-imports/no-unused-imports': 'error',
+      'react-refresh/only-export-components': 'warn',
       'unused-imports/no-unused-vars': [
         'warn',
         {

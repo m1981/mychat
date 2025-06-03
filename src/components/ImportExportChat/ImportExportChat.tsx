@@ -3,9 +3,9 @@ import { useRef, useState } from 'react';
 
 import PopupModal from '@components/PopupModal';
 import { ProviderRegistry } from '@config/providers/registry';
+import { ChatInterface, FolderCollection, ProviderKey } from '@config/types/chat.types';
 import ExportIcon from '@icon/ExportIcon';
 import useStore from '@store/store';
-import { ChatInterface, FolderCollection, ProviderKey } from '@config/types/chat.types';
 import { Export } from '@type/export';
 import { getToday } from '@utils/date';
 import downloadFile from '@utils/downloadFile';

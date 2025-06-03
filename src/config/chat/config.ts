@@ -1,9 +1,11 @@
+import { v4 as uuidv4 } from 'uuid';
+
+import { DEFAULT_PROVIDER, DEFAULT_SYSTEM_MESSAGE } from '../constants';
+import { ModelRegistry } from '../models/registry';
+import { ProviderRegistry } from '../providers/registry';
 import { ChatConfig, ChatInterface } from '../types/chat.types';
 import { ModelConfig } from '../types/model.types';
-import { DEFAULT_PROVIDER, DEFAULT_SYSTEM_MESSAGE } from '../constants';
-import { ProviderRegistry } from '../providers/registry';
-import { ModelRegistry } from '../models/registry';
-import { v4 as uuidv4 } from 'uuid';
+
 
 /**
  * Create default model configuration based on provider

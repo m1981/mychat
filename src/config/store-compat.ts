@@ -2,11 +2,12 @@
  * This file provides compatibility with the existing store structure
  * while we transition to the new configuration system.
  */
-import { DEFAULT_CHAT_CONFIG, DEFAULT_MODEL_CONFIG } from './chat/config';
-import { ProviderRegistry } from './providers/registry';
-import { ModelRegistry } from './models/registry';
-import { DEFAULT_PROVIDER } from './constants';
 import { ProviderKey } from '../types';
+
+import { DEFAULT_CHAT_CONFIG, DEFAULT_MODEL_CONFIG } from './chat/config';
+import { DEFAULT_PROVIDER } from './constants';
+import { ModelRegistry } from './models/registry';
+import { ProviderRegistry } from './providers/registry';
 
 // Re-export constants and functions needed by the store
 export {

@@ -1,5 +1,6 @@
 // src/config/models/__tests__/model.registry.test.ts
 import { describe, it, expect } from 'vitest';
+
 import { ModelRegistry } from '../model.registry';
 
 describe('ModelRegistry', () => {

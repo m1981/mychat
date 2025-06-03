@@ -5,13 +5,13 @@
  * to the new structure.
  */
 
+import { ConfigService } from '../services/ConfigService';
 import { 
   ChatInterface, 
   ChatConfig, 
   ModelConfig, 
   ProviderKey 
 } from '../types';
-import { ConfigService } from '../services/ConfigService';
 
 /**
  * Migrates an old-format chat to the new format

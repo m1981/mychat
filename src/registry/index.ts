@@ -5,8 +5,8 @@
  * Use this as the single entry point for registry access.
  */
 
-import { ProviderKey, ModelCapabilities, ProviderConfig } from '../types';
 import { PROVIDER_CAPABILITIES } from '../config/providers/defaults';
+import { ProviderKey, ModelCapabilities, ProviderConfig } from '../types';
 
 // Model Registry
 export class ModelRegistry {

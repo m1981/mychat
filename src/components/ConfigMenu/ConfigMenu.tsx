@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
+
 import PopupModal from '@components/PopupModal';
-import { ProviderModel } from '@config/types/provider.types';
-import { ProviderRegistry } from '@config/providers/registry';
 import { ModelRegistry } from '@config/models/registry';
+import { ProviderRegistry } from '@config/providers/registry';
+import { ProviderModel } from '@config/types/provider.types';
 import DownChevronArrow from '@icon/DownChevronArrow';
 import { ChatConfig, ModelConfig, ProviderKey } from '@type/chat';
 import { providers } from '@type/providers';

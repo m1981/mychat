@@ -5,17 +5,19 @@
  * application configuration.
  */
 
+import { v4 as uuidv4 } from 'uuid';
+
+import { 
+  DEFAULT_SYSTEM_MESSAGE
+} from '../constants';
+import { ModelRegistry, ProviderRegistry } from '../registry';
 import { 
   ChatConfig, 
   ModelConfig, 
   ProviderKey,
   ChatInterface
 } from '../types';
-import { 
-  DEFAULT_SYSTEM_MESSAGE
-} from '../constants';
-import { ModelRegistry, ProviderRegistry } from '../registry';
-import { v4 as uuidv4 } from 'uuid';
+
 
 export class ConfigService {
   /**

@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
+
 import { ChatStreamHandler } from '@src/handlers/ChatStreamHandler';
-import { AIProvider } from '../types';
+
 import { providers } from '../types/providers';
 import { getSafeProviderKey } from '../utils/typeGuards';
 

@@ -132,6 +132,7 @@
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
     "eslint-plugin-unused-imports": "^3.0.0",
     "jsdom": "^26.0.0",
     "markdownlint-cli2": "^0.12.1",

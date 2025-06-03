@@ -5,9 +5,9 @@
  * Import constants from here instead of from individual files.
  */
 
-import { ProviderKey, ModelConfig, ChatConfig } from '../types';
 import { PROVIDER_CAPABILITIES } from '../config/providers/defaults';
 import { ProviderRegistry } from '../registry';
+import { ProviderKey, ModelConfig, ChatConfig } from '../types';
 
 // Provider constants
 export const DEFAULT_PROVIDER: ProviderKey = 'anthropic';
