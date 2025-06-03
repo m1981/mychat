@@ -1,7 +1,7 @@
 import { useRef, useCallback, useMemo } from 'react';
 
-import { DEFAULT_PROVIDER } from '@config/constants';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/config';
+import { DEFAULT_PROVIDER } from '@config/constants';
 import { StorageService, StorageQuotaError } from '@src/services/StorageService';
 import { SubmissionLock } from '@src/services/SubmissionLock';
 import { ChatSubmissionService } from '@src/services/SubmissionService';
@@ -45,13 +45,10 @@ export const globalSubmissionManager = {
 };
 
 const useSubmit = () => {
-  debug.log('useSubmit', '[useSubmit] useSubmit hook called');
-  
+
   // Add component identification if possible
   const componentStack = new Error().stack;
   const callingComponent = componentStack?.split('\n')[2] || 'Unknown component';
-  debug.log('useSubmit', `[useSubmit] useSubmit called from: ${callingComponent}`);
-  
   const store = useStore();
   
   // Store access - including request state
@@ -86,10 +83,15 @@ const useSubmit = () => {
     const stackTrace = new Error().stack;
     const caller = stackTrace?.split('\n')[2] || 'Unknown caller';
     
-    debug.log('useSubmit', `[useSubmit] useMemo for providerSetup called from: ${caller}`);
-    debug.log('useSubmit', `[useSubmit] Retrieved API key for provider ${providerKey}: ${key ? 'Key exists' : 'Key missing'}`);
-    debug.log('useSubmit', `[useSubmit] providerSetup render count: ${renderCountRef.current}`);
-    
+    // debug.log('useSubmit', `[useSubmit] useMemo for providerSetup called from: ${caller}`);
+
+    debug.log('useSubmit', 'Provider setup:', {
+      providerKey,
+      providerExists: !!providers[providerKey],
+      providerMethods: providers[providerKey] ? Object.keys(providers[providerKey]) : [],
+      hasFormatRequest: providers[providerKey] && typeof providers[providerKey].formatRequest === 'function'
+    });
+
     return {
       currentChat,
       providerKey,
@@ -130,6 +132,17 @@ const useSubmit = () => {
 
   const handleSubmit = useCallback(async () => {
     debug.log('useSubmit', '[useSubmit] handleSubmit called');
+    
+    // Debug Zustand store state at the beginning
+    const initialStoreState = useStore.getState();
+    debug.log('useSubmit', '[useSubmit] Initial store state:', {
+      currentChatIndex: initialStoreState.currentChatIndex,
+      chatCount: initialStoreState.chats?.length || 0,
+      isRequesting: initialStoreState.isRequesting,
+      generating: initialStoreState.generating,
+      hasError: !!initialStoreState.error,
+      provider: initialStoreState.chats?.[initialStoreState.currentChatIndex]?.config?.provider || 'unknown'
+    });
     
     // Use global submission manager
     if (globalSubmissionManager.isSubmitting) {
@@ -213,6 +226,21 @@ const useSubmit = () => {
       // Submit request
       debug.log('useSubmit', '[useSubmit] Submitting request');
       submission.dispatch({ type: 'STREAMING' });
+
+      // Log current submission state
+      debug.log('useSubmit', '[useSubmit] Current submission state:', {
+        status: submission.state.status,
+        hasError: !!submission.state.error,
+        aborted: submission.state.aborted
+      });
+
+      // Log current store state before API call
+      const preApiStoreState = messageManager.getStoreState();
+      debug.log('useSubmit', '[useSubmit] Store state before API call:', {
+        currentChatIndex: preApiStoreState.currentChatIndex,
+        messageCount: preApiStoreState.chats?.[preApiStoreState.currentChatIndex]?.messages?.length || 0
+      });
+
       await submissionService.submit(currentMessages, {
         ...modelConfig,
         stream: true
