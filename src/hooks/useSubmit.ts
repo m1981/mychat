@@ -2,13 +2,14 @@ import { useRef, useCallback, useMemo } from 'react';
 
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/config';
 import { DEFAULT_PROVIDER } from '@config/constants';
+import { DEBUG_MODULE } from '@src/config/logging';
 import { StorageService, StorageQuotaError } from '@src/services/StorageService';
 import { SubmissionLock } from '@src/services/SubmissionLock';
 import { ChatSubmissionService } from '@src/services/SubmissionService';
+import { debug } from '@src/utils/debug';
 import useStore from '@store/store';
 import { ModelConfig } from '@type/chat';
 import { providers } from '@type/providers';
-import { debug } from '@utils/debug';
 
 import { useMessageManager } from './useMessageManager';
 import { useStreamHandler } from './useStreamHandler';
@@ -28,18 +29,18 @@ export const globalSubmissionManager = {
   isSubmitting: false,
   
   startSubmission() {
-    debug.log('useSubmit', '[useSubmit] Global submission started');
+    debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Global submission started');
     this.isSubmitting = true;
     return true;
   },
   
   endSubmission() {
-    debug.log('useSubmit', '[useSubmit] Global submission ended');
+    debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Global submission ended');
     this.isSubmitting = false;
   },
   
   abort(reason: string) {
-    debug.log('useSubmit', `[useSubmit] Global submission aborted: ${reason}`);
+    debug.log(DEBUG_MODULE.USESUBMIT, `[useSubmit] Global submission aborted: ${reason}`);
     this.isSubmitting = false;
   }
 };
@@ -83,9 +84,9 @@ const useSubmit = () => {
     const stackTrace = new Error().stack;
     const caller = stackTrace?.split('\n')[2] || 'Unknown caller';
     
-    // debug.log('useSubmit', `[useSubmit] useMemo for providerSetup called from: ${caller}`);
+    // debug.log(DEBUG_MODULE.USESUBMIT, `[useSubmit] useMemo for providerSetup called from: ${caller}`);
 
-    debug.log('useSubmit', 'Provider setup:', {
+    debug.log(DEBUG_MODULE.USESUBMIT, 'Provider setup:', {
       providerKey,
       providerExists: !!providers[providerKey],
       providerMethods: providers[providerKey] ? Object.keys(providers[providerKey]) : [],
@@ -123,7 +124,7 @@ const useSubmit = () => {
   }, []);
 
   const stopGeneration = useCallback(() => {
-    debug.log('useSubmit', '[useSubmit] Stopping generation');
+    debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Stopping generation');
     submission.dispatch({ type: 'ABORT' });
     stopRequest('User stopped generation');
     globalSubmissionManager.abort('User stopped generation');
@@ -131,11 +132,11 @@ const useSubmit = () => {
   }, [stopRequest, setGenerating, submission.dispatch]);
 
   const handleSubmit = useCallback(async () => {
-    debug.log('useSubmit', '[useSubmit] handleSubmit called');
+    debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] handleSubmit called');
     
     // Debug Zustand store state at the beginning
     const initialStoreState = useStore.getState();
-    debug.log('useSubmit', '[useSubmit] Initial store state:', {
+    debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Initial store state:', {
       currentChatIndex: initialStoreState.currentChatIndex,
       chatCount: initialStoreState.chats?.length || 0,
       isRequesting: initialStoreState.isRequesting,
@@ -146,7 +147,7 @@ const useSubmit = () => {
     
     // Use global submission manager
     if (globalSubmissionManager.isSubmitting) {
-      debug.log('useSubmit', '[useSubmit] Global submission already in progress');
+      debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Global submission already in progress');
       return;
     }
     
@@ -162,7 +163,7 @@ const useSubmit = () => {
     
     try {
       if (!submissionLockRef.current.lock()) {
-        debug.log('useSubmit', '[useSubmit] Submission canceled - already in progress');
+        debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Submission canceled - already in progress');
         globalSubmissionManager.endSubmission();
         return;
       }
@@ -171,7 +172,7 @@ const useSubmit = () => {
       submission.dispatch({ type: 'SUBMIT_START' });
       
       // Start request in Zustand - this creates the abort controller
-      debug.log('useSubmit', '[useSubmit] Starting request via Zustand');
+      debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Starting request via Zustand');
       startRequest();
       
       // Check storage quota
@@ -188,7 +189,7 @@ const useSubmit = () => {
         currentState.chats,
         currentState.currentChatIndex
       );
-      debug.log('useSubmit', '[useSubmit] Appending assistant message');
+      debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Appending assistant message');
       messageManager.setChats(updatedChats);
       
       // Prepare submission
@@ -203,7 +204,7 @@ const useSubmit = () => {
       };
       
       // Create submission service
-      debug.log('useSubmit', '[useSubmit] Creating submission service');
+      debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Creating submission service');
       const submissionService = new ChatSubmissionService(
         providerSetup.provider,
         providerSetup.apiKey,
@@ -224,11 +225,11 @@ const useSubmit = () => {
       );
       
       // Submit request
-      debug.log('useSubmit', '[useSubmit] Submitting request');
+      debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Submitting request');
       submission.dispatch({ type: 'STREAMING' });
 
       // Log current submission state
-      debug.log('useSubmit', '[useSubmit] Current submission state:', {
+      debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Current submission state:', {
         status: submission.state.status,
         hasError: !!submission.state.error,
         aborted: submission.state.aborted
@@ -236,7 +237,7 @@ const useSubmit = () => {
 
       // Log current store state before API call
       const preApiStoreState = messageManager.getStoreState();
-      debug.log('useSubmit', '[useSubmit] Store state before API call:', {
+      debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Store state before API call:', {
         currentChatIndex: preApiStoreState.currentChatIndex,
         messageCount: preApiStoreState.chats?.[preApiStoreState.currentChatIndex]?.messages?.length || 0
       });
@@ -247,16 +248,16 @@ const useSubmit = () => {
       } as ModelConfig);
       
       // Stream complete
-      debug.log('useSubmit', '[useSubmit] Stream complete');
+      debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Stream complete');
       submission.dispatch({ type: 'STREAM_COMPLETE' });
       
       // Generate title
-      debug.log('useSubmit', '[useSubmit] Generating title');
+      debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Generating title');
       submission.dispatch({ type: 'GENERATING_TITLE' });
       await handleTitleGeneration();
       
       // Complete successfully
-      debug.log('useSubmit', '[useSubmit] Submission complete');
+      debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Submission complete');
       submission.dispatch({ type: 'COMPLETE' });
       
     } catch (error: unknown) {
@@ -265,18 +266,18 @@ const useSubmit = () => {
       
       // Error handling
       if (error instanceof Error && error.name === 'AbortError') {
-        debug.log('useSubmit', '[useSubmit] Request was aborted:', error.message);
+        debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Request was aborted:', error.message);
       } else {
         debug.error('useSubmit', '[useSubmit] Submit error:', error);
         setError(createErrorMessage(error));
       }
     } finally {
       // Clean up
-      debug.log('useSubmit', '[useSubmit] Cleaning up after submission');
+      debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Cleaning up after submission');
       setGenerating(false);
       
       if (isRequesting) {
-        debug.log('useSubmit', '[useSubmit] Resetting request state in Zustand');
+        debug.log(DEBUG_MODULE.USESUBMIT, '[useSubmit] Resetting request state in Zustand');
         resetRequestState();
       }
       

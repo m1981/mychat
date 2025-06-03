@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
-import { debug } from '@utils/debug';
+import { DEBUG_MODULE } from '@src/config/logging';
+import { debug } from '@src/utils/debug';
 
 interface UseTextareaFocusOptions {
   scrollIntoView?: boolean;
@@ -43,7 +44,7 @@ export function useTextareaFocus(
     if (cursorAtEnd) {
       const length = textareaRef.current.value.length;
       textareaRef.current.setSelectionRange(length, length);
-      debug.log('focus', `[${debugId}] Cursor at end: position ${length}`);
+      debug.log(DEBUG_MODULE.FOCUS, `[${debugId}] Cursor at end: position ${length}`);
     } else if (focusLine !== null && typeof focusLine === 'number') {
       // Handle focusLine option if provided
       const lines = textareaRef.current.value.split('\n');
@@ -55,7 +56,7 @@ export function useTextareaFocus(
       }
       
       textareaRef.current.setSelectionRange(position, position);
-      debug.log('focus', `[${debugId}] Cursor at line ${focusLine}: position ${position}`);
+      debug.log(DEBUG_MODULE.FOCUS, `[${debugId}] Cursor at line ${focusLine}: position ${position}`);
     }
     // Remove the else block that was setting cursor position at the end of first line
     

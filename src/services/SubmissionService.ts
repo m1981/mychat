@@ -1,7 +1,8 @@
+import { DEBUG_MODULE } from '@src/config/logging';
+import { debug } from '@src/utils/debug';
 import useStore from '@store/store';
 import { MessageInterface, ModelConfig } from '@type/chat';
 import { providers } from '@type/providers';
-import { debug } from '@utils/debug';
 
 export interface SubmissionService {
   submit(messages: MessageInterface[], config: ModelConfig): Promise<void>;
@@ -23,7 +24,7 @@ export class ChatSubmissionService implements SubmissionService {
   }
 
   async submit(messages: MessageInterface[], modelConfig: ModelConfig): Promise<void> {
-    debug.log('useSubmit', 'Submitting with API key:', this.apiKey ? 'Key exists' : 'Key missing');
+    debug.log(DEBUG_MODULE.USESUBMIT, 'Submitting with API key:', this.apiKey ? 'Key exists' : 'Key missing');
     
     if (!this.apiKey) {
       throw new Error('API key is missing. Please add your API key in settings.');
@@ -36,9 +37,9 @@ export class ChatSubmissionService implements SubmissionService {
     });
 
     // Debug the formatted request structure
-    debug.log('useSubmit', 'Raw formatted request:', formattedRequest);
-    debug.log('useSubmit', 'Provider ID:', this.provider.id);
-    debug.log('useSubmit', 'Provider formatRequest output keys:', Object.keys(formattedRequest || {}));
+    debug.log(DEBUG_MODULE.USESUBMIT, 'Raw formatted request:', formattedRequest);
+    debug.log(DEBUG_MODULE.USESUBMIT, 'Provider ID:', this.provider.id);
+    debug.log(DEBUG_MODULE.USESUBMIT, 'Provider formatRequest output keys:', Object.keys(formattedRequest || {}));
 
     // Check if messages exists before accessing
     if (!formattedRequest || !formattedRequest.messages) {
@@ -49,7 +50,7 @@ export class ChatSubmissionService implements SubmissionService {
     try {
       // Get the current abort controller from Zustand
       const { abortController } = useStore.getState();
-      debug.log('useSubmit','Using abort controller:', abortController ? 'Present' : 'Missing');
+      debug.log(DEBUG_MODULE.USESUBMIT, 'Using abort controller:', abortController ? 'Present' : 'Missing');
       
       // Create the request payload
       const requestPayload = {
@@ -58,7 +59,7 @@ export class ChatSubmissionService implements SubmissionService {
       };
 
       // Log the full request payload (with redacted API key)
-      debug.log('useSubmit', ' Full request payload:', {
+      debug.log(DEBUG_MODULE.USESUBMIT, 'Full request payload:', {
         ...requestPayload,
         apiKey: '[REDACTED]'
       });
@@ -75,8 +76,8 @@ export class ChatSubmissionService implements SubmissionService {
 
       if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
-        debug.log('useSubmit','❌ Response error status:', response.status);
-        debug.log('useSubmit','❌ Response headers:', Object.fromEntries([...response.headers.entries()]));
+        debug.log(DEBUG_MODULE.USESUBMIT, '❌ Response error status:', response.status);
+        debug.log(DEBUG_MODULE.USESUBMIT, '❌ Response headers:', Object.fromEntries([...response.headers.entries()]));
         
         // Clone the response before reading it
         const clonedResponse = response.clone();
@@ -84,19 +85,19 @@ export class ChatSubmissionService implements SubmissionService {
         try {
           // Try to parse as JSON first
           const errorData = await clonedResponse.json();
-          debug.log('useSubmit','❌ Error response body:', errorData);
+          debug.log(DEBUG_MODULE.USESUBMIT, '❌ Error response body:', errorData);
           if (errorData.error) {
             errorMessage = `API Error: ${errorData.error}`;
           }
         } catch (_) {
           try {
             const errorText = await response.text();
-            debug.log('useSubmit','❌ Error response text:', errorText);
+            debug.log(DEBUG_MODULE.USESUBMIT, '❌ Error response text:', errorText);
             if (errorText) {
               errorMessage = `API Error: ${errorText}`;
             }
           } catch (e) {
-            debug.log('useSubmit','❌ Failed to parse error response:', e);
+            debug.log(DEBUG_MODULE.USESUBMIT, '❌ Failed to parse error response:', e);
             // Use default message
           }
         }
