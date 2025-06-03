@@ -7,7 +7,6 @@ import type { UserConfig } from 'vite';
 import topLevelAwait from 'vite-plugin-top-level-await';
 import wasm from 'vite-plugin-wasm';
 
-
 // Shared aliases for all configurations
 const sharedAliases = {
   '@icon': path.resolve(__dirname, './src/assets/icons'),
@@ -62,7 +61,7 @@ function createDevConfig(): UserConfig {
         path: 'hmr'
       },
       watch: {
-        usePolling: true,
+        usePolling: false, // Better performance, change to true only if needed
         interval: 100
       },
       host: '0.0.0.0',
@@ -78,28 +77,36 @@ function createDevConfig(): UserConfig {
       },
       proxy: {
         '/api': {
-          target: 'http://127.0.0.1:3000', // Use IP instead of localhost
+          target: 'http://127.0.0.1:3000',
           changeOrigin: true,
           secure: false,
-          configure: (proxy, _options) => {
-            proxy.on('error', (err, _req, _res) => {
-              console.log('proxy error', err);
+          ws: true,
+          configure: (proxy) => {
+            // Increase timeouts
+            proxy.options.proxyTimeout = 120000; // 2 minutes
+            proxy.options.timeout = 120000;
+            
+            // Disable connection pooling to prevent socket reuse issues
+            proxy.options.agent = false;
+            
+            // Handle proxy errors
+            proxy.on('error', (err, req, res) => {
+              console.log('Proxy error:', err);
+              if (!res.headersSent) {
+                res.writeHead(500, {
+                  'Content-Type': 'application/json'
+                });
+              }
+              res.end(JSON.stringify({ error: 'Proxy error', details: err.message }));
             });
-            // Add logging for proxy requests
-            proxy.on('proxyReq', (proxyReq, req, _res) => {
-              console.log(`\n[PROXY] ${req.method} ${req.url} -> ${proxyReq.path}`);
-            });
-            proxy.on('proxyRes', (proxyRes, req, _res) => {
-              console.log(`\n[PROXY] ${req.method} ${req.url} <- ${proxyRes.statusCode}`);
-            });
-          },
+          }
         }
       }
     },
     optimizeDeps: {
       exclude: ['@webassembly/*']
     },
-    logLevel: 'warn', // Change to 'warn' or 'error' to reduce Vite's output
+    logLevel: 'warn', // Reduce console noise
     customLogger: {
       info: (msg) => {
         // Filter out some of the verbose HMR messages
