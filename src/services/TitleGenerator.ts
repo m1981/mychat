@@ -11,6 +11,10 @@ type TitleGeneratorResponse = {
   }>;
 };
 
+/**
+ * @deprecated This class is being replaced by the TitleGenerator in useTitleGeneration hook.
+ * It will be removed once the migration to hooks is complete.
+ */
 export class TitleGenerator {
   constructor(
     private readonly generateTitle: (
@@ -81,7 +85,7 @@ export class TitleGenerator {
       return this.cleanupTitle(title);
     } catch (error) {
       console.error('Title generation failed:', error);
-      throw error;
+      return "New Chat"; // Return default title instead of throwing
     }
   }
 }

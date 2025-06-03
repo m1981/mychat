@@ -1,5 +1,5 @@
-import { ProviderKey, AIProvider, MessageInterface, RequestConfig, FormattedRequest } from '../types';
 import { ModelRegistry } from '../registry';
+import { ProviderKey, AIProvider, MessageInterface, RequestConfig, FormattedRequest } from '../types';
 
 // Create a type-safe providers object
 export const providers: Record<ProviderKey, AIProvider> = {
@@ -28,9 +28,37 @@ export const providers: Record<ProviderKey, AIProvider> = {
     name: 'Anthropic',
     endpoints: [],
     models: ModelRegistry.getModelsForProvider('anthropic'),
-    formatRequest: (_messages: MessageInterface[], _config: RequestConfig): FormattedRequest => {
-      // Implementation
-      return {};
+    formatRequest: (messages: MessageInterface[], config: RequestConfig): FormattedRequest => {
+      // Extract system message if the first message appears to be a system instruction
+      let systemMessage = '';
+      let userMessages = [...messages];
+      
+      // Check if first message looks like a system instruction
+      if (messages.length > 0 && messages[0].role === 'user' && 
+          (messages[0].content.includes('You are') ||
+           messages[0].content.includes('As an AI') ||
+           messages[0].content.includes('helpful assistant'))) {
+        systemMessage = messages[0].content;
+        userMessages = messages.slice(1);
+      }
+      
+      // Filter out empty assistant messages (typically the last one)
+      const filteredMessages = userMessages.filter(msg => 
+        !(msg.role === 'assistant' && (msg.content === '' || msg.content === null))
+      );
+      
+      // Format for Anthropic API
+      return {
+        model: config.model || 'claude-3-7-sonnet-20250219',
+        max_tokens: config.max_tokens || 4096,
+        temperature: config.temperature || 0.7,
+        stream: config.stream || false,
+        system: systemMessage,
+        messages: filteredMessages.map(msg => ({
+          role: msg.role === 'assistant' ? 'assistant' : 'user',
+          content: msg.content
+        }))
+      };
     },
     parseResponse: (_response: any): string => {
       // Implementation

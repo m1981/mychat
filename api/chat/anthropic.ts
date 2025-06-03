@@ -1,16 +1,11 @@
-// api/anthropic.ts
-/* eslint-env node */
-import Anthropic from '@anthropic-ai/sdk';
-import type {
-  ContentBlockStopEvent,
-  MessageStopEvent
-} from '@anthropic-ai/sdk';
+import type { ContentBlockStopEvent, MessageStopEvent } from '@anthropic-ai/sdk';
 import type { MessageInterface } from '@type/chat';
 import type { NextApiRequest, NextApiResponse } from 'next';
-// Import MessageInterface from your types
+
+import AnthropicClient from '../../src/api/anthropic-client';
 
 export const config = {
-  maxDuration: 60,
+  maxDuration: 120, // Increase to 2 minutes
   api: {
     responseLimit: false,
     bodyParser: false,
@@ -29,13 +24,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   const data = JSON.parse(Buffer.concat(chunks).toString());
   const { messages, config: chatConfig, apiKey } = data;
-
-  const anthropic = new Anthropic({
-    apiKey: apiKey,
-  });
+  
+  // Generate a unique request ID
+  const requestId = Date.now().toString(36);
 
   try {
-    // Set standard SSE headers
+    // Set standard SSE headers immediately
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -43,6 +37,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Additional headers required by Anthropic
     res.setHeader('X-Accel-Buffering', 'no');
     res.setHeader('Transfer-Encoding', 'chunked');
+
+    // Initialize client with request ID for tracing
+    const anthropicClient = new AnthropicClient(apiKey, requestId);
 
     const streamMode = chatConfig?.stream ?? false;
     if (streamMode) {
@@ -52,21 +49,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         content: msg.content,
       }));
 
-      const stream = await anthropic.messages.create({
+      // Create request parameters
+      const requestParams = {
         messages: formattedMessages,
         model: chatConfig.model,
         max_tokens: chatConfig.max_tokens,
         temperature: chatConfig.temperature,
-        stream: true,
-      });
+      };
+      
+      // Add system message if present
+      if (chatConfig.system) {
+        requestParams.system = chatConfig.system;
+      }
 
+      const stream = await anthropicClient.createStreamingMessage(requestParams);
+
+      // More frequent keep-alive pings (every 3 seconds)
       let lastPing = Date.now();
       const keepAliveInterval = setInterval(() => {
-        if (Date.now() - lastPing >= 5000) {
+        if (Date.now() - lastPing >= 3000) {
           res.write(':keep-alive\n\n');
           lastPing = Date.now();
         }
-      }, 5000);
+      }, 3000);
 
       try {
         for await (const chunk of stream) {
@@ -92,10 +97,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               delta: chunk.delta,
             })}\n\n`);
           } else if (chunk.type === 'signature_delta') {
-            // Fix type comparison issue
             res.write(`data: ${JSON.stringify({
               type: 'signature_delta',
-              signature: (chunk as unknown), // Replace any with unknown
+              signature: (chunk as unknown),
             })}\n\n`);
           } else if (chunk.type === 'content_block_stop') {
             res.write(`data: ${JSON.stringify({
@@ -121,7 +125,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     } else {
       // Non-streaming response
-      const response = await anthropic.messages.create({
+      const response = await anthropicClient.createMessage({
         messages: messages.map((msg: MessageInterface) => ({
           role: msg.role === 'assistant' ? 'assistant' : 'user',
           content: msg.content,
@@ -129,6 +133,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         model: chatConfig.model,
         max_tokens: chatConfig.max_tokens,
         temperature: chatConfig.temperature,
+        system: chatConfig.system
       });
 
       res.status(200).json(response);
