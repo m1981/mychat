@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 
-
 import {
   FrequencyPenaltySlider,
   MaxTokenSlider,
@@ -10,8 +9,8 @@ import {
   TopPSlider,
 } from '@components/ConfigMenu/ConfigMenu';
 import PopupModal from '@components/PopupModal';
-import { DEFAULT_CHAT_CONFIG, DEFAULT_MODEL_CONFIG } from '@config/chat/config';
 import { DEFAULT_SYSTEM_MESSAGE } from '@config/constants';
+import { DEFAULT_CHAT_CONFIG, DEFAULT_MODEL_CONFIG } from '@constants/index';
 import useStore from '@store/store';
 import { ModelConfig, ProviderKey } from '@type/chat';
 import { useTranslation } from 'react-i18next';

@@ -1,7 +1,7 @@
-import { DEFAULT_CHAT_CONFIG } from '@config/chat/config';
-import { DEFAULT_SYSTEM_MESSAGE } from '@config/constants';
 import { ChatInterface } from '@type/chat';
 import { generateUUID } from '@utils/uuid';
+
+import { DEFAULT_CHAT_CONFIG, DEFAULT_SYSTEM_MESSAGE } from './index';
 
 // Chat Factory
 export const generateDefaultChat = (title?: string, folder?: string, systemMessage?: string): ChatInterface => {
@@ -18,13 +18,8 @@ export const generateDefaultChat = (title?: string, folder?: string, systemMessa
   };
 };
 
-
 // Default chats
 export const DEFAULT_CHATS: ChatInterface[] = [
   generateDefaultChat('Project Planning Assistant', 'work-folder', DEFAULT_SYSTEM_MESSAGE),
   generateDefaultChat('Study Notes & Explanations', 'learning-folder', DEFAULT_SYSTEM_MESSAGE),
 ];
-
-// Re-export configuration
-export { DEFAULT_SYSTEM_MESSAGE } from '@config/constants';
-export { DEFAULT_CHAT_CONFIG } from '@config/chat/config';

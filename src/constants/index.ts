@@ -38,3 +38,6 @@ export const DEFAULT_CHAT_CONFIG: ChatConfig = {
   provider: DEFAULT_PROVIDER,
   modelConfig: DEFAULT_MODEL_CONFIG,
 };
+
+// Export chat factory function
+// export { generateDefaultChat } from './chat';

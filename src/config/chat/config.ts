@@ -1,11 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
 
-import { DEFAULT_PROVIDER, DEFAULT_SYSTEM_MESSAGE } from '../constants';
+import { DEFAULT_PROVIDER, DEFAULT_SYSTEM_MESSAGE, DEFAULT_CHAT_CONFIG } from '../../constants';
 import { ModelRegistry } from '../models/registry';
 import { ProviderRegistry } from '../providers/registry';
-import { ChatConfig, ChatInterface } from '../types/chat.types';
+import { ChatInterface } from '../types/chat.types';
 import { ModelConfig } from '../types/model.types';
-
 
 /**
  * Create default model configuration based on provider
@@ -28,16 +27,6 @@ export function createDefaultModelConfig(provider = DEFAULT_PROVIDER): ModelConf
     },
   };
 }
-
-/**
- * Default chat configuration
- */
-export const DEFAULT_MODEL_CONFIG = createDefaultModelConfig();
-
-export const DEFAULT_CHAT_CONFIG: ChatConfig = {
-  provider: DEFAULT_PROVIDER,
-  modelConfig: DEFAULT_MODEL_CONFIG,
-};
 
 /**
  * Generate a default chat with specified title and folder

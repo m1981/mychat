@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
-
 import ConfigMenu from '@components/ConfigMenu';
-import { DEFAULT_CHAT_CONFIG } from '@constants/chat';
+import { DEFAULT_CHAT_CONFIG } from '@constants/index';
 import useStore from '@store/store';
 import { ChatInterface, ChatConfig } from '@type/chat';
 import { providers } from '@type/providers';
