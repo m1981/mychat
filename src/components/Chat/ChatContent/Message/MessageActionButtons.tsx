@@ -45,6 +45,7 @@ const EditButton: React.FC<ToggleButtonProps> = ({ setIsActive }) => (
     icon={<EditIcon2 />} 
     onClick={() => setIsActive(true)}
     title="Edit message"
+    data-testid="edit-message-button"
   />
 );
 

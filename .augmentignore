@@ -13,3 +13,7 @@ public
 .env
 .venv
 venv
+playwright-report
+# Project related
+src/assets
+public

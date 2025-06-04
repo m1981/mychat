@@ -7,11 +7,25 @@ export const LOG_MODULES = [
   'perf', 
   'useSubmit', 
   'scrollToEdit',
-  'focus'
+  'focus',
+  'streaming'  // Add streaming as a log module
 ] as const;
 
 export type LogModule = typeof LOG_MODULES[number];
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug' | 'trace';
+
+// Add a constant object for module names to prevent typos
+export const DEBUG_MODULE: Record<Uppercase<LogModule>, LogModule> = {
+  STORE: 'store',
+  API: 'api',
+  CHAT: 'chat',
+  UI: 'ui',
+  PERF: 'perf',
+  USESUBMIT: 'useSubmit',
+  SCROLLTOEDIT: 'scrollToEdit',
+  FOCUS: 'focus',
+  STREAMING: 'streaming'
+} as const;
 
 export interface LogConfig {
   enabled: boolean;

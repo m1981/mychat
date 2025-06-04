@@ -3,7 +3,8 @@ import React from 'react';
 import Chat from '@components/Chat';
 import Debug from '@components/Debug';
 import Menu from '@components/Menu';
-import { useInitialiseNewChat } from '@hooks/useInitialiseNewChat';
+import Debug from '@components/Debug';
+import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
 import * as Sentry from '@sentry/react';
 import useStore from '@store/store';
 import { ChatInterface } from '@type/chat';
@@ -194,6 +195,7 @@ function App() {
           <Menu />
           <Chat />
           <Toaster />
+        {process.env.NODE_ENV === 'development' && <Debug />}
           {showTestButton && (
             <>
               <Debug />

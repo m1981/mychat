@@ -8,7 +8,8 @@
   "author": "Jing Hua <betterchatgpt@mail.tjh.sg>",
   "description": "Play and chat smarter with BetterChatGPT - an amazing open-source web app with a better UI for exploring OpenAI's ChatGPT API!",
   "scripts": {
-    "dev:host": "vite --host",
+    "proxy": "node scripts/server.js",
+    "dev:host": "vite --host --force",
     "build": "NODE_ENV=production TS_NODE_BASEURL=./ pnpm build:vite",
     "build:vite": "NODE_OPTIONS='--max_old_space_size=2192' vite build",
     "sentry:upload": "node scripts/upload-to-sentry.js",
@@ -34,7 +35,12 @@
     "format": "pnpm lint:format:fix",
     "validate": "pnpm type:check:all && pnpm lint:all",
     "precommit": "pnpm lint-staged",
-    "vercel-build": "pnpm build"
+    "vercel-build": "pnpm build",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:analyze": "node scripts/analyze-test-failures.js"
   },
   "build": {
     "appId": "better-chatgpt",
@@ -66,6 +72,7 @@
     "@sentry/react": "^9.15.0",
     "@sentry/vite-plugin": "^3.4.0",
     "@types/react-beautiful-dnd": "^13.1.8",
+    "express": "^5.1.0",
     "highlight.js": "^11.11.1",
     "html2canvas": "^1.4.1",
     "i18next": "^22.4.11",
@@ -96,6 +103,7 @@
     "zustand": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "@tailwindcss/typography": "^0.5.9",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^14.2.1",
@@ -124,6 +132,7 @@
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
     "eslint-plugin-unused-imports": "^3.0.0",
     "jsdom": "^26.0.0",
     "markdownlint-cli2": "^0.12.1",

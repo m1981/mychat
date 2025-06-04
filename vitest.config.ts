@@ -13,8 +13,9 @@
  * - Must handle all test-specific environment needs
  * - Must maintain isolation between tests
  */
+import path from 'path';
+
 import { defineConfig } from 'vitest/config';
-import { resolve } from 'path';
 
 export default defineConfig({
   test: {
@@ -29,6 +30,7 @@ export default defineConfig({
         'node_modules/',
         'dist/',
         '**/*.d.ts',
+        '**/*.test.ts',
         '**/*.config.ts',
         'coverage/**',
         '**/*.stories.*',
@@ -168,20 +170,17 @@ export default defineConfig({
   cacheDir: '.vite/vitest',
   resolve: {
     alias: {
-      '@src': resolve(__dirname, './src'),
-      '@icon': resolve(__dirname, './src/assets/icons'),
-      '@type': resolve(__dirname, './src/types'),
-      '@contexts': resolve(__dirname, './src/contexts'),
-      '@capabilities': resolve(__dirname, './src/capabilities'),
-      '@services': resolve(__dirname, './src/services'),
-      '@hooks': resolve(__dirname, './src/hooks'),
-      '@store': resolve(__dirname, './src/store'),
-      '@config': resolve(__dirname, './src/config'),
-      '@constants': resolve(__dirname, './src/constants'),
-      '@utils': resolve(__dirname, './src/utils'),
-      '@models': resolve(__dirname, './src/config/models'),
-      '@api': resolve(__dirname, './src/api'),
-      '@components': resolve(__dirname, './src/components'),
+      '@src': path.resolve(__dirname, './src'),
+      '@icon': path.resolve(__dirname, './src/assets/icons'),
+      '@type': path.resolve(__dirname, './src/types'),
+      '@hooks': path.resolve(__dirname, './src/hooks'),
+      '@store': path.resolve(__dirname, './src/store'),
+      '@config': path.resolve(__dirname, './src/config'),
+      '@constants': path.resolve(__dirname, './src/constants'),
+      '@utils': path.resolve(__dirname, './src/utils'),
+      '@models': path.resolve(__dirname, './src/config/models'),
+      '@api': path.resolve(__dirname, './src/api'),
+      '@components': path.resolve(__dirname, './src/components'),
     },
   },
 });

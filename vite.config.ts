@@ -39,13 +39,8 @@ function createBaseConfig(): UserConfig {
     },
     optimizeDeps: {
       exclude: ['@webassembly/*'],
-      force: false, // Change to false to avoid forcing re-optimization on every start
-      entries: [
-        'src/main.tsx' // Explicitly define entry point
-      ],
-      cacheDir: '/app/node_modules/.vite/deps' // Explicitly set deps cache location
+      force: true
     },
-    cacheDir: '/app/node_modules/.vite', // Explicitly set cache directory
     define: {
       'process.cwd': 'function() { return "/" }',
       'process.env': JSON.stringify({
@@ -61,7 +56,6 @@ function createDevConfig(): UserConfig {
   return {
     server: {
       hmr: {
-        timeout: 1000,
         protocol: 'ws',
         host: 'localhost',
         port: 5173,
@@ -84,16 +78,53 @@ function createDevConfig(): UserConfig {
       fs: {
         strict: false,
         allow: ['/app']
+      },
+      proxy: {
+        '/api': {
+          target: 'http://127.0.0.1:3000',
+          changeOrigin: true,
+          secure: false,
+          ws: true,
+          configure: (proxy) => {
+            // Increase timeouts
+            proxy.options.proxyTimeout = 120000; // 2 minutes
+            proxy.options.timeout = 120000;
+            
+            // Disable connection pooling to prevent socket reuse issues
+            proxy.options.agent = false;
+            
+            // Handle proxy errors
+            proxy.on('error', (err, req, res) => {
+              console.log('Proxy error:', err);
+              if (!res.headersSent) {
+                res.writeHead(500, {
+                  'Content-Type': 'application/json'
+                });
+              }
+              res.end(JSON.stringify({ error: 'Proxy error', details: err.message }));
+            });
+          }
+        }
       }
     },
     optimizeDeps: {
-      exclude: ['@webassembly/*'],
-      disabled: false,
-      esbuildOptions: {
-        target: 'esnext'
-      }
+      exclude: ['@webassembly/*']
     },
-    logLevel: 'info'
+    logLevel: 'warn', // Reduce console noise
+    customLogger: {
+      info: (msg) => {
+        // Filter out some of the verbose HMR messages
+        if (!msg.includes('hmr update') && !msg.includes('page reload')) {
+          console.log(msg);
+        }
+      },
+      warn: console.warn,
+      warnOnce: console.warn,
+      error: console.error,
+      clearScreen: () => {},
+      hasErrorLogged: () => false,
+      hasWarned: false
+    }
   };
 }
 

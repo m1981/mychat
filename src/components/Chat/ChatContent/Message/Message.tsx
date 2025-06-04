@@ -152,6 +152,10 @@ const Message = React.memo(
         className={`w-full border-b border-black/10 dark:border-gray-900/50 text-gray-800 dark:text-gray-100 group ${
           backgroundStyle[messageIndex % 2]
         }`}
+        role={role} // Ensure role is set here
+        data-role={role} // Add a data attribute as a backup
+        data-testid={`message-${role}`} // Add a test ID for easier selection
+        data-message-index={messageIndex}
       >
         <div
           className={`text-base gap-4 md:gap-6 m-auto p-4 md:py-6 flex transition-all ease-in-out 
