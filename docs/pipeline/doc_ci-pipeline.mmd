@@ -1,0 +1,70 @@
+graph TD
+    subgraph CI_CD_Pipeline
+        Trigger{Trigger Type} --> |PR/Push| CI[CI Workflow]
+        Trigger --> |Manual| AcceptRef[Accept References]
+
+        subgraph "Parallel Jobs"
+            CI --> Lint[Lint Code]
+            CI --> TypeCheck[Type Check]
+            CI --> UnitTest[Unit Tests]
+            CI --> BuildTest[Build Test]
+            CI --> VisualTest[Visual Regression Tests]
+        end
+        
+        Lint --> |Success| QualityGate[Quality Gate]
+        TypeCheck --> |Success| QualityGate
+        UnitTest --> |Success| QualityGate
+        BuildTest --> |Success| QualityGate
+        VisualTest --> |Success| QualityGate
+        
+        QualityGate --> |All Passed| DeployPreview[Deploy Preview]
+        DeployPreview --> |Success| E2ETest[E2E Tests on Preview]
+        
+        E2ETest --> |Success| MergePR[Ready to Merge]
+        MergePR --> |Merged to Main| ProdBuild[Production Build]
+        ProdBuild --> |Success| DeployProd[Deploy to Production]
+    end
+    
+    subgraph "Visual Testing Flow"
+        VisualTest --> |1. Setup| DockerEnv[Docker Environment]
+        DockerEnv --> |2. Start App| DevServer[Dev Server]
+        DevServer --> |3. Run| BackstopTests[BackstopJS Tests]
+        BackstopTests --> |4. Generate| TestReport[Test Report]
+        TestReport --> GHPages[GitHub Pages]
+        GHPages --> PRComment[PR Comment with Links]
+
+        AcceptRef --> References[Reference Images]
+        References --> MainBranch[Main Branch]
+    end
+    
+    subgraph "Vercel Build Process"
+        BuildTest --> |Uses| VercelConfig[vercel.json Config]
+        BuildTest --> |Runs| PNPMInstall[PNPM Install]
+        PNPMInstall --> |Runs| VercelBuild[Vercel Build Command]
+        VercelBuild --> |Generates| BuildArtifacts[Build Artifacts]
+        
+        DeployPreview --> |Uses| VercelPreview[Vercel Preview Deployment]
+        DeployProd --> |Uses| VercelProd[Vercel Production Deployment]
+    end
+    
+    subgraph "GitHub Actions Configuration"
+        GHActions[GitHub Actions] --> |Defines| BuildJob[Build Job]
+        GHActions --> |Defines| TestJob[Test Job]
+        GHActions --> |Defines| VisualJob[Visual Test Job]
+        GHActions --> AcceptJob[Accept References Job]
+
+        BuildJob --> |Uses| DockerImage[Docker Image]
+        TestJob --> |Uses| DockerImage
+        VisualJob --> |Uses| DockerImage
+        
+        DockerImage --> |Contains| NodePNPM[Node + PNPM]
+        DockerImage --> |Contains| Chromium[Chromium for BackstopJS]
+    end
+
+    classDef trigger fill:#f9f,stroke:#333,stroke-width:2px
+    classDef manual fill:#fcf,stroke:#333,stroke-width:2px
+    classDef report fill:#cff,stroke:#333,stroke-width:2px
+
+    class Trigger trigger
+    class AcceptRef manual
+    class GHPages,PRComment report

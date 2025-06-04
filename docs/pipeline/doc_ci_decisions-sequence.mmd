@@ -1,0 +1,57 @@
+graph TD
+    Start[Workflow Trigger] --> TriggerType{Trigger Type?}
+
+%% Workflow Dispatch Branch
+    TriggerType -->|workflow_dispatch| Action{Action Type?}
+    Action -->|accept-references| AcceptRef[Accept References Job]
+    Action -->|test| MainFlow
+
+%% PR and Push Branch
+    TriggerType -->|PR/Push| MainFlow[Main Flow]
+
+%% Main Parallel Jobs
+    MainFlow --> Lint[Lint & Typecheck]
+    MainFlow --> Unit[Unit Tests]
+    MainFlow --> Build[Build Test]
+    MainFlow --> Visual[Visual Tests]
+
+%% Visual Testing Flow
+    Visual --> StartApp[Start App]
+    StartApp --> RunTests[Run BackstopJS Tests]
+    RunTests --> Results{Test Results}
+    Results -->|Pass| Report[Generate Report]
+    Results -->|Fail| Report
+    Report --> DeployPages[Deploy to GitHub Pages]
+    DeployPages --> PRComment[Create PR Comment]
+
+%% Unit Test Artifacts
+    Unit --> Coverage[Upload Coverage]
+
+%% Build Artifacts
+    Build --> BuildArtifacts[Upload Build]
+
+%% Deployment Flows
+    Lint & Unit & Build & Visual --> DeployType{Deploy Type?}
+
+%% PR Flow
+    DeployType -->|PR| Preview[Deploy Preview]
+    Preview --> E2E[E2E Tests]
+
+%% Main Branch Flow
+    DeployType -->|Main Branch| Prod[Deploy Production]
+
+%% Accept References Flow
+    AcceptRef --> UpdateRef[Update Reference Images]
+    UpdateRef --> Commit[Commit Changes]
+    Commit --> Push[Push to Main]
+
+%% Styling
+    classDef trigger fill:#f9f,stroke:#333,stroke-width:2px
+    classDef condition fill:#fcf,stroke:#333,stroke-width:2px
+    classDef job fill:#cfc,stroke:#333,stroke-width:2px
+    classDef artifact fill:#cff,stroke:#333,stroke-width:2px
+
+    class Start trigger
+    class TriggerType,Action,Results,DeployType condition
+    class Lint,Unit,Build,Visual,Preview,E2E,Prod,AcceptRef job
+    class Coverage,BuildArtifacts,Report artifact
