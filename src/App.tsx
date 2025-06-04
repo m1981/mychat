@@ -3,7 +3,6 @@ import React from 'react';
 import Chat from '@components/Chat';
 import Debug from '@components/Debug';
 import Menu from '@components/Menu';
-import Debug from '@components/Debug';
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
 import * as Sentry from '@sentry/react';
 import useStore from '@store/store';

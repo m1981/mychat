@@ -3,7 +3,7 @@ import useStore from '@store/store';
 import { DEFAULT_CHAT_CONFIG } from '@config/chat/ChatConfig';
 import { v4 as uuidv4 } from 'uuid';
 
-export const useInitialiseNewChat = () => {
+const useInitialiseNewChat = () => {
   // Get the addChat function directly from the store
   const addChat = useStore(state => state.addChat);
 
@@ -27,3 +27,5 @@ export const useInitialiseNewChat = () => {
 
   return initialiseNewChat;
 };
+
+export default useInitialiseNewChat;

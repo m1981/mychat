@@ -1,9 +1,9 @@
 import { ModelConfig } from '@type/provider';
-import { DEFAULT_MODEL_CONFIG } from './ChatConfig';
+import { createDefaultModelConfig } from '../defaults/ModelDefaults';
 import { ModelRegistry } from '@config/models/model.registry';
 
-// Re-export DEFAULT_MODEL_CONFIG for backward compatibility
-export { DEFAULT_MODEL_CONFIG };
+// Create and export DEFAULT_MODEL_CONFIG
+export const DEFAULT_MODEL_CONFIG = createDefaultModelConfig();
 
 /**
  * Get model configuration with optional overrides
