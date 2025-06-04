@@ -1,10 +1,4 @@
-import { 
-  DEFAULT_CHAT_CONFIG, 
-  DEFAULT_SYSTEM_MESSAGE,
-  DEFAULT_PROVIDER,
-  DEFAULT_MODEL_CONFIG,
-  createDefaultChatConfig
-} from '@config/defaults/ChatDefaults';
+import { DEFAULT_CHAT_CONFIG, DEFAULT_SYSTEM_MESSAGE } from '@config/chat/ChatConfig';
 import { ChatInterface } from '@type/chat';
 import { generateUUID } from '@utils/uuid';
 
@@ -16,7 +10,7 @@ export const generateDefaultChat = (title?: string, folder?: string, systemMessa
     messages: systemMessage 
       ? [{ role: 'system', content: systemMessage }] 
       : [],
-    config: createDefaultChatConfig(), // Use factory function for fresh instance
+    config: DEFAULT_CHAT_CONFIG,
     titleSet: false,
     folder,
     timestamp: Date.now()
@@ -33,8 +27,5 @@ export const DEFAULT_CHATS: ChatInterface[] = [
 // Re-export configuration
 export { 
   DEFAULT_CHAT_CONFIG,
-  DEFAULT_SYSTEM_MESSAGE,
-  DEFAULT_PROVIDER,
-  DEFAULT_MODEL_CONFIG,
-  createDefaultChatConfig
-};
+  DEFAULT_SYSTEM_MESSAGE 
+} from '@config/chat/ChatConfig';

@@ -1,28 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { useDefaultConfig, useCapabilitySupport } from '@hooks/useConfiguration';
-import ModelSelector from '@components/ConfigMenu/ModelSelector';
-import TemperatureSlider from '@components/ConfigMenu/TemperatureSlider';
-import MaxTokenSlider from '@components/ConfigMenu/MaxTokenSlider';
-import { ThinkingModeToggle } from '@components/ConfigMenu/ThinkingModeToggle';
+import React, { useState } from 'react';
+
+
+import {
+  FrequencyPenaltySlider,
+  MaxTokenSlider,
+  ModelSelector,
+  PresencePenaltySlider,
+  TemperatureSlider,
+  TopPSlider,
+} from '@components/ConfigMenu/ConfigMenu';
 import PopupModal from '@components/PopupModal';
+import { DEFAULT_CHAT_CONFIG, DEFAULT_SYSTEM_MESSAGE } from '@config/chat/ChatConfig';
+import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
+import useStore from '@store/store';
+import { ModelConfig, ProviderKey } from '@type/chat';
 import { useTranslation } from 'react-i18next';
-import { debug } from '@utils/debug';
+
 
 const ChatConfigMenu = () => {
   const { t } = useTranslation('model');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  debug.log('ui', 'Rendering ChatConfigMenu');
-  
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   return (
     <div>
-      <button 
-        className='btn btn-neutral' 
-        onClick={() => {
-          debug.log('ui', 'Opening ChatConfigMenu modal');
-          setIsModalOpen(true);
-        }}
-      >
+      <button className='btn btn-neutral' onClick={() => setIsModalOpen(true)}>
         {t('defaultChatConfig')}
       </button>
       {isModalOpen && <ChatConfigPopup setIsModalOpen={setIsModalOpen} />}
@@ -32,149 +32,128 @@ const ChatConfigMenu = () => {
 
 const ChatConfigPopup = ({
   setIsModalOpen,
+}: {
+  setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
+  const config = useStore.getState().defaultChatConfig;
+  const setDefaultChatConfig = useStore((state) => state.setDefaultChatConfig);
+  const setDefaultSystemMessage = useStore((state) => state.setDefaultSystemMessage);
+
+  const [_systemMessage, _setSystemMessage] = useState<string>(
+    useStore.getState().defaultSystemMessage
+  );
+  const [_provider, _setProvider] = useState<ProviderKey>(config.provider);
+  const [_modelConfig, _setModelConfig] = useState<ModelConfig>(config.modelConfig);
+
   const { t } = useTranslation('model');
-  
-  debug.log('ui', 'Rendering ChatConfigPopup');
-  
-  // Always call hooks at the top level
-  const {
-    config,
-    systemMessage,
-    isLoading,
-    updateConfig,
-    updateModelConfig,
-    updateCapability,
-    updateSystemMessage
-  } = useDefaultConfig();
-  
-  debug.log('ui', 'ChatConfigPopup: useDefaultConfig returned', { 
-    hasConfig: !!config,
-    systemMessage,
-    isLoading
-  });
-  
-  if (config) {
-    debug.log('ui', 'ChatConfigPopup: config details', {
-      provider: config.provider,
-      model: config.modelConfig.model,
-      capabilities: Object.keys(config.modelConfig.capabilities || {})
+
+  const handleSave = () => {
+    setDefaultChatConfig({
+      provider: _provider,
+      modelConfig: _modelConfig,
     });
-  }
-  
-  // Local state for system message
-  const [localSystemMessage, setLocalSystemMessage] = useState('');
-  
-  // Initialize local state when config is loaded
-  useEffect(() => {
-    if (systemMessage) {
-      setLocalSystemMessage(systemMessage);
-    }
-  }, [systemMessage]);
-  
-  // Check capability support - always call these hooks, even if config is null
-  // We'll handle the null case inside the hook
-  const isThinkingSupported = useCapabilitySupport(
-    'thinking_mode', 
-    config?.provider, 
-    config?.modelConfig?.model
-  );
-  
-  const isFileUploadSupported = useCapabilitySupport(
-    'file_upload', 
-    config?.provider, 
-    config?.modelConfig?.model
-  );
-  
-  useEffect(() => {
-    if (config) {
-      // Ensure capabilities is an object, not an array
-      if (Array.isArray(config.modelConfig.capabilities)) {
-        debug.log('ui', 'WARN: Config capabilities is an array, converting to object');
-        updateModelConfig({
-          capabilities: {}
-        });
-      } else if (!config.modelConfig.capabilities) {
-        debug.log('ui', 'WARN: Config capabilities is null/undefined, initializing empty object');
-        updateModelConfig({
-          capabilities: {}
-        });
-      }
-    }
-  }, [config, updateModelConfig]);
-  
-  const handleConfirm = () => {
-    if (updateSystemMessage) {
-      updateSystemMessage(localSystemMessage);
-    }
+    setDefaultSystemMessage(_systemMessage);
     setIsModalOpen(false);
   };
-  
-  // Render loading state or content
-  if (isLoading || !config) {
-    return (
-      <PopupModal
-        title={t('defaultChatConfig')}
-        setIsModalOpen={setIsModalOpen}
-      >
-        <div className="p-6 text-center">Loading...</div>
-      </PopupModal>
-    );
-  }
-  
-  // Render the full content when config is available
+
+  const handleReset = () => {
+    _setProvider(DEFAULT_CHAT_CONFIG.provider);
+    _setModelConfig(DEFAULT_MODEL_CONFIG);
+    _setSystemMessage(DEFAULT_SYSTEM_MESSAGE);
+  };
+
   return (
     <PopupModal
-      title={t('defaultChatConfig')}
+      title={t('defaultChatConfig') as string}
       setIsModalOpen={setIsModalOpen}
-      handleConfirm={handleConfirm}
+      handleConfirm={handleSave}
     >
-      <div className='p-6 border-b border-gray-200 dark:border-gray-600'>
-        <div className='mb-4'>
-          <label className='block text-sm font-medium text-gray-900 dark:text-white mb-2'>
-            {t('systemMessage')}
-          </label>
-          <textarea
-            className='w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white'
-            value={localSystemMessage}
-            onChange={(e) => setLocalSystemMessage(e.target.value)}
-            rows={4}
-          />
-        </div>
-        
+      <div className='p-6 border-b border-gray-200 dark:border-gray-600 w-[90vw] max-w-full text-sm text-gray-900 dark:text-gray-300'>
+        <DefaultSystemChat
+          _systemMessage={_systemMessage}
+          _setSystemMessage={_setSystemMessage}
+        />
         <ModelSelector
-          provider={config.provider}
-          setProvider={(provider) => updateConfig({ provider })}
-          modelConfig={config.modelConfig}
-          updateModelConfig={updateModelConfig}
+          provider={_provider}
+          setProvider={_setProvider}
+          modelConfig={_modelConfig}
+          setModelConfig={_setModelConfig}
         />
-        
         <MaxTokenSlider
-          provider={config.provider}
-          modelConfig={config.modelConfig}
-          updateModelConfig={updateModelConfig}
+          provider={_provider}
+          modelConfig={_modelConfig}
+          setModelConfig={_setModelConfig}
         />
-        
         <TemperatureSlider
-          modelConfig={config.modelConfig}
-          updateModelConfig={updateModelConfig}
+          modelConfig={_modelConfig}
+          setModelConfig={_setModelConfig}
         />
-        
-        {/* Capability-specific components */}
-        {isThinkingSupported && (
-          <ThinkingModeToggle
-            modelConfig={config.modelConfig}
-            setModelConfig={updateModelConfig}
-            context={{ 
-              provider: config.provider, 
-              model: config.modelConfig.model,
-              modelConfig: config.modelConfig
-            }}
-          />
-        )}
-        
+        <TopPSlider
+          modelConfig={_modelConfig}
+          setModelConfig={_setModelConfig}
+        />
+        <PresencePenaltySlider
+          modelConfig={_modelConfig}
+          setModelConfig={_setModelConfig}
+        />
+        <FrequencyPenaltySlider
+          modelConfig={_modelConfig}
+          setModelConfig={_setModelConfig}
+        />
+        <div
+          className='btn btn-neutral cursor-pointer mt-5'
+          onClick={handleReset}
+        >
+          {t('resetToDefault')}
+        </div>
       </div>
     </PopupModal>
+  );
+};
+
+const DefaultSystemChat = ({
+  _systemMessage,
+  _setSystemMessage,
+}: {
+  _systemMessage: string;
+  _setSystemMessage: React.Dispatch<React.SetStateAction<string>>;
+}) => {
+  const { t } = useTranslation('model');
+
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    e.target.style.height = 'auto';
+    e.target.style.height = `${e.target.scrollHeight}px`;
+    e.target.style.maxHeight = `${e.target.scrollHeight}px`;
+  };
+
+  const handleOnFocus = (e: React.FocusEvent<HTMLTextAreaElement, Element>) => {
+    e.target.style.height = 'auto';
+    e.target.style.height = `${e.target.scrollHeight}px`;
+    e.target.style.maxHeight = `${e.target.scrollHeight}px`;
+  };
+
+  const handleOnBlur = (e: React.FocusEvent<HTMLTextAreaElement, Element>) => {
+    e.target.style.height = 'auto';
+    e.target.style.maxHeight = '2.5rem';
+  };
+
+  return (
+    <div>
+      <div className='block text-sm font-medium text-gray-900 dark:text-white'>
+        {t('defaultSystemMessage')}
+      </div>
+      <textarea
+        className='my-2 mx-0 px-2 resize-none rounded-lg bg-transparent overflow-y-hidden leading-7 p-1 border border-gray-400/50 focus:ring-1 focus:ring-blue w-full max-h-10 transition-all'
+        onFocus={handleOnFocus}
+        onBlur={handleOnBlur}
+        onChange={(e) => {
+          _setSystemMessage(e.target.value);
+        }}
+        onInput={handleInput}
+        value={_systemMessage}
+        rows={1}
+      ></textarea>
+    </div>
   );
 };
 

@@ -30,7 +30,7 @@ const TokenCount = React.memo(() => {
 
   const cost = useMemo(() => {
     const providerConfig = ProviderRegistry.getProvider(provider);
-    const modelConfig = providerConfig.models.find((m: ProviderModel) => m.id === model);
+    const modelConfig = providerConfig.models.find(m => m.id === model);
     
     if (!modelConfig?.cost) {
       return '0.00';

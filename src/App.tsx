@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import Chat from '@components/Chat';
 import Debug from '@components/Debug';
@@ -11,7 +11,6 @@ import { Theme } from '@type/theme';
 import { getEnvVar } from '@utils/env';
 import { Toaster } from 'react-hot-toast';
 import { ProviderProvider } from '@contexts/ProviderContext';
-import { withErrorHandling, useSafeEffect } from '@utils/errorHandling';
 
 import i18n from './i18n';
 
@@ -103,7 +102,7 @@ function App() {
   const currentChatIndex = useStore(state => state.currentChatIndex);
 
   // Use the safe effect utility
-  useSafeEffect(() => {
+  useEffect(() => {
     Sentry.startSpan({ name: "app-initialization" }, (span) => {
       document.documentElement.lang = i18n.language;
       i18n.on('languageChanged', (lng) => {
@@ -113,8 +112,7 @@ function App() {
     });
   }, [], { component: 'App', operation: 'i18n-setup' });
 
-  // Use the safe effect utility for localStorage operations
-  useSafeEffect(() => {
+  useEffect(() => {
     const oldChats = localStorage.getItem('chats');
     const apiKey = localStorage.getItem('apiKey');
     const theme = localStorage.getItem('theme');
@@ -133,8 +131,7 @@ function App() {
       try {
         const chats: ChatInterface[] = JSON.parse(oldChats);
         if (chats.length > 0) {
-          // Use the store's actions to update state
-          chats.forEach(chat => addChat(chat));
+          setChats(chats);
           setCurrentChatIndex(0);
         } else {
           initialiseNewChat();
@@ -145,7 +142,8 @@ function App() {
       }
       localStorage.removeItem('chats');
     } else {
-      // Check if we need to initialize a new chat
+      const chats = useStore.getState().chats;
+      const currentChatIndex = useStore.getState().currentChatIndex;
       if (!chats || chats.length === 0) {
         initialiseNewChat();
       }
