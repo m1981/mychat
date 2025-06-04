@@ -173,6 +173,7 @@ export default defineConfig({
       '@src': path.resolve(__dirname, './src'),
       '@icon': path.resolve(__dirname, './src/assets/icons'),
       '@type': path.resolve(__dirname, './src/types'),
+      '@contexts': path.resolve(__dirname, './src/contexts'),
       '@hooks': path.resolve(__dirname, './src/hooks'),
       '@store': path.resolve(__dirname, './src/store'),
       '@config': path.resolve(__dirname, './src/config'),

@@ -1,6 +1,6 @@
 
 import { useRef, useCallback, useMemo } from 'react';
-import { DEFAULT_PROVIDER } from '@config/defaults/ChatDefaults';
+import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 import { StorageService, StorageQuotaError } from '@src/services/StorageService';
 import { SubmissionLock } from '@src/services/SubmissionLock';

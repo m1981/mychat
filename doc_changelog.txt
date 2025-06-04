@@ -1,0 +1,5 @@
+5th May 2025
+Streaming works on proxy :)
+Title generation not works
+OpenAI complain about budget_tokens
+Playwright 1 test is passing

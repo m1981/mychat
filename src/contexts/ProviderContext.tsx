@@ -3,7 +3,7 @@
    import { ProviderKey } from '@type/chat';
    import { ProviderRegistry } from '@config/providers/provider.registry';
    import useStore from '@store/store';
-   import { DEFAULT_PROVIDER } from '@config/defaults/ChatDefaults';
+   import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 
    // Create context with null as default value
    export const ProviderContext = createContext<AIProviderInterface | null>(null);

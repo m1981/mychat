@@ -14,7 +14,6 @@ const sharedAliases = {
   '@config': path.resolve(__dirname, './src/config'),
   '@type': path.resolve(__dirname, './src/types'),
   '@contexts': path.resolve(__dirname, './src/contexts'),
-  '@capabilities': path.resolve(__dirname, './src/capabilities'),
   '@store': path.resolve(__dirname, './src/store'),
   '@hooks': path.resolve(__dirname, './src/hooks'),
   '@constants': path.resolve(__dirname, './src/constants'),

@@ -1,13 +1,36 @@
-import { StateCreator } from 'zustand';
-import { ConfigSlice, StoreState } from './types';
-import { ProviderRegistry } from '@config/providers/provider.registry';
+import { DEFAULT_SYSTEM_MESSAGE } from '@config/chat/ChatConfig';
+import { DEFAULT_MODEL_CONFIG } from '@config/chat/ModelConfig';
 import { ChatConfig, ProviderKey } from '@type/chat';
 import { Theme } from '@type/theme';
-import { debug } from '@utils/debug';
+
+import { StoreSlice } from './store';
 
 export type LayoutWidth = 'normal' | 'wide';
 
-export const createConfigSlice: StateCreator<StoreState, [], [], ConfigSlice> = (set, get) => ({
+export interface ConfigSlice {
+  openConfig: boolean;
+  theme: Theme;
+  autoTitle: boolean;
+  hideMenuOptions: boolean;
+  defaultChatConfig: ChatConfig;
+  defaultSystemMessage: string;
+  hideSideMenu: boolean;
+  enterToSubmit: boolean;
+  layoutWidth: LayoutWidth;
+  setOpenConfig: (openConfig: boolean) => void;
+  setTheme: (theme: Theme) => void;
+  setAutoTitle: (autoTitle: boolean) => void;
+  setProvider: (provider: ProviderKey) => void;
+  setDefaultChatConfig: (config: ChatConfig) => void;
+  setDefaultSystemMessage: (defaultSystemMessage: string) => void;
+  setHideMenuOptions: (hideMenuOptions: boolean) => void;
+  setHideSideMenu: (hideSideMenu: boolean) => void;
+  setEnterToSubmit: (enterToSubmit: boolean) => void;
+  setLayoutWidth: (width: LayoutWidth) => void;
+
+}
+
+export const createConfigSlice: StoreSlice<ConfigSlice> = (set) => ({
   openConfig: false,
   theme: 'dark',
   hideMenuOptions: false,
@@ -17,118 +40,70 @@ export const createConfigSlice: StateCreator<StoreState, [], [], ConfigSlice> = 
   layoutWidth: 'normal',
   defaultChatConfig: {
     provider: 'anthropic',
-    modelConfig: {
-      model: 'claude-3-7-sonnet-20250219',
-      max_tokens: 4096,
-      temperature: 0.7,
-      capabilities: {}
-    },
-    systemPrompt: 'Be my helpful and honest advisor.'
+    modelConfig: DEFAULT_MODEL_CONFIG,
   },
-  defaultSystemMessage: 'Be my helpful and honest advisor.',
-  
+  defaultSystemMessage: DEFAULT_SYSTEM_MESSAGE,
   setOpenConfig: (openConfig: boolean) => {
-    set({ openConfig });
+    set((prev: ConfigSlice) => ({
+      ...prev,
+      openConfig: openConfig,
+    }));
   },
-  
   setTheme: (theme: Theme) => {
-    set({ theme });
+    set((prev: ConfigSlice) => ({
+      ...prev,
+      theme: theme,
+    }));
   },
-  
   setAutoTitle: (autoTitle: boolean) => {
-    set({ autoTitle });
+    set((prev: ConfigSlice) => ({
+      ...prev,
+      autoTitle: autoTitle,
+    }));
   },
-  
-  setDefaultChatConfig: (config: Partial<ChatConfig>) => {
-    debug.log('store', 'Setting default chat config:', config);
-    
-    // Get current config
-    const currentConfig = get().defaultChatConfig;
-    
-    // Handle provider change - update model if provider changes
-    if (config.provider && config.provider !== currentConfig.provider) {
-      debug.log('store', `Provider changed from ${currentConfig.provider} to ${config.provider}`);
-      
-      try {
-        // Get default model for the new provider
-        const defaultModel = ProviderRegistry.getDefaultModelForProvider(config.provider);
-        debug.log('store', `Default model for ${config.provider}: ${defaultModel}`);
-        
-        // Update model in the config
-        if (!config.modelConfig) {
-          config.modelConfig = { ...currentConfig.modelConfig, model: defaultModel };
-        } else {
-          config.modelConfig.model = defaultModel;
-        }
-      } catch (error) {
-        debug.error('store', `Error getting default model for provider ${config.provider}:`, error);
-      }
-    }
-    
-    // Create a new config object
-    const newConfig = { ...currentConfig };
-    
-    // Update provider if specified
-    if (config.provider) {
-      newConfig.provider = config.provider;
-    }
-    
-    // Update modelConfig if specified
-    if (config.modelConfig) {
-      // If model is specified in the update, it overrides the default model
-      newConfig.modelConfig = {
-        ...newConfig.modelConfig,
-        ...config.modelConfig
-      };
-      
-      // Ensure capabilities is an object, not an array
-      if (Array.isArray(newConfig.modelConfig.capabilities)) {
-        debug.log('store', 'WARN: Converting capabilities array to object');
-        newConfig.modelConfig.capabilities = {};
-      }
-      
-      // Merge capabilities
-      if (currentConfig.modelConfig?.capabilities && newConfig.modelConfig.capabilities) {
-        newConfig.modelConfig.capabilities = {
-          ...(currentConfig.modelConfig.capabilities || {}),
-          ...(newConfig.modelConfig.capabilities || {})
-        };
-      }
-    }
-    
-    // Update systemPrompt if specified
-    if (config.systemPrompt) {
-      newConfig.systemPrompt = config.systemPrompt;
-    }
-    
-    debug.log('store', 'New default chat config:', newConfig);
-    
-    // Update the store
-    set({ defaultChatConfig: newConfig });
+  setDefaultChatConfig: (config: ChatConfig) => {
+    set((prev: ConfigSlice) => ({
+      ...prev,
+      defaultChatConfig: config,
+    }));
   },
-  
   setProvider: (provider: ProviderKey) => {
-    const { setDefaultChatConfig } = get();
-    setDefaultChatConfig({ provider });
+    set((prev) => ({
+      ...prev,
+      defaultChatConfig: {
+        ...prev.defaultChatConfig,
+        provider,
+      },
+    }));
   },
-  
   setDefaultSystemMessage: (defaultSystemMessage: string) => {
-    set({ defaultSystemMessage });
+    set((prev: ConfigSlice) => ({
+      ...prev,
+      defaultSystemMessage: defaultSystemMessage,
+    }));
   },
-  
   setHideMenuOptions: (hideMenuOptions: boolean) => {
-    set({ hideMenuOptions });
+    set((prev: ConfigSlice) => ({
+      ...prev,
+      hideMenuOptions: hideMenuOptions,
+    }));
   },
-  
   setHideSideMenu: (hideSideMenu: boolean) => {
-    set({ hideSideMenu });
+    set((prev: ConfigSlice) => ({
+      ...prev,
+      hideSideMenu: hideSideMenu,
+    }));
   },
-  
   setEnterToSubmit: (enterToSubmit: boolean) => {
-    set({ enterToSubmit });
+    set((prev: ConfigSlice) => ({
+      ...prev,
+      enterToSubmit: enterToSubmit,
+    }));
   },
-  
   setLayoutWidth: (layoutWidth: LayoutWidth) => {
-    set({ layoutWidth });
+    set((prev: ConfigSlice) => ({
+      ...prev,
+      layoutWidth,
+    }));
   },
 });
