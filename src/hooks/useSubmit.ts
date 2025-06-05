@@ -235,7 +235,13 @@ function useSubmit(dependencies: SubmitDependencies = {}) {
       // Generate title
       debug.log('useSubmit', '[useSubmit] Generating title');
       submission?.dispatch?.({ type: 'GENERATING_TITLE' });
-      await titleGeneration.generateTitle(currentMessages, modelConfig);
+
+      // Get the latest state to ensure we have the most up-to-date messages
+      const latestState = messageManager.getStoreState();
+      const latestChat = latestState.chats[latestState.currentChatIndex];
+      const latestMessages = latestChat.messages;
+
+      await titleGeneration.generateTitle(latestMessages, modelConfig);
       
       // Complete successfully
       debug.log('useSubmit', '[useSubmit] Submission complete');

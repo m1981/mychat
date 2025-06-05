@@ -211,12 +211,6 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
           ? endpoint 
           : `/api${endpoint}`;
       
-      console.log('🔍 Anthropic submitCompletion - Request endpoint:', apiEndpoint);
-      console.log('🔍 Anthropic submitCompletion - Request body:', JSON.stringify({
-        formattedRequest,
-        apiKey: apiKey ? '***' : undefined // Mask the actual key
-      }, null, 2));
-
       try {
       const response = await fetch(apiEndpoint, {
         method: 'POST',
@@ -235,9 +229,7 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
         throw new Error(`Anthropic API error: ${response.status}`);
       }
       
-        const data = await response.json();
-        console.log('✅ Anthropic submitCompletion - Response:', JSON.stringify(data, null, 2));
-        return data;
+        return await response.json();;
       } catch (error) {
         console.error('❌ Anthropic submitCompletion - Error:', error);
         throw error;

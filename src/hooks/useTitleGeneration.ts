@@ -8,8 +8,12 @@ import { UseTitleGenerationReturn } from '@type/hooks';
 const TITLE_SYSTEM_PROMPT = 'Generate a concise, descriptive title (5 words or less) for this conversation. Return only the title text with no quotes or additional explanation.';
 
 export function useTitleGeneration(providerKey: ProviderKey): UseTitleGenerationReturn {
-  const store = useStore();
-  const setChats = store.setChats;
+  // Get state and setChats directly
+  const { chats, currentChatIndex, setChats } = useStore(state => ({
+    chats: state.chats,
+    currentChatIndex: state.currentChatIndex,
+    setChats: state.setChats
+  }));
   
   const generateTitle = useCallback(async (
     messages: MessageInterface[], 
@@ -22,12 +26,12 @@ export function useTitleGeneration(providerKey: ProviderKey): UseTitleGeneration
         return;
       }
       
-      // Get current state - store is already the state in Zustand
-      const { chats, currentChatIndex } = store;
-      const targetChatIndex = chatIndex !== undefined ? chatIndex : currentChatIndex;
+      // Get the most current state at the time of title generation
+      const currentState = useStore.getState();
+      const targetChatIndex = chatIndex !== undefined ? chatIndex : currentState.currentChatIndex;
       
       // Only generate title if it hasn't been set yet
-      const currentChat = chats[targetChatIndex];
+      const currentChat = currentState.chats[targetChatIndex];
       if (!currentChat || currentChat.titleSet) {
         return;
       }
@@ -62,8 +66,6 @@ export function useTitleGeneration(providerKey: ProviderKey): UseTitleGeneration
         ...config
       });
 
-      console.log('Title generation request:', JSON.stringify(formattedRequest, null, 2));
-
       // Submit request using the correct method from AIProviderInterface
       const response = await providerInstance.submitCompletion(formattedRequest);
       
@@ -91,19 +93,21 @@ export function useTitleGeneration(providerKey: ProviderKey): UseTitleGeneration
         title = 'New Conversation';
       }
       
-      // Update chat title
-      const updatedChats = [...chats];
+      // Get the latest state again to ensure we have the most up-to-date messages
+      const latestState = useStore.getState();
+      const updatedChats = [...latestState.chats];
       updatedChats[targetChatIndex] = {
         ...updatedChats[targetChatIndex],
         title,
         titleSet: true
       };
-      
+
+      // Update store
       setChats(updatedChats);
     } catch (error) {
       console.error('Error in title generation:', error);
     }
-  }, [providerKey, store, setChats]);
+  }, [providerKey, setChats]);
   
   return { generateTitle };
 }
