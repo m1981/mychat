@@ -1,5 +1,5 @@
 // provider.config.ts - Contains only configuration data
-import { ProviderKey } from '@type/chat';
+import { ProviderKey } from '@type/provider';
 
 export interface ProviderModel {
   id: string;
@@ -17,6 +17,10 @@ export interface ProviderConfig {
   defaultModel: string;
   endpoints: string[];
   models: ProviderModel[];
+  capabilities: {
+    supportsThinking: boolean;
+    supportsFileUpload?: boolean;
+  };
 }
 
 // Configuration data only - no dependencies on implementations
@@ -38,7 +42,10 @@ export const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
         }
       },
       // Other models...
-    ]
+    ],
+    capabilities: {
+      supportsThinking: true
+    }
   },
   openai: {
     id: 'openai',
@@ -57,6 +64,9 @@ export const PROVIDER_CONFIGS: Record<ProviderKey, ProviderConfig> = {
         }
       },
       // Other models...
-    ]
+    ],
+    capabilities: {
+      supportsThinking: false
+    }
   }
 };

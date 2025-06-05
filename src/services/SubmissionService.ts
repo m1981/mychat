@@ -1,14 +1,15 @@
 import useStore from '@store/store';
-import { MessageInterface, ModelConfig } from '@type/chat';
-import { providers } from '@type/providers';
+import { MessageInterface } from '@type/chat';
+import { AIProviderInterface, ModelConfig, RequestConfig } from '@type/provider';
+import { debug } from '@utils/debug';
 
 export interface SubmissionService {
-  submit(messages: MessageInterface[], config: ModelConfig): Promise<void>;
+  submit(messages: MessageInterface[], config: RequestConfig): Promise<void>;
 }
 
 export class ChatSubmissionService implements SubmissionService {
   constructor(
-    private provider: typeof providers[keyof typeof providers],
+    private provider: AIProviderInterface,
     private apiKey: string,
     private contentCallback: (content: string) => void,
     private streamHandler: {
@@ -17,12 +18,12 @@ export class ChatSubmissionService implements SubmissionService {
   ) {
     // Add validation for API key
     if (!this.apiKey) {
-      console.error('⚠️ No API key provided for provider:', provider);
+      console.error('⚠️ No API key provided for provider:', provider.id);
     }
   }
 
-  async submit(messages: MessageInterface[], modelConfig: ModelConfig): Promise<void> {
-    console.log('🔐 Submitting with API key:', this.apiKey ? 'Key exists' : 'Key missing');
+  async submit(messages: MessageInterface[], config: RequestConfig): Promise<void> {
+    debug.log('submission', `🔐 Submitting with API key: ${this.apiKey ? 'Key exists' : 'Key missing'}`);
     
     if (!this.apiKey) {
       throw new Error('API key is missing. Please add your API key in settings.');
@@ -34,41 +35,48 @@ export class ChatSubmissionService implements SubmissionService {
       throw new Error('Messages must be an array');
     }
     
-    const formattedRequest = this.provider.formatRequest(messages, {
-      ...modelConfig,
-      stream: true
-    });
+    // Ensure config has required properties
+    const safeConfig: RequestConfig = {
+      model: config.model,
+      max_tokens: config.max_tokens,
+      temperature: config.temperature,
+      top_p: config.top_p,
+      presence_penalty: config.presence_penalty || 0,
+      frequency_penalty: config.frequency_penalty || 0,
+      stream: true,
+      thinking: config.thinking
+    };
+    
+    // Format request using provider's implementation
+    const formattedRequest = this.provider.formatRequest(messages, safeConfig);
 
     try {
       // Get the current abort controller from Zustand
       const { abortController } = useStore.getState();
       
-      // Preserve the provider's formatted request structure
-      // Only add API key and extract basic config for logging/tracking
+      // Prepare the endpoint URL
+      const endpoint = this.provider.endpoints[0];
+      const apiEndpoint = endpoint.startsWith('http') 
+        ? endpoint 
+        : endpoint.startsWith('/api') 
+          ? endpoint 
+          : `/api${endpoint}`;
+      
+      debug.log('submission', `📤 Submitting to endpoint: ${apiEndpoint}`);
+      
+      // Prepare the request body
       const requestBody = {
-        // Include the entire formatted request
+        // Include the entire formatted request directly (not nested)
         ...formattedRequest,
         // Add API key
-        apiKey: this.apiKey,
-        // Include config separately for logging/tracking purposes
-        config: {
-          model: formattedRequest.model,
-          max_tokens: formattedRequest.max_tokens,
-          temperature: formattedRequest.temperature,
-          top_p: formattedRequest.top_p,
-          stream: true,
-          enableThinking: formattedRequest.thinking ? true : false,
-          thinkingConfig: formattedRequest.thinking ? {
-            budget_tokens: formattedRequest.thinking.budget_tokens
-          } : undefined
-        }
+        apiKey: this.apiKey
       };
 
-      const response = await fetch(`/api/chat/${this.provider.id}`, {
+      // Make the API request
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'text/event-stream',
         },
         body: JSON.stringify(requestBody),
         signal: abortController?.signal

@@ -94,6 +94,14 @@ export default defineConfig({
         'src/api/base.ts': {
           statements: 93,
         },
+        'src/api/anthropic-client.js': {
+          statements: 80,
+          branches: 70,
+        },
+        'src/api/openai-client.js': {
+          statements: 80,
+          branches: 70,
+        },
         'src/config/models/model.registry.ts': {
           statements: 79,
         },

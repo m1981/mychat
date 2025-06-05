@@ -1,26 +1,58 @@
 import { MessageInterface, ModelConfig, ProviderKey } from '@type/chat';
 
-export interface RequestConfig extends ModelConfig {
-  stream?: boolean;  // Optional in incoming config
-  thinking_mode?: {
-    enabled: boolean;
-    budget_tokens: number;
-  };
+// Core provider types
+export type ProviderKey = 'anthropic' | 'openai' | string;
+
+// Provider capabilities
+export interface ProviderCapabilities {
+  supportsThinking: boolean;
+  maxCompletionTokens: number;
+  defaultModel: string;
+  defaultThinkingModel?: string;
 }
 
+// Base model configuration
+export interface BaseModelConfig {
+  model: string;
+  max_tokens: number;
+  temperature: number;
+  top_p: number;
+  presence_penalty?: number;
+  frequency_penalty?: number;
+}
+
+// Thinking mode configuration
+export interface ThinkingConfig {
+  enabled: boolean;
+  budget_tokens: number;
+}
+
+// Complete model configuration
+export interface ModelConfig extends BaseModelConfig {
+  provider: ProviderKey;
+  thinking?: ThinkingConfig;
+}
+
+// Request configuration
+export interface RequestConfig extends BaseModelConfig {
+  stream?: boolean;
+  thinking?: ThinkingConfig;
+}
+
+// Provider-specific formatted request
 export interface FormattedRequest {
   // Common fields required by all providers
-  messages: any[]; // Provider-specific message format
   model: string;
   max_tokens: number;
   temperature: number;
   top_p: number;
   stream: boolean;
+  messages: any[]; // Provider-specific message format
   
   // Optional provider-specific fields
-  system?: string;         // For providers that support system prompts
-  thinking?: {             // For providers that support thinking mode
-    type: string;          // Type of thinking mode
+  system?: string;
+  thinking?: {
+    type: string;
     budget_tokens: number;
   };
   presence_penalty?: number;
@@ -30,7 +62,7 @@ export interface FormattedRequest {
   [key: string]: unknown;
 }
 
-// Define a standardized response type
+// Provider response
 export interface ProviderResponse {
   content?: string | Array<{text: string}>;
   choices?: Array<{
@@ -45,12 +77,13 @@ export interface ProviderResponse {
   [key: string]: unknown;
 }
 
+// Provider interface
 export interface AIProviderInterface {
-  id: string;
+  id: ProviderKey;
   name: string;
   endpoints: string[];
   models: string[];
-  formatRequest: (config: RequestConfig, messages: MessageInterface[]) => FormattedRequest;
+  formatRequest: (messages: MessageInterface[], config: RequestConfig) => FormattedRequest;
   parseResponse: (response: any) => string;
   parseStreamingResponse: (response: any) => string;
   submitCompletion: (formattedRequest: FormattedRequest) => Promise<ProviderResponse>;

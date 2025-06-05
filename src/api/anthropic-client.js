@@ -28,10 +28,17 @@ export class AnthropicClient {
   
   // Helper method to format messages according to Anthropic's API requirements
   _formatParams(params) {
-    // Make a copy to avoid modifying the original
     const formattedParams = { ...params };
     
-    // Ensure messages are in the correct format for Anthropic
+    // Remove unnecessary properties (like OpenAI client)
+    if (formattedParams.config) {
+      delete formattedParams.config;
+    }
+    if (formattedParams.apiKey) {
+      delete formattedParams.apiKey;
+    }
+    
+    // Format messages for Anthropic API
     if (formattedParams.messages && Array.isArray(formattedParams.messages)) {
       formattedParams.messages = formattedParams.messages.map(msg => ({
         role: msg.role === 'assistant' ? 'assistant' : 'user',

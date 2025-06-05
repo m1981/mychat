@@ -1,23 +1,7 @@
 
-import { ModelRegistry } from '@config/models/model.registry';
+import { ProviderKey, MessageInterface, RequestConfig, FormattedRequest, ProviderResponse, AIProviderInterface } from '@type/provider';
 import { PROVIDER_CONFIGS } from '@config/providers/provider.config';
-import { MessageInterface, ProviderKey } from '@type/chat';
-import { AIProviderInterface, ProviderResponse, RequestConfig, FormattedRequest } from '@type/provider';
 import store from '@store/store';
-
-export interface AIProviderInterface {
-  id: string;
-  name: string;
-  endpoints: string[];
-  models: string[];
-  
-  // Standardize parameter order: messages first, then config
-  formatRequest: (messages: MessageInterface[], config: RequestConfig) => FormattedRequest;
-  parseResponse: (response: ProviderResponse) => string;
-  parseStreamingResponse: (response: ProviderResponse) => string;
-  submitCompletion: (formattedRequest: FormattedRequest) => Promise<ProviderResponse>;
-  submitStream: (formattedRequest: FormattedRequest) => Promise<ReadableStream>;
-}
 
 // Create provider implementations using configuration data directly
 export const providers: Record<ProviderKey, AIProviderInterface> = {
@@ -40,24 +24,22 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
           messages: []
         };
       }
-      
-      const formattedRequest = {
-        messages: messages
-          .filter(m => m.content && m.content.trim() !== '')
-          .map(m => ({
-            role: m.role,
-            content: m.content
-          })),
-        model: config.model,
-        max_tokens: ModelRegistry.getModelCapabilities(config.model).maxResponseTokens,
-        temperature: config.temperature,
-        presence_penalty: config.presence_penalty,
-        top_p: config.top_p,
-        frequency_penalty: config.frequency_penalty,
-        stream: config.stream ?? false
-      };
 
-      return formattedRequest;
+      // Format the request according to OpenAI's API
+      return {
+        model: config.model,
+        max_tokens: config.max_tokens,
+        temperature: config.temperature,
+        top_p: config.top_p,
+        presence_penalty: config.presence_penalty,
+        frequency_penalty: config.frequency_penalty,
+        stream: config.stream,
+        messages: messages.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }))
+        // No nested config object - this was redundant
+      };
     },
     parseResponse: (response: ProviderResponse): string => {
       if (response.choices?.[0]?.message?.content) {
@@ -87,13 +69,16 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
           ? endpoint 
           : `/api${endpoint}`;
       
+      // Send the request with properties at the top level, not nested
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          formattedRequest, // Send the formatted request directly
+          // Spread the formatted request at the top level
+          ...formattedRequest,
+          // Add API key separately
           apiKey
         })
       });
@@ -119,9 +104,15 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
         },
-        body: JSON.stringify({...formattedRequest, stream: true})
+        body: JSON.stringify({
+          // Spread the formatted request at the top level
+          ...formattedRequest,
+          // Ensure stream is true
+          stream: true,
+          // Add API key separately
+          apiKey
+        })
       });
       
       if (!response.ok) {
@@ -154,29 +145,37 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
       // Extract system message if present
       const systemMessage = messages.find(m => m.role === 'system');
       
-      // Filter out system messages and empty messages for the regular message array
+      // Format regular messages for Anthropic
       const regularMessages = messages
         .filter(m => m.role !== 'system')
-        .filter(m => m.content && m.content.trim() !== '')
         .map(m => ({
           role: m.role === 'assistant' ? 'assistant' : 'user',
-          content: m.content,
+          content: m.content
         }));
       
-      const formattedRequest = {
+      // Create formatted request
+      const formattedRequest: FormattedRequest = {
         model: config.model,
         max_tokens: config.max_tokens,
         temperature: config.temperature,
         top_p: config.top_p,
         stream: config.stream ?? false,
-        thinking: config.thinking_mode?.enabled ? {
-          type: "enabled" as const,
-          budget_tokens: config.thinking_mode.budget_tokens
-        } : undefined,
-        ...(systemMessage && { system: systemMessage.content }),
         messages: regularMessages
       };
-
+      
+      // Add system message if present
+      if (systemMessage) {
+        formattedRequest.system = systemMessage.content;
+      }
+      
+      // Add thinking configuration if enabled
+      if (config.thinking?.enabled) {
+        formattedRequest.thinking = {
+          type: "enabled",
+          budget_tokens: config.thinking.budget_tokens
+        };
+      }
+      
       return formattedRequest;
     },
     parseResponse: (response: ProviderResponse): string => {
@@ -266,7 +265,7 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
 };
 
 // Add a factory function to create provider implementation instances
-export function getProviderImplementation(key: ProviderKey): AIProviderInterface {
+export  function getProviderImplementation(key: ProviderKey): AIProviderInterface {
   const provider = providers[key];
   if (!provider) {
     throw new Error(`Provider implementation for ${key} not found`);

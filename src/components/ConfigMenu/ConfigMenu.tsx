@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { validateMaxTokens, validateThinkingBudget } from '../../config/tokens/TokenConfig';
 
 import PopupModal from '@components/PopupModal';
+import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { ProviderModel } from '@config/providers/provider.config';
 import { ProviderRegistry } from '@config/providers/provider.registry';
 import DownChevronArrow from '@icon/DownChevronArrow';
@@ -18,8 +19,21 @@ const ConfigMenu = ({
   config: ChatConfig;
   setConfig: (config: ChatConfig) => void;
 }) => {
-  const [_provider, _setProvider] = useState<ProviderKey>(config.provider);
-  const [_modelConfig, _setModelConfig] = useState<ModelConfig>(config.modelConfig);
+  // Ensure we have valid defaults if config is incomplete
+  const defaultProvider = DEFAULT_PROVIDER;
+  const [_provider, _setProvider] = useState<ProviderKey>(config?.provider || defaultProvider);
+  
+  // Create a safe initial model config with defaults
+  const safeModelConfig = config?.modelConfig || {
+    model: ProviderRegistry.getDefaultModelForProvider(_provider),
+    max_tokens: 4096,
+    temperature: 0.7,
+    top_p: 1,
+    presence_penalty: 0,
+    frequency_penalty: 0
+  };
+  
+  const [_modelConfig, _setModelConfig] = useState<ModelConfig>(safeModelConfig);
   const { t } = useTranslation('model');
 
   const handleConfirm = () => {
@@ -85,25 +99,45 @@ export const ModelSelector = ({
   setModelConfig: (config: ModelConfig) => void;
 }) => {
   const [dropDown, setDropDown] = useState<boolean>(false);
-  const currentProvider = providers[provider];
+  
+  // Safely get provider information with fallbacks
+  const currentProvider = providers[provider] || providers[DEFAULT_PROVIDER];
   const providerConfig = ProviderRegistry.getProvider(provider);
+  const providerCapabilities = ProviderRegistry.getProviderCapabilities(provider);
 
   // Ensure selected model is valid for current provider
   useEffect(() => {
-    if (!currentProvider.models.includes(modelConfig.model)) {
+    // Skip if provider or modelConfig is undefined
+    if (!provider || !modelConfig) return;
+    
+    // Check if current model is valid for this provider
+    const isModelValid = currentProvider.models.includes(modelConfig.model);
+    
+    if (!isModelValid) {
       const defaultModel = providerConfig.models[0];
-      setModelConfig({
+      
+      // Create base model config
+      const newModelConfig: ModelConfig = {
         ...modelConfig,
+        provider,
         model: defaultModel.id,
         max_tokens: defaultModel.maxCompletionTokens,
-        // Ensure thinking mode properties are preserved
-        enableThinking: modelConfig.enableThinking,
-        thinkingConfig: {
-          budget_tokens: modelConfig.thinkingConfig.budget_tokens
-        }
-      });
+      };
+      
+      // Handle thinking mode based on provider capabilities
+      if (providerCapabilities.supportsThinking) {
+        newModelConfig.thinking = {
+          enabled: modelConfig.thinking?.enabled ?? false,
+          budget_tokens: modelConfig.thinking?.budget_tokens ?? 1000
+        };
+      } else {
+        // For providers that don't support thinking, ensure thinking is undefined
+        newModelConfig.thinking = undefined;
+      }
+      
+      setModelConfig(newModelConfig);
     }
-  }, [provider]);
+  }, [provider, modelConfig?.model]);
 
   return (
     <div className='mb-4'>
@@ -124,7 +158,7 @@ export const ModelSelector = ({
           type='button'
           onClick={() => setDropDown((prev) => !prev)}
         >
-          {modelConfig.model}
+          {modelConfig?.model || providerCapabilities.defaultModel}
           <DownChevronArrow />
         </button>
       </div>
@@ -167,32 +201,35 @@ export const MaxTokenSlider = ({
 }) => {
   const { t } = useTranslation('model');
   const providerConfig = ProviderRegistry.getProvider(provider);
-  const currentModelConfig = providerConfig.models.find(m => m.id === modelConfig.model);
+  const currentModelConfig = providerConfig.models.find(m => m.id === modelConfig?.model);
 
   const MIN_TOKENS = 100;
-  // Ensure max_tokens doesn't exceed model's maxCompletionTokens
+  // Ensure max_tokens doesn't exceed model's maxCompletionTokens with fallback
   const maxAllowedTokens = currentModelConfig?.maxCompletionTokens ?? 2048;
 
   return (
     <div>
       <label className='block text-sm font-medium text-gray-900 dark:text-white'>
-        {t('token.label')}: {modelConfig.max_tokens}
+        {t('token.label')}: {modelConfig?.max_tokens || MIN_TOKENS}
       </label>
       <input
         type='range'
-        value={modelConfig.max_tokens}
+        value={modelConfig?.max_tokens || MIN_TOKENS}
         onChange={(e) => {
           const newMaxTokens = Number(e.target.value);
           setModelConfig({
             ...modelConfig,
             max_tokens: newMaxTokens,
-            // Ensure thinking budget doesn't exceed max_tokens
-            thinkingConfig: {
-              budget_tokens: Math.min(
-                modelConfig.thinkingConfig.budget_tokens,
-                newMaxTokens
-              )
-            }
+            // Ensure thinking budget doesn't exceed max_tokens if thinking exists
+            ...(modelConfig?.thinking ? {
+              thinking: {
+                ...modelConfig.thinking,
+                budget_tokens: Math.min(
+                  modelConfig.thinking.budget_tokens,
+                  newMaxTokens
+                )
+              }
+            } : {})
           });
         }}
         min={MIN_TOKENS}
@@ -352,14 +389,25 @@ export const ThinkingModeToggle = ({
   setModelConfig: (config: ModelConfig) => void;
 }) => {
   const { t } = useTranslation('model');
+  
+  // Safely get provider capabilities with fallback
+  const providerCapabilities = ProviderRegistry.getProviderCapabilities(modelConfig?.provider);
+  
+  // If provider doesn't support thinking, don't render the component
+  if (!providerCapabilities.supportsThinking) {
+    return null;
+  }
 
+  // Ensure thinking config exists with defaults
+  const thinking = modelConfig?.thinking ?? { enabled: false, budget_tokens: 0 };
+  
   const handleThinkingToggle = (enabled: boolean) => {
     setModelConfig({
       ...modelConfig,
-      enableThinking: enabled,
-      thinkingConfig: {
+      thinking: {
+        enabled,
         budget_tokens: enabled 
-          ? Math.min(1000, modelConfig.max_tokens)
+          ? Math.min(1000, modelConfig.max_tokens || 4096)
           : 0
       }
     });
@@ -368,8 +416,9 @@ export const ThinkingModeToggle = ({
   const handleBudgetChange = (budget: number) => {
     setModelConfig({
       ...modelConfig,
-      thinkingConfig: {
-        budget_tokens: Math.min(budget, modelConfig.max_tokens)
+      thinking: {
+        ...thinking,
+        budget_tokens: Math.min(budget, modelConfig.max_tokens || 4096)
       }
     });
   };
@@ -382,23 +431,23 @@ export const ThinkingModeToggle = ({
         </label>
         <input
           type='checkbox'
-          checked={modelConfig.enableThinking}
+          checked={thinking.enabled}
           onChange={(e) => handleThinkingToggle(e.target.checked)}
           className='toggle toggle-primary'
         />
       </div>
       
-      {modelConfig.enableThinking && (
+      {thinking.enabled && (
         <div className='mt-4'>
           <label className='block text-sm font-medium text-gray-900 dark:text-white'>
-            {t('thinking.budget')}: {modelConfig.thinkingConfig.budget_tokens}
+            {t('thinking.budget')}: {thinking.budget_tokens}
           </label>
           <input
             type='range'
-            value={modelConfig.thinkingConfig.budget_tokens}
+            value={thinking.budget_tokens}
             onChange={(e) => handleBudgetChange(Number(e.target.value))}
             min={100}
-            max={modelConfig.max_tokens} // Cap at max_tokens
+            max={modelConfig.max_tokens || 4096} // Cap at max_tokens with fallback
             step={100}
             className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
           />

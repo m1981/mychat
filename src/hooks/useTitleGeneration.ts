@@ -61,9 +61,12 @@ export function useTitleGeneration(providerKey: ProviderKey): UseTitleGeneration
       // Get provider implementation from registry
       const providerInstance = ProviderRegistry.getProviderImplementation(providerKey);
       
-      // Use the correct method from the AIProviderInterface
+      // FIX: Ensure we're passing parameters in the correct order
+      // First parameter should be messages array, second parameter should be config
       const formattedRequest = providerInstance.formatRequest(titlePrompt, {
-        ...config
+        ...config,
+        // Ensure stream is false for title generation
+        stream: false
       });
 
       // Submit request using the correct method from AIProviderInterface

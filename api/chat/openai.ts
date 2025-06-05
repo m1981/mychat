@@ -33,6 +33,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
+  // Remove redundant config object if it exists
+  if (formattedRequest.config) {
+    console.warn('Redundant config object detected in request, removing');
+    delete formattedRequest.config;
+  }
+
+  // Remove apiKey from formattedRequest if it was accidentally included
+  if (formattedRequest.apiKey) {
+    console.warn('API key found in formattedRequest, removing for security');
+    delete formattedRequest.apiKey;
+  }
+
   // Initialize OpenAI client with the API key from the request
   const openai = new OpenAI({
     apiKey: apiKey,

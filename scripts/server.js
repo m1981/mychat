@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import http from 'http';
 import { exec } from 'child_process';
 import AnthropicClient from '../src/api/anthropic-client.js';
+import OpenAIClient from '../src/api/openai-client.js';
 
 // Increase file descriptor limit
 try {
@@ -39,7 +40,7 @@ async function createServer() {
     console.log('Anthropic API request received');
     
     // For non-streaming responses, use JSON content type
-    const isStreaming = req.body?.config?.stream === true;
+    const isStreaming = req.body?.stream === true || req.body?.config?.stream === true;
     
     if (isStreaming) {
       // Set headers for SSE
@@ -151,6 +152,111 @@ async function createServer() {
         res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
         res.write('data: [DONE]\n\n');
         res.end();
+      }
+    }
+  });
+
+  // OpenAI API endpoint
+  app.post('/api/chat/openai', async (req, res) => {
+    console.log('OpenAI API request received');
+    
+    // For non-streaming responses, use JSON content type
+    const isStreaming = req.body?.stream === true || req.body?.config?.stream === true;
+    
+    if (isStreaming) {
+      // Set headers for SSE
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      
+      // Disable Nagle's algorithm
+      req.socket.setNoDelay(true);
+    }
+    
+    // Generate a unique request ID
+    const requestId = Date.now().toString(36);
+    
+    try {
+      // Log the request body for debugging
+      console.log('Request body:', JSON.stringify(req.body, null, 2));
+      
+      // Standardize request parameter extraction for OpenAI
+      const { messages, config, apiKey } = req.body;
+
+      // Validate required fields
+      if (!apiKey) {
+        return res.status(400).json({ 
+          error: 'No API key found for OpenAI' 
+        });
+      }
+
+      // Create default config if not provided
+      const safeConfig = config || {};
+
+      // Create request params with safe defaults
+      const requestParams = {
+        model: safeConfig.model || 'gpt-4o',
+        max_tokens: safeConfig.max_tokens || 4096,
+        temperature: safeConfig.temperature || 0.7,
+        messages: messages,
+        stream: isStreaming
+      };
+      
+      // Initialize OpenAI client using your wrapper class
+      const openaiClient = new OpenAIClient(apiKey, requestId);
+      
+      // Handle streaming response
+      if (isStreaming) {
+        // Set up keep-alive
+        const keepAliveInterval = setInterval(() => {
+          res.write(':keep-alive\n\n');
+        }, 15000);
+        
+        try {
+          console.log('Sending request to OpenAI with params:', JSON.stringify(requestParams, null, 2));
+          
+          // Use your client's streaming method
+          const stream = await openaiClient.createStreamingMessage(requestParams);
+          
+          // Process stream
+          for await (const chunk of stream) {
+            res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+          }
+        } catch (error) {
+          console.error('Stream error:', error);
+          res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+        } finally {
+          clearInterval(keepAliveInterval);
+          res.write('data: [DONE]\n\n');
+          res.end();
+          console.log('Stream connection closed');
+        }
+      } else {
+        // Non-streaming implementation
+        try {
+          console.log('Sending request to OpenAI with params:', JSON.stringify(requestParams, null, 2));
+          
+          // Use your client's non-streaming method
+          const response = await openaiClient.createMessage(requestParams);
+          
+          res.json(response);
+        } catch (error) {
+          console.error('API error:', error);
+          res.status(500).json({ error: error.message });
+        }
+      }
+    } catch (error) {
+      console.error('Server error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: error.message });
+      } else {
+        try {
+        res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        res.end();
+        } catch (writeError) {
+          console.error('Error writing error response:', writeError);
+        }
       }
     }
   });
