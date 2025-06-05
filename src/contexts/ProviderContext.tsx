@@ -9,12 +9,12 @@
    export const ProviderContext = createContext<AIProviderInterface | null>(null);
 
    // Provider component that wraps your app and makes the provider available
-   export const ProviderProvider: React.FC<{ 
+   export const ProviderProvider: React.FC<{
      children: React.ReactNode;
      providerKey?: ProviderKey;
    }> = ({ children, providerKey }) => {
      const { currentChatIndex, chats, apiKeys } = useStore();
-     
+
      // For testing purposes, directly get the provider if providerKey is provided
      if (providerKey) {
        const directProvider = ProviderRegistry.getProvider(providerKey);
@@ -24,7 +24,7 @@
          </ProviderContext.Provider>
        );
      }
-     
+
      // For normal app usage, use state and effect
      const [provider, setProvider] = useState<AIProviderInterface | null>(() => {
        const effectiveProviderKey = chats?.[currentChatIndex]?.config?.provider || DEFAULT_PROVIDER;

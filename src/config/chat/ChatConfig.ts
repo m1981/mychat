@@ -42,13 +42,3 @@ export const DEFAULT_CHAT_CONFIG = Object.freeze({
   maxTokens: DEFAULT_MODEL_CONFIG.max_tokens
 });
 
-/**
- * Chat configuration type
- */
-export interface ChatConfigType {
-  provider: ProviderKey;
-  modelConfig: ModelConfig;
-  systemPrompt: string;
-  temperature: number;
-  maxTokens: number;
-}

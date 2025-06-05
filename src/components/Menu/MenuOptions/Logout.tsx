@@ -8,5 +8,4 @@ const Logout = () => {
     </a>
   );
 };
-
 export default Logout;

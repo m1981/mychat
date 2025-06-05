@@ -52,22 +52,22 @@ export const MessageEditorProvider: React.FC<MessageEditorProviderProps> = ({
     editContent,
     isModalOpen,
     isEditing: false, // This will be updated by the parent component
-    
+
     // Setters
     setEditContent,
     setIsModalOpen,
     setIsEdit,
-    
+
     // Refs
     textareaRef,
-    
+
     // Actions
     handleSave,
     handleSaveAndSubmit,
     handleSaveAndSubmitWithTruncation,
     handleModalCancel,
     resetTextAreaHeight,
-    
+
     // Metadata
     messageIndex,
     isComposer,
@@ -81,5 +81,4 @@ export const MessageEditorProvider: React.FC<MessageEditorProviderProps> = ({
   );
 };
 
-// Export the context for direct access if needed
 export default MessageEditorContext;
