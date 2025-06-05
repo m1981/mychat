@@ -211,22 +211,37 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
           ? endpoint 
           : `/api${endpoint}`;
       
+      console.log('🔍 Anthropic submitCompletion - Request endpoint:', apiEndpoint);
+      console.log('🔍 Anthropic submitCompletion - Request body:', JSON.stringify({
+        formattedRequest,
+        apiKey: apiKey ? '***' : undefined // Mask the actual key
+      }, null, 2));
+
+      try {
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          formattedRequest, // Send the formatted request directly
+            ...formattedRequest, // Spread the properties directly
           apiKey
         })
       });
       
       if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Anthropic API error:', response.status, errorText);
         throw new Error(`Anthropic API error: ${response.status}`);
       }
       
-      return await response.json();
+        const data = await response.json();
+        console.log('✅ Anthropic submitCompletion - Response:', JSON.stringify(data, null, 2));
+        return data;
+      } catch (error) {
+        console.error('❌ Anthropic submitCompletion - Error:', error);
+        throw error;
+      }
     },
     submitStream: async (formattedRequest: FormattedRequest): Promise<ReadableStream> => {
       const apiKey = store.getState().apiKeys.anthropic;

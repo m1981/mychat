@@ -1,24 +1,22 @@
-import { ModelRegistry } from '@config/models/model.registry';
-import { ProviderRegistry } from '@config/providers/provider.registry';
-import { ModelConfig } from '@type/chat';
+import { ModelConfig } from '../chat/ModelConfig';
+import { ModelRegistry } from '../models/model.registry';
+import { ProviderRegistry } from '../providers/provider.registry';
+import { DEFAULT_TOKEN_CONFIG } from '../tokens/TokenConfig';
 
-import { DEFAULT_PROVIDER } from './ChatDefaults';
-
-export const createDefaultModelConfig = (): Readonly<ModelConfig> => {
-  const defaultProvider = ProviderRegistry.getProvider(DEFAULT_PROVIDER);
-  const defaultModel = defaultProvider.defaultModel;
-  const modelCapabilities = ModelRegistry.getModelCapabilities(defaultModel);
-
-  return Object.freeze({
-    model: defaultModel,
+export const createDefaultModelConfig = (providerId: string, modelId: string): ModelConfig => {
+  const modelCapabilities = ModelRegistry.getModelCapabilities(modelId);
+  
+  return {
+    provider: providerId,
+    model: modelId,
     max_tokens: modelCapabilities.defaultResponseTokens,
-    temperature: 0,
-    presence_penalty: 0,
+    temperature: 0.7,
     top_p: 1,
+    presence_penalty: 0,
     frequency_penalty: 0,
     enableThinking: false,
-    thinkingConfig: Object.freeze({
-      budget_tokens: 1000,
-    }),
-  });
+    thinkingConfig: {
+      budget_tokens: DEFAULT_TOKEN_CONFIG.thinking.budget_tokens,
+    }
+  };
 };

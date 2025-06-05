@@ -1,13 +1,15 @@
 import { useCallback } from 'react';
 import useStore from '@store/store';
-import { useProvider } from '@contexts/ProviderContext';
-import { MessageInterface, ModelConfig } from '@type/chat';
-import { RequestConfig } from '@type/provider';
+import { ProviderRegistry } from '@config/providers/provider.registry';
+import { MessageInterface, ModelConfig, ProviderKey } from '@type/chat';
 import { UseTitleGenerationReturn } from '@type/hooks';
 
-export function useTitleGeneration(): UseTitleGenerationReturn {
-  const provider = useProvider();
-  const setChats = useStore(state => state.setChats);
+// Define the system prompt for title generation
+const TITLE_SYSTEM_PROMPT = 'Generate a concise, descriptive title (5 words or less) for this conversation. Return only the title text with no quotes or additional explanation.';
+
+export function useTitleGeneration(providerKey: ProviderKey): UseTitleGenerationReturn {
+  const store = useStore();
+  const setChats = store.setChats;
   
   const generateTitle = useCallback(async (
     messages: MessageInterface[], 
@@ -20,10 +22,9 @@ export function useTitleGeneration(): UseTitleGenerationReturn {
         return;
       }
       
-      // Get current state
-      const currentState = useStore.getState();
-      const { chats } = currentState;
-      const targetChatIndex = chatIndex !== undefined ? chatIndex : currentState.currentChatIndex;
+      // Get current state - store is already the state in Zustand
+      const { chats, currentChatIndex } = store;
+      const targetChatIndex = chatIndex !== undefined ? chatIndex : currentChatIndex;
       
       // Only generate title if it hasn't been set yet
       const currentChat = chats[targetChatIndex];
@@ -45,7 +46,7 @@ export function useTitleGeneration(): UseTitleGenerationReturn {
       const titlePrompt = [
         {
           role: 'system',
-          content: 'Generate a concise, descriptive title (5 words or less) for this conversation. Return only the title text with no quotes or additional explanation.'
+          content: TITLE_SYSTEM_PROMPT
         },
         {
           role: 'user',
@@ -53,24 +54,26 @@ export function useTitleGeneration(): UseTitleGenerationReturn {
         }
       ];
       
-      // Format request using provider
-      const requestConfig: RequestConfig = {
-        ...config,
-        stream: false
-      };
+      // Get provider implementation from registry
+      const providerInstance = ProviderRegistry.getProviderImplementation(providerKey);
       
-      const formattedRequest = provider.formatRequest(requestConfig, titlePrompt);
+      // Use the correct method from the AIProviderInterface
+      const formattedRequest = providerInstance.formatRequest(titlePrompt, {
+        ...config
+      });
+
+      console.log('Title generation request:', JSON.stringify(formattedRequest, null, 2));
+
+      // Submit request using the correct method from AIProviderInterface
+      const response = await providerInstance.submitCompletion(formattedRequest);
       
-      // Submit request
-      const response = await provider.submitCompletion(formattedRequest);
-      
-      // Parse response
-      const parsedResponse = provider.parseResponse(response);
+      // Parse response using the correct method
+      const parsedResponse = providerInstance.parseResponse(response);
       
       // Extract title from response
       let title = '';
-      if (typeof parsedResponse.content === 'string') {
-        title = parsedResponse.content;
+      if (typeof parsedResponse === 'string') {
+        title = parsedResponse;
       } else if (parsedResponse.choices && Array.isArray(parsedResponse.choices)) {
         title = parsedResponse.choices[0]?.message?.content || '';
       }
@@ -100,7 +103,7 @@ export function useTitleGeneration(): UseTitleGenerationReturn {
     } catch (error) {
       console.error('Error in title generation:', error);
     }
-  }, [provider, setChats]);
+  }, [providerKey, store, setChats]);
   
   return { generateTitle };
 }

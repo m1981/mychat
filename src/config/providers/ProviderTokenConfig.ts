@@ -1,0 +1,28 @@
+import { ProviderKey } from '../../types/provider';
+import { DEFAULT_TOKEN_CONFIG } from '../tokens/TokenConfig';
+
+interface ProviderTokenDefaults {
+  defaultMaxTokens: number;
+  defaultThinkingBudget: number;
+}
+
+// Provider-specific token defaults
+const PROVIDER_TOKEN_DEFAULTS: Record<ProviderKey, ProviderTokenDefaults> = {
+  openai: {
+    defaultMaxTokens: 4096,
+    defaultThinkingBudget: 16000
+  },
+  anthropic: {
+    defaultMaxTokens: 4096,
+    defaultThinkingBudget: 16000
+  },
+  // Add other providers with their specific defaults
+};
+// TODO: Export 'getProviderTokenDefaults' appears to be unused. Consider removing it or documenting why it's needed.
+
+export const getProviderTokenDefaults = (provider: ProviderKey): ProviderTokenDefaults => {
+  return PROVIDER_TOKEN_DEFAULTS[provider] || {
+    defaultMaxTokens: DEFAULT_TOKEN_CONFIG.max_tokens,
+    defaultThinkingBudget: DEFAULT_TOKEN_CONFIG.thinking.budget_tokens
+  };
+};
