@@ -308,14 +308,7 @@ jobs:
       - name: Build app
         run: NODE_ENV=production pnpm build:vite
       
-      # Start the app in the background
-      - name: Start app for testing
-        run: |
-          cd dist && npx serve -s -l 5173 &
-          echo "Waiting for app to start..."
-          sleep 5
-      
-      # Run Playwright tests
+      # Run Playwright tests - let Playwright start the server
       - name: Run E2E tests
         run: pnpm test:e2e
       
