@@ -285,18 +285,57 @@ jobs:
 
   # Add this job to implement E2E tests on the preview deployment
   e2e-tests:
-    needs: [deploy-preview]
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    container:
+      image: mcr.microsoft.com/playwright:v1.41.1-jammy
     steps:
       - uses: actions/checkout@v3
       - uses: pnpm/action-setup@v2
         with:
           version: 10.4.1
-      - run: pnpm install
+      - run: PNPM_FROZEN_LOCKFILE=true pnpm install
+      
+      # Set up environment variables for API keys
+      - name: Set up environment variables
+        env:
+          TEST_OPENAI_API_KEY: ${{ secrets.TEST_OPENAI_API_KEY }}
+          TEST_ANTHROPIC_API_KEY: ${{ secrets.TEST_ANTHROPIC_API_KEY }}
+        run: |
+          echo "TEST_OPENAI_API_KEY=${TEST_OPENAI_API_KEY}" >> $GITHUB_ENV
+          echo "TEST_ANTHROPIC_API_KEY=${TEST_ANTHROPIC_API_KEY}" >> $GITHUB_ENV
+      
+      # Build the app for testing
+      - name: Build app
+        run: NODE_ENV=production pnpm build:vite
+      
+      # Start the app in the background
+      - name: Start app for testing
+        run: |
+          cd dist && npx serve -s -l 5173 &
+          echo "Waiting for app to start..."
+          sleep 5
+      
+      # Run Playwright tests
       - name: Run E2E tests
-        run: echo "Running E2E tests on preview deployment"
-        # This would typically use Cypress, Playwright, etc.
+        run: pnpm test:e2e
+      
+      # Upload test results and artifacts
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+      
+      # Upload test traces for debugging
+      - name: Upload test traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
 
   # Add this job to implement Production Build and Deploy
   deploy-production:

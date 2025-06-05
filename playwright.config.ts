@@ -16,11 +16,9 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
 
   // Enhanced reporting configuration
-  reporter: [
-    ['html', { open: 'never' }],
-    ['json', { outputFile: 'test-results/test-results.json' }],
-    ['list']
-  ],
+  reporter: process.env.CI 
+    ? [['html'], ['junit', { outputFile: 'test-results/e2e-junit-results.xml' }]] 
+    : [['html', { open: 'never' }], ['list']],
 
   use: {
     actionTimeout: 1000, // Timeout for actions like click, fill, etc.
@@ -36,7 +34,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm dev',
+    command: process.env.CI ? 'cd dist && npx serve -s -l 5173' : 'pnpm dev',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
