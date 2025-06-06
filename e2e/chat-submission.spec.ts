@@ -45,9 +45,20 @@ test('user can type and submit a message', async ({ page }) => {
   // Setup API keys
   await setupApiKeys(page);
   
+  // Wait for the store to be fully initialized
+  await page.waitForFunction(() => {
+    return window.store && window.store.getState && 
+           window.store.getState().apiKeys && 
+           window.store.getState().apiKeys.anthropic;
+  }, { timeout: 10000 });
+  
   // Add debug log to check store state before submission
   await page.evaluate(() => {
     console.log('Current store state:', JSON.stringify(window.store?.getState?.() || 'Store not available'));
+    console.log('API keys in store:', JSON.stringify({
+      openai: window.store?.getState?.().apiKeys?.openai ? 'present' : 'missing',
+      anthropic: window.store?.getState?.().apiKeys?.anthropic ? 'present' : 'missing'
+    }));
   });
 
   // Navigate to the app

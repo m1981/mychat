@@ -15,9 +15,35 @@ export interface AuthSlice {
 }
 
 export const createAuthSlice: StoreSlice<AuthSlice> = (set) => {
-  // Log initial values
-  const openaiKey = getEnvVar('VITE_OPENAI_API_KEY', '');
-  const anthropicKey = getEnvVar('VITE_ANTHROPIC_API_KEY', '');
+  // Try to load from localStorage first
+  let storedKeys = { openai: '', anthropic: '' };
+  let storedEndpoints = { 
+    openai: officialAPIEndpoint,
+    anthropic: 'https://api.anthropic.com/v1/messages'
+  };
+  let firstVisitValue = true;
+  
+  try {
+    const storedAuth = localStorage.getItem('auth-store');
+    if (storedAuth) {
+      const parsed = JSON.parse(storedAuth);
+      if (parsed.apiKeys) storedKeys = parsed.apiKeys;
+      if (parsed.apiEndpoints) storedEndpoints = parsed.apiEndpoints;
+      if (parsed.firstVisit !== undefined) firstVisitValue = parsed.firstVisit;
+      
+      console.log('[AuthSlice] Loaded from localStorage:', {
+        openai: storedKeys.openai ? 'present' : 'missing',
+        anthropic: storedKeys.anthropic ? 'present' : 'missing'
+      });
+    }
+  } catch (e) {
+    console.error('[AuthSlice] Error loading from localStorage:', e);
+  }
+  
+  // Fall back to environment variables if localStorage values are empty
+  const openaiKey = storedKeys.openai || getEnvVar('VITE_OPENAI_API_KEY', '');
+  const anthropicKey = storedKeys.anthropic || getEnvVar('VITE_ANTHROPIC_API_KEY', '');
+  
   console.log('[AuthSlice] Initializing with keys:', {
     openai: openaiKey ? 'present' : 'missing',
     anthropic: anthropicKey ? 'present' : 'missing'
@@ -28,11 +54,8 @@ export const createAuthSlice: StoreSlice<AuthSlice> = (set) => {
       openai: openaiKey,
       anthropic: anthropicKey,
     },
-    apiEndpoints: {
-      openai: officialAPIEndpoint,
-      anthropic: 'https://api.anthropic.com/v1/messages',
-    },
-    firstVisit: true,
+    apiEndpoints: storedEndpoints,
+    firstVisit: firstVisitValue,
     setApiKey: (provider: ProviderKey, key: string) => {
       console.log(`[AuthSlice] Setting API key for ${provider}: ${key ? 'present' : 'missing'}`);
       set((prev) => ({
