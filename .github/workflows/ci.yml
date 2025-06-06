@@ -409,21 +409,7 @@ jobs:
           # Copy Playwright report
           cp -r playwright-report/* gh-pages/reports/$REPORT_PATH/
           
-          # Create index.html in the report directory
-          cat > gh-pages/reports/$REPORT_PATH/index.html << EOF
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta http-equiv="refresh" content="0;url=./index.html">
-            <title>Playwright Report</title>
-          </head>
-          <body>
-            <p>Redirecting to report...</p>
-          </body>
-          </html>
-          EOF
-          
-          # Create or update main index.html
+          # Create main index.html
           cat > gh-pages/index.html << EOF
           <!DOCTYPE html>
           <html>
@@ -443,7 +429,7 @@ jobs:
             <h1>Playwright Test Reports</h1>
             <ul>
               <li>
-                <a href="./reports/$REPORT_PATH/">$REPORT_PATH</a>
+                <a href="./reports/$REPORT_PATH/index.html">$REPORT_PATH</a>
                 <span class="timestamp">(Generated on $(date))</span>
               </li>
             </ul>
