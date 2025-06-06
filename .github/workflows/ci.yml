@@ -91,10 +91,7 @@ jobs:
 
   visual-tests:
     runs-on: ubuntu-latest
-    # Add environment configuration for Pages
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    # Remove environment configuration for Pages - this will be handled by deploy-playwright-report
     if: github.event.inputs.action != 'accept-references'
     services:
       selenium:
@@ -117,9 +114,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       
-      # Configure Pages
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+      # Remove Pages setup - not needed here
 
       # Start app in background
       - name: Build and start app for testing
@@ -193,20 +188,8 @@ jobs:
           echo "<li><a href='./$BRANCH_PATH/'>$BRANCH_PATH (Latest - $(date))</a></li>" >> gh-pages-report/index.html
           echo "</ul></body></html>" >> gh-pages-report/index.html
 
-      # Upload Pages artifact with complete report
-      - name: Upload Pages artifact
-        if: always()
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: 'gh-pages-report'
 
-      # Deploy to GitHub Pages
-      - name: Deploy to GitHub Pages
-        if: always()
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-      # Update PR comment with branch-specific URL
+      # Fix the duplicate comment in PR comment section
       - name: Comment PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
@@ -216,7 +199,7 @@ jobs:
             const prNumber = context.issue.number;
             const branchPath = `pr-${prNumber}`;
             
-            const reportUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/${branchPath}`;
+            const reportUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/reports/${branchPath}/visual/`;
             const acceptUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/workflows/ci.yml`;
             
             const comment = `
@@ -372,7 +355,7 @@ jobs:
 
   # Add this job to deploy Playwright reports to GitHub Pages
   deploy-playwright-report:
-    needs: [e2e-tests]
+    needs: [e2e-tests, visual-tests]
     if: always()
     runs-on: ubuntu-latest
     permissions:
@@ -388,7 +371,13 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report
-      
+
+      - name: Download Visual Test Report
+        uses: actions/download-artifact@v4
+        with:
+          name: backstop-report
+          path: backstop-report
+
       # Prepare directory structure for GitHub Pages
       - name: Prepare GitHub Pages structure
         shell: bash
@@ -403,18 +392,20 @@ jobs:
             REPORT_PATH=$(echo $GITHUB_REF | sed 's/refs\/heads\///' | sed 's/\//-/g')
           fi
           
-          # Create report directory
-          mkdir -p gh-pages/reports/$REPORT_PATH
+          # Create report directories
+          mkdir -p gh-pages/reports/$REPORT_PATH/e2e
+          mkdir -p gh-pages/reports/$REPORT_PATH/visual
           
-          # Copy Playwright report
-          cp -r playwright-report/* gh-pages/reports/$REPORT_PATH/
+          # Copy reports
+          cp -r playwright-report/* gh-pages/reports/$REPORT_PATH/e2e/ || true
+          cp -r backstop-report/* gh-pages/reports/$REPORT_PATH/visual/ || true
           
           # Create main index.html
           cat > gh-pages/index.html << EOF
           <!DOCTYPE html>
           <html>
           <head>
-            <title>Playwright Test Reports</title>
+            <title>Test Reports</title>
             <style>
               body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; }
               h1 { color: #333; }
@@ -423,16 +414,24 @@ jobs:
               a { color: #0366d6; text-decoration: none; }
               a:hover { text-decoration: underline; }
               .timestamp { color: #666; font-size: 0.8rem; }
+              .report-group { margin-bottom: 1rem; }
             </style>
           </head>
           <body>
-            <h1>Playwright Test Reports</h1>
-            <ul>
-              <li>
-                <a href="./reports/$REPORT_PATH/index.html">$REPORT_PATH</a>
-                <span class="timestamp">(Generated on $(date))</span>
-              </li>
-            </ul>
+            <h1>Test Reports</h1>
+            <div class="report-group">
+              <h2>$REPORT_PATH</h2>
+              <ul>
+                <li>
+                  <a href="./reports/$REPORT_PATH/e2e/index.html">E2E Tests Report</a>
+                  <span class="timestamp">(Generated on $(date))</span>
+                </li>
+                <li>
+                  <a href="./reports/$REPORT_PATH/visual/html_report/index.html">Visual Tests Report</a>
+                  <span class="timestamp">(Generated on $(date))</span>
+                </li>
+              </ul>
+            </div>
           </body>
           </html>
           EOF
@@ -460,14 +459,17 @@ jobs:
           script: |
             const prNumber = context.issue.number;
             const reportPath = `pr-${prNumber}`;
-            const reportUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/reports/${reportPath}/`;
-            
-            const comment = `## 🎭 Playwright Test Report
-            
-            The E2E test report for this PR is available at:
-            
-            🔗 [View Playwright Report](${reportUrl})
-            
+            const baseUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/reports/${reportPath}`;
+            const e2eUrl = `${baseUrl}/e2e/`;
+            const visualUrl = `${baseUrl}/visual/html_report/`;
+
+            const comment = `## 🧪 Test Reports
+
+            The test reports for this PR are available at:
+
+            🎭 [View E2E Test Report](${e2eUrl})
+            👁️ [View Visual Test Report](${visualUrl})
+
             This report shows test results, screenshots, and traces for debugging.`;
             
             github.rest.issues.createComment({
