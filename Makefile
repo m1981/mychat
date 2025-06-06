@@ -169,7 +169,7 @@ test-file: ensure-pnpm-dirs install ## Run specific test file. Usage: make test-
 .PHONY: lint type-check
 
 dead: ## Find unsed code
-	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint:deadcode | ./add-todos.sh
+	$(NODE_PACKAGE_MANAGER) lint:deadcode | ./add-todos.sh
 
 lint: ## Run all linters
 	$(DOCKER_COMPOSE_RUN) app $(NODE_PACKAGE_MANAGER) lint:all
