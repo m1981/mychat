@@ -369,3 +369,124 @@ jobs:
       - name: Deploy to production
         run: echo "Deploying to production"
         # This would typically use a service like Vercel, Netlify, etc.
+
+  # Add this job to deploy Playwright reports to GitHub Pages
+  deploy-playwright-report:
+    needs: [e2e-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download Playwright Report
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+      
+      # Prepare directory structure for GitHub Pages
+      - name: Prepare GitHub Pages structure
+        shell: bash
+        run: |
+          # Create directory structure
+          mkdir -p gh-pages
+          
+          # Get branch/PR info for path
+          if [[ "$GITHUB_REF" == refs/pull/* ]]; then
+            REPORT_PATH="pr-$(echo $GITHUB_REF | sed 's/refs\/pull\///' | sed 's/\/merge//')"
+          else
+            REPORT_PATH=$(echo $GITHUB_REF | sed 's/refs\/heads\///' | sed 's/\//-/g')
+          fi
+          
+          # Create report directory
+          mkdir -p gh-pages/reports/$REPORT_PATH
+          
+          # Copy Playwright report
+          cp -r playwright-report/* gh-pages/reports/$REPORT_PATH/
+          
+          # Create index.html in the report directory
+          cat > gh-pages/reports/$REPORT_PATH/index.html << EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta http-equiv="refresh" content="0;url=./index.html">
+            <title>Playwright Report</title>
+          </head>
+          <body>
+            <p>Redirecting to report...</p>
+          </body>
+          </html>
+          EOF
+          
+          # Create or update main index.html
+          cat > gh-pages/index.html << EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Playwright Test Reports</title>
+            <style>
+              body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; }
+              h1 { color: #333; }
+              ul { list-style-type: none; padding: 0; }
+              li { margin: 0.5rem 0; padding: 0.5rem; border-radius: 4px; background: #f5f5f5; }
+              a { color: #0366d6; text-decoration: none; }
+              a:hover { text-decoration: underline; }
+              .timestamp { color: #666; font-size: 0.8rem; }
+            </style>
+          </head>
+          <body>
+            <h1>Playwright Test Reports</h1>
+            <ul>
+              <li>
+                <a href="./reports/$REPORT_PATH/">$REPORT_PATH</a>
+                <span class="timestamp">(Generated on $(date))</span>
+              </li>
+            </ul>
+          </body>
+          </html>
+          EOF
+      
+      # Setup Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      # Upload Pages artifact
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'gh-pages'
+      
+      # Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+      
+      # Comment on PR with link to report
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const prNumber = context.issue.number;
+            const reportPath = `pr-${prNumber}`;
+            const reportUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/reports/${reportPath}/`;
+            
+            const comment = `## 🎭 Playwright Test Report
+            
+            The E2E test report for this PR is available at:
+            
+            🔗 [View Playwright Report](${reportUrl})
+            
+            This report shows test results, screenshots, and traces for debugging.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
