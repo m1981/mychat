@@ -1,7 +1,39 @@
 import { test, captureTestContext } from './utils/test-context-collector';
 import { expect } from '@playwright/test';
 
+// Setup function to inject API keys before tests
+async function setupApiKeys(page) {
+  // Get API keys from environment variables
+  const openaiKey = process.env.VITE_OPENAI_API_KEY || process.env.TEST_OPENAI_API_KEY || '';
+  const anthropicKey = process.env.VITE_ANTHROPIC_API_KEY || process.env.TEST_ANTHROPIC_API_KEY || '';
+  
+  console.log('Setting up API keys:', 
+    openaiKey ? 'OpenAI key present' : 'OpenAI key missing',
+    anthropicKey ? 'Anthropic key present' : 'Anthropic key missing'
+  );
+  
+  // Set API keys via localStorage
+  await page.addInitScript(({ openaiKey, anthropicKey }) => {
+    const store = {
+      apiKeys: {
+        openai: openaiKey,
+        anthropic: anthropicKey
+      },
+      apiEndpoints: {
+        openai: '/api/chat/openai',
+        anthropic: '/api/chat/anthropic'
+      },
+      firstVisit: false
+    };
+    localStorage.setItem('auth-store', JSON.stringify(store));
+    console.log('API keys set in localStorage:', store.apiKeys);
+  }, { openaiKey, anthropicKey });
+}
+
 test('user can type and submit a message', async ({ page }) => {
+  // Setup API keys
+  await setupApiKeys(page);
+  
   // Navigate to the app
   await page.goto('/');
   

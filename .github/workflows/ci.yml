@@ -285,6 +285,10 @@ jobs:
           TEST_OPENAI_API_KEY: ${{ secrets.TEST_OPENAI_API_KEY }}
           TEST_ANTHROPIC_API_KEY: ${{ secrets.TEST_ANTHROPIC_API_KEY }}
         run: |
+          # Create .env.test file for Playwright to use
+          echo "VITE_OPENAI_API_KEY=${TEST_OPENAI_API_KEY}" > .env.test
+          echo "VITE_ANTHROPIC_API_KEY=${TEST_ANTHROPIC_API_KEY}" >> .env.test
+          # Also set in environment for the current process
           echo "TEST_OPENAI_API_KEY=${TEST_OPENAI_API_KEY}" >> $GITHUB_ENV
           echo "TEST_ANTHROPIC_API_KEY=${TEST_ANTHROPIC_API_KEY}" >> $GITHUB_ENV
       
@@ -292,8 +296,13 @@ jobs:
       - name: Build app
         run: NODE_ENV=production pnpm build:vite
       
-      # Run Playwright tests - let Playwright start the server
+      # Run Playwright tests with environment variables
       - name: Run E2E tests
+        env:
+          PLAYWRIGHT_TEST_BASE_URL: http://localhost:5173
+          # Pass API keys to Playwright
+          VITE_OPENAI_API_KEY: ${{ secrets.TEST_OPENAI_API_KEY }}
+          VITE_ANTHROPIC_API_KEY: ${{ secrets.TEST_ANTHROPIC_API_KEY }}
         run: pnpm test:e2e
       
       # Prepare Playwright reports for GitHub Pages
