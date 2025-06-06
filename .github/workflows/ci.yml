@@ -1,3 +1,4 @@
+
 name: CI/CD Pipeline
 
 on:
@@ -312,7 +313,30 @@ jobs:
       - name: Run E2E tests
         run: pnpm test:e2e
       
-      # Upload test results and artifacts
+      # Prepare Playwright reports for GitHub Pages
+      - name: Prepare Playwright reports for GitHub Pages
+        if: always()
+        run: |
+          # Get branch name or use PR number
+          if [[ $GITHUB_REF == refs/pull/* ]]; then
+            BRANCH_PATH="pr-$(echo $GITHUB_REF | sed 's/refs\/pull\///' | sed 's/\/merge//')"
+          else
+            BRANCH_PATH=$(echo $GITHUB_REF | sed 's/refs\/heads\///' | sed 's/\//-/g')
+          fi
+          
+          # Create directory for e2e reports
+          mkdir -p gh-pages-report/$BRANCH_PATH/e2e-tests
+          
+          # Copy Playwright report
+          cp -r playwright-report/* gh-pages-report/$BRANCH_PATH/e2e-tests/ || true
+          
+          # Update index page to include link to E2E tests
+          if [ -f gh-pages-report/index.html ]; then
+            # Add link to E2E tests before closing </ul> tag
+            sed -i "s|</ul>|  <li><a href='./$BRANCH_PATH/e2e-tests/'>E2E Test Report (Latest - $(date))</a></li>\n</ul>|" gh-pages-report/index.html
+          fi
+      
+      # Upload test results as artifacts (for download from Actions page)
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
