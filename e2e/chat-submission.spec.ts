@@ -26,14 +26,30 @@ async function setupApiKeys(page) {
       firstVisit: false
     };
     localStorage.setItem('auth-store', JSON.stringify(store));
-    console.log('API keys set in localStorage:', store.apiKeys);
+    console.log('API keys set in localStorage:', JSON.stringify({
+      openai: openaiKey ? 'present' : 'missing',
+      anthropic: anthropicKey ? 'present' : 'missing'
+    }));
   }, { openaiKey, anthropicKey });
+
+  // Add a check to verify localStorage after navigation
+  await page.goto('/');
+  await page.evaluate(() => {
+    const storedData = localStorage.getItem('auth-store');
+    console.log('Stored auth data after page load:', storedData);
+    return storedData;
+  });
 }
 
 test('user can type and submit a message', async ({ page }) => {
   // Setup API keys
   await setupApiKeys(page);
   
+  // Add debug log to check store state before submission
+  await page.evaluate(() => {
+    console.log('Current store state:', JSON.stringify(window.store?.getState?.() || 'Store not available'));
+  });
+
   // Navigate to the app
   await page.goto('/');
   

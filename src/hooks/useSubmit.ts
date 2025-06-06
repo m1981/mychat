@@ -99,6 +99,9 @@ function useSubmit(dependencies: SubmitDependencies = {}) {
     const providerKey = currentChat?.config.provider || DEFAULT_PROVIDER;
     const key = apiKeys[providerKey];
     
+    debug.log('useSubmit', `[useSubmit] Provider setup: provider=${providerKey}, apiKey=${key ? 'present' : 'missing'}`);
+    debug.log('useSubmit', `[useSubmit] All apiKeys: ${JSON.stringify(Object.keys(apiKeys).map(k => [k, apiKeys[k] ? 'present' : 'missing']))}`);
+
     return {
       currentChat,
       providerKey,

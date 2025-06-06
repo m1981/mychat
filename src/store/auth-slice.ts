@@ -14,29 +14,40 @@ export interface AuthSlice {
   setFirstVisit: (firstVisit: boolean) => void;
 }
 
-export const createAuthSlice: StoreSlice<AuthSlice> = (set) => ({
-  apiKeys: {
-    openai: getEnvVar('VITE_OPENAI_API_KEY', ''),
-    anthropic: getEnvVar('VITE_ANTHROPIC_API_KEY', ''),
-  },
-  apiEndpoints: {
-    openai: officialAPIEndpoint,
-    anthropic: 'https://api.anthropic.com/v1/messages',
-  },
-  firstVisit: true,
-  setApiKey: (provider: ProviderKey, key: string) => {
-    set((prev) => ({
-      ...prev,
-      apiKeys: { ...prev.apiKeys, [provider]: key },
-    }));
-  },
-  setApiEndpoint: (provider: ProviderKey, endpoint: string) => {
-    set((prev) => ({
-      ...prev,
-      apiEndpoints: { ...prev.apiEndpoints, [provider]: endpoint },
-    }));
-  },
-  setFirstVisit: (firstVisit: boolean) => {
-    set((prev) => ({ ...prev, firstVisit }));
-  },
-});
+export const createAuthSlice: StoreSlice<AuthSlice> = (set) => {
+  // Log initial values
+  const openaiKey = getEnvVar('VITE_OPENAI_API_KEY', '');
+  const anthropicKey = getEnvVar('VITE_ANTHROPIC_API_KEY', '');
+  console.log('[AuthSlice] Initializing with keys:', {
+    openai: openaiKey ? 'present' : 'missing',
+    anthropic: anthropicKey ? 'present' : 'missing'
+  });
+  
+  return {
+    apiKeys: {
+      openai: openaiKey,
+      anthropic: anthropicKey,
+    },
+    apiEndpoints: {
+      openai: officialAPIEndpoint,
+      anthropic: 'https://api.anthropic.com/v1/messages',
+    },
+    firstVisit: true,
+    setApiKey: (provider: ProviderKey, key: string) => {
+      console.log(`[AuthSlice] Setting API key for ${provider}: ${key ? 'present' : 'missing'}`);
+      set((prev) => ({
+        ...prev,
+        apiKeys: { ...prev.apiKeys, [provider]: key },
+      }));
+    },
+    setApiEndpoint: (provider: ProviderKey, endpoint: string) => {
+      set((prev) => ({
+        ...prev,
+        apiEndpoints: { ...prev.apiEndpoints, [provider]: endpoint },
+      }));
+    },
+    setFirstVisit: (firstVisit: boolean) => {
+      set((prev) => ({ ...prev, firstVisit }));
+    },
+  };
+};
