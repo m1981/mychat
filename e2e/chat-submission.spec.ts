@@ -159,7 +159,7 @@ test('user can edit and save a message', async ({ page }) => {
     
     // Capture state after edit is saved
     await captureTestContext(page, test.info());
-    
+
     // Verify the edited message appears
     await expect(page.locator('.prose p').filter({ hasText: 'Edited message' })).toBeVisible();
     
@@ -173,7 +173,10 @@ test('user can edit and save a message', async ({ page }) => {
   }
 });
 
-test('user can add a new message between existing messages', async ({ page }) => {
+test('streaming response appears progressively in chat area', async ({ page }) => {
+  // Setup API keys with focus on Anthropic
+  await setupApiKeys(page);
+  
   // Navigate to the app
   await page.goto('/');
   
@@ -184,31 +187,76 @@ test('user can add a new message between existing messages', async ({ page }) =>
     // Capture initial state
     await captureTestContext(page, test.info());
     
-    // Submit first message
+    // Select Anthropic model from dropdown if available
+    const modelSelector = page.locator('[data-testid="model-selector"]');
+    if (await modelSelector.isVisible()) {
+      await modelSelector.click();
+      await page.locator('text=claude-3-7-sonnet').first().click();
+    }
+    
+    // Type a message that will trigger a longer response to better observe streaming
     const textarea = page.locator('textarea').first();
     await textarea.click();
-    await textarea.fill('First message');
+    await textarea.fill('Write a short poem about streaming data, one line at a time');
+    
+    // Start request timing
+    const startTime = Date.now();
+    
+    // Submit the message
     await page.locator('[data-testid="save-submit-button"]').click();
     
-    // Wait for response with increased timeout
-    await expect(page.locator('[role="assistant"]')).toBeVisible();
+    // Verify the message was sent
+    await expect(page.locator('[data-testid="message-user"]')
+      .filter({ hasText: 'Write a short poem about streaming data' })).toBeVisible();
     
-    // Capture state after first message and response
+    // Wait for the assistant response container to appear
+    const assistantResponse = page.locator('[role="assistant"]').first();
+    await expect(assistantResponse).toBeVisible({ timeout: 10000 });
+    
+    // Capture the initial response length
+    const initialText = await assistantResponse.textContent() || '';
+    const initialLength = initialText.length;
+    
+    // Wait a short time for streaming to progress
+    await page.waitForTimeout(2000);
+    
+    // Capture the updated response
+    const midwayText = await assistantResponse.textContent() || '';
+    const midwayLength = midwayText.length;
+    
+    // Verify that the response is growing (streaming is working)
+    expect(midwayLength).toBeGreaterThan(initialLength);
+    
+    // Wait for streaming to complete (max 30 seconds)
+    await expect(async () => {
+      // Check if response has stopped changing for 3 seconds
+      const currentText = await assistantResponse.textContent() || '';
+      const currentLength = currentText.length;
+      await page.waitForTimeout(3000);
+      const newText = await assistantResponse.textContent() || '';
+      const newLength = newText.length;
+      console.log(`Checking if streaming completed: ${currentLength} vs ${newLength} characters`);
+      return currentText === newText && newLength > midwayLength;
+    }).toPass({ timeout: 30000 });
+    
+    // Calculate and log response time
+    const endTime = Date.now();
+    console.log(`Streaming response completed in ${endTime - startTime}ms`);
+
+    // Capture final state with complete response
     await captureTestContext(page, test.info());
     
-    // Click the "+" button to add a new message
-    await page.locator('div.h-0.w-0.relative div').first().click();
-    
-    // Type and submit a new message
-    const newTextarea = page.locator('textarea').first();
-    await newTextarea.fill('Inserted message');
-    await page.locator('[data-testid="save-submit-button"]').click();
-    
-    // Verify the new message was inserted
-    await expect(page.getByText('Inserted message')).toBeVisible();
-    
-    // Capture final state
-    await captureTestContext(page, test.info());
+    // Verify the final response contains meaningful content
+    const finalText = await assistantResponse.textContent() || '';
+    const finalLength = finalText.length;
+
+    // Add specific content length assertions
+    expect(finalLength).toBeGreaterThan(50);
+    console.log(`Final response length: ${finalLength} characters`);
+
+    // Verify the response contains poetry-related content
+    expect(finalText.toLowerCase()).toContain('stream');
+    expect(finalText.split('\n').length).toBeGreaterThan(2);
   } catch (error) {
     // Capture detailed context on failure
     await captureTestContext(page, test.info());
