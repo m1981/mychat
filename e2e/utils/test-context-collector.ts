@@ -1,6 +1,43 @@
 import fs from 'fs';
 import path from 'path';
-import { test as base } from '@playwright/test';
+import { test as base, TestInfo } from '@playwright/test';
+
+// Function to capture test context (screenshots, DOM, etc.)
+export async function captureTestContext(page, testInfo: TestInfo) {
+  const contextDir = path.join('test-logs', testInfo.title.replace(/\s+/g, '-'));
+  
+  if (!fs.existsSync(contextDir)) {
+    fs.mkdirSync(contextDir, { recursive: true });
+  }
+  
+  // Capture screenshot
+  const screenshotPath = path.join(contextDir, `screenshot-${Date.now()}.png`);
+  await page.screenshot({ path: screenshotPath, fullPage: true });
+  
+  // Capture DOM snapshot
+  const html = await page.content();
+  fs.writeFileSync(path.join(contextDir, `dom-${Date.now()}.html`), html);
+  
+  // Capture local storage
+  const localStorage = await page.evaluate(() => {
+    const items = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      items[key] = localStorage.getItem(key);
+    }
+    return items;
+  });
+  
+  fs.writeFileSync(
+    path.join(contextDir, `localStorage-${Date.now()}.json`), 
+    JSON.stringify(localStorage, null, 2)
+  );
+  
+  // Log the capture
+  console.log(`Captured test context to ${contextDir}`);
+  
+  return { screenshotPath, contextDir };
+}
 
 // Extend the Playwright test with context collection
 export const test = base.extend({
