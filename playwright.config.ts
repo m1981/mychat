@@ -1,6 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 import path from 'path';
 
+// Reuse your existing path aliases
+import { sharedAliases } from './vite.config';
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 15000, // Global timeout for tests (15 seconds instead of 30)
@@ -37,6 +40,30 @@ export default defineConfig({
       name: 'chromium',
       use: { 
         ...devices['Desktop Chrome'],
+        // Capture console logs
+        logger: {
+          isEnabled: (name, severity) => true,
+          log: (name, severity, message, args) => {
+            // Log to console
+            console.log(`[${name}] ${severity}: ${message}`);
+            
+            // Also write to file if in CI
+            if (process.env.CI) {
+              const fs = require('fs');
+              const path = require('path');
+              const logsDir = path.join(process.cwd(), 'test-logs');
+              
+              if (!fs.existsSync(logsDir)) {
+                fs.mkdirSync(logsDir, { recursive: true });
+              }
+              
+              fs.appendFileSync(
+                path.join(logsDir, 'browser-console.log'),
+                `[${new Date().toISOString()}] [${name}] ${severity}: ${message}\n`
+              );
+            }
+          }
+        }
       },
     },
   ],
