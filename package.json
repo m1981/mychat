@@ -67,7 +67,7 @@
     }
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.38.0",
+    "@anthropic-ai/sdk": "^0.52.0",
     "@dqbd/tiktoken": "^1.0.2",
     "@sentry/react": "^9.15.0",
     "@sentry/vite-plugin": "^3.4.0",
