@@ -30,146 +30,30 @@ async function parseRequestBody(req: NextApiRequest): Promise<any> {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  // Parse the request body
-  const data = await parseRequestBody(req);
-  
-  // Extract standardized parameters
-  const { formattedRequest, apiKey } = data;
-
-  if (!formattedRequest || !apiKey) {
-    return res.status(400).json({ 
-      error: 'Missing required parameters',
-      status: 400
-    });
-  }
-
-  const anthropic = new Anthropic({
-    apiKey: apiKey,
-  });
-
   try {
-    if (formattedRequest.stream) {
-      // Set up SSE headers
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      res.setHeader('X-Accel-Buffering', 'no');
-
-      // Keep-alive mechanism
-      let lastPing = Date.now();
-      const keepAliveInterval = setInterval(() => {
-        if (Date.now() - lastPing >= 15000) {
-          res.write(':keep-alive\n\n');
-          lastPing = Date.now();
-        }
-      }, 15000);
-
-      try {
-        // Create streaming request to Anthropic
-        const stream = await anthropic.messages.create({
-          ...formattedRequest,
-          stream: true
-        });
-        
-        // Process each chunk
-        for await (const chunk of stream) {
-          lastPing = Date.now();
-          
-          // Use type discriminated unions for safer handling
-          switch (chunk.type) {
-            case 'message_start':
-              res.write(`data: ${JSON.stringify({
-                type: 'message_start',
-                message: chunk.message,
-              })}\n\n`);
-              break;
-              
-            case 'content_block_start':
-              // Handle thinking blocks
-              if (chunk.content_block.type === 'thinking' || chunk.content_block.type === 'redacted_thinking') {
-                res.write(`data: ${JSON.stringify({
-                  type: 'content_block_start',
-                  content_block: chunk.content_block,
-                })}\n\n`);
-              }
-              break;
-              
-            case 'content_block_delta':
-              res.write(`data: ${JSON.stringify({
-                type: 'content_block_delta',
-                delta: chunk.delta,
-              })}\n\n`);
-              break;
-              
-            case 'content_block_stop':
-              res.write(`data: ${JSON.stringify({
-                type: 'content_block_stop',
-                content_block: chunk.content_block,
-              })}\n\n`);
-              break;
-              
-            case 'message_delta':
-              res.write(`data: ${JSON.stringify({
-                type: 'message_delta',
-                delta: chunk.delta,
-              })}\n\n`);
-              break;
-              
-            case 'message_stop':
-              res.write(`data: ${JSON.stringify({
-                type: 'message_stop',
-                message: chunk.message,
-              })}\n\n`);
-              break;
-          }
-        }
-      } catch (error) {
-        console.error('Anthropic API error:', error);
-        
-        // Return error response with type field
-        res.status(error.status || 500).json({
-          error: error.message || 'Unknown error',
-          status: error.status || 500,
-          type: error.type || 'unknown_error'  // Include the type field
-        });
-      } finally {
-        clearInterval(keepAliveInterval);
-        res.write('data: [DONE]\n\n');
-        res.end();
-      }
-    } else {
-      // Non-streaming response
-      const response = await anthropic.messages.create({
-        ...formattedRequest,
-        stream: false
-      });
-
-      // Return standardized response
-      res.status(200).json({
-        content: response.content,
-        model: response.model,
-        id: response.id,
-        type: response.type
-      });
-    }
-  } catch (error: any) {
-    console.error('[Anthropic API] Error:', error);
+    // Parse the request body
+    const { formattedRequest, apiKey } = await parseRequestBody(req);
     
-    // Extract error details
-    const errorStatus = error.status || 500;
-    const errorMessage = error.message || 'Unknown error';
-    const errorType = error.type || 'unknown_error';
-    const errorDetails = error.error?.details || '';
-    
-    res.status(errorStatus).json({
-      error: errorMessage,
-      status: errorStatus,
-      type: errorType,
-      details: errorDetails
+    // Initialize Anthropic client
+    const anthropic = new Anthropic({
+      apiKey: apiKey
     });
+    
+    // Extract the request parameters directly
+    const response = await anthropic.messages.create({
+      model: formattedRequest.model,
+      max_tokens: formattedRequest.max_tokens,
+      temperature: formattedRequest.temperature,
+      top_p: formattedRequest.top_p,
+      stream: formattedRequest.stream || false,
+      messages: formattedRequest.messages,
+      system: formattedRequest.system
+    });
+    
+    // Return the response
+    res.status(200).json(response);
+  } catch (error: any) {
+    console.error('Anthropic API error:', error);
+    res.status(error.status || 500).json({ error: error.message });
   }
 }
