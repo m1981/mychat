@@ -1,15 +1,22 @@
 import { test, captureTestContext } from './utils/test-context-collector';
 import { expect } from '@playwright/test';
 
+// Create a test-specific logger that will be visible in Playwright UI
+const log = {
+  info: (message: string) => console.log(`[TEST INFO] ${message}`),
+  debug: (message: string) => console.log(`[TEST DEBUG] ${message}`),
+  error: (message: string) => console.error(`[TEST ERROR] ${message}`)
+};
+
 // Setup function to inject API keys before tests
 async function setupApiKeys(page) {
   // Get API keys from environment variables
   const openaiKey = process.env.VITE_OPENAI_API_KEY || process.env.TEST_OPENAI_API_KEY || '';
   const anthropicKey = process.env.VITE_ANTHROPIC_API_KEY || process.env.TEST_ANTHROPIC_API_KEY || '';
   
-  console.log('Setting up API keys:', 
-    openaiKey ? 'OpenAI key present' : 'OpenAI key missing',
-    anthropicKey ? 'Anthropic key present' : 'Anthropic key missing'
+  log.info('Setting up API keys: ' + 
+    (openaiKey ? 'OpenAI key present' : 'OpenAI key missing') + ', ' +
+    (anthropicKey ? 'Anthropic key present' : 'Anthropic key missing')
   );
   
   // Set API keys via localStorage
@@ -34,11 +41,13 @@ async function setupApiKeys(page) {
 
   // Add a check to verify localStorage after navigation
   await page.goto('/');
-  await page.evaluate(() => {
+  const storedData = await page.evaluate(() => {
     const storedData = localStorage.getItem('auth-store');
     console.log('Stored auth data after page load:', storedData);
     return storedData;
   });
+  
+  log.info('Auth store verification: ' + (storedData ? 'Data present' : 'No data found'));
 }
 
 test('user can type and submit a message', async ({ page }) => {
@@ -259,6 +268,91 @@ test('streaming response appears progressively in chat area', async ({ page }) =
     expect(finalText.split('\n').length).toBeGreaterThan(2);
   } catch (error) {
     // Capture detailed context on failure
+    await captureTestContext(page, test.info());
+    throw error;
+  }
+});
+
+test('chat title is automatically generated after message submission', async ({ page }) => {
+  // Setup API keys
+  await setupApiKeys(page);
+  
+  // Navigate to the app
+  await page.goto('/');
+  
+  try {
+    log.info('Test started: chat title generation');
+    
+    // Wait for the chat interface to load
+    await expect(page.locator('[data-testid="chat-interface"]')).toBeVisible();
+    log.info('Chat interface loaded');
+    
+    // Click "New Chat" button to ensure we start with a fresh chat
+    await page.locator('[aria-label="New chat"]').click();
+    log.info('Clicked New Chat button');
+    
+    // Wait for the new chat to initialize
+    await page.waitForTimeout(500);
+    
+    // Verify we have a new chat with default title
+    const initialTitle = await page.locator('[data-testid="chat-title"]').first().textContent();
+    log.info(`Initial chat title: "${initialTitle}"`);
+    expect(initialTitle).toContain('New Chat');
+     
+    // Capture initial state
+    await captureTestContext(page, test.info());
+    
+    // Type a message that should trigger title generation
+    const textarea = page.locator('textarea').first();
+    await textarea.click();
+    await textarea.fill('What is the capital of France?');
+    log.info('Entered test message');
+    
+    // Submit the message
+    await page.locator('[data-testid="save-submit-button"]').click();
+    log.info('Submitted message');
+    
+    // Wait for the message to appear in the chat
+    await expect(page.locator('[data-testid="message-user"]')
+      .filter({ hasText: 'What is the capital of France?' })).toBeVisible();
+    log.info('User message visible in chat');
+    
+    // Wait for assistant response with increased timeout
+    const assistantResponse = page.locator('[role="assistant"]').first();
+    await expect(assistantResponse).toBeVisible({ timeout: 15000 });
+    log.info('Assistant response container appeared');
+    
+    // Wait for the response to complete (similar to streaming test)
+    await expect(async () => {
+      const currentText = await assistantResponse.textContent() || '';
+      const currentLength = currentText.length;
+      await page.waitForTimeout(2000);
+      const newText = await assistantResponse.textContent() || '';
+      log.debug(`Response check: ${currentLength} chars vs ${newText.length} chars after wait`);
+      return currentText === newText && currentText.length > 10;
+    }).toPass({ timeout: 20000 });
+    log.info('Assistant response completed');
+    
+    // Wait for title generation to complete (may take a moment after response)
+    await expect(async () => {
+      const title = await page.locator('[data-testid="chat-title"]').first().textContent();
+      log.debug(`Current title: "${title}"`);
+      return title !== 'New Chat' && title !== '';
+    }).toPass({ timeout: 15000 });
+    
+    // Get the generated title
+    const generatedTitle = await page.locator('[data-testid="chat-title"]').first().textContent();
+    log.info(`Generated title: "${generatedTitle}"`);
+    
+    // Verify the title is meaningful (contains relevant keywords)
+    expect(generatedTitle?.toLowerCase()).toMatch(/capital|france|paris/);
+    
+    // Capture final state with generated title
+    await captureTestContext(page, test.info());
+    log.info('Test completed successfully');
+  } catch (error) {
+    // Capture detailed context on failure
+    log.error(`Test failed: ${error.message}`);
     await captureTestContext(page, test.info());
     throw error;
   }

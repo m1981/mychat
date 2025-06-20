@@ -135,7 +135,7 @@ const ChatHistory = React.memo(
             />
           ) : (
             <>
-              <span>{_title}</span>
+              <span data-testid="chat-title">{_title}</span>
               {!active && <span className={ChatHistoryClass.dot}><DotIcon /></span>}
             </>
           )}
