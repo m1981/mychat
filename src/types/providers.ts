@@ -54,9 +54,38 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
     },
      parseStreamingResponse: (response: ProviderResponse): string => {
       try {
-        return response.choices?.[0]?.delta?.content || '';
+        // Log the incoming response for debugging
+        console.log('OpenAI streaming response received:', JSON.stringify(response));
+        
+        // Handle both direct delta content and nested delta content
+        if (response.choices?.[0]?.delta?.content !== undefined) {
+          return response.choices[0].delta.content;
+        }
+        
+        // Handle case where content might be directly on the response
+        if (typeof response.content === 'string') {
+          return response.content;
+        }
+        
+        // Handle case where the entire response might be a string
+        if (typeof response === 'string') {
+          try {
+            const parsed = JSON.parse(response);
+            if (parsed.choices?.[0]?.delta?.content !== undefined) {
+              return parsed.choices[0].delta.content;
+            }
+          } catch (e) {
+            // Not JSON, return empty string
+            console.error('Failed to parse string response:', e);
+            return '';
+          }
+        }
+        
+        // Log unhandled response formats
+        console.warn('Unhandled response format in parseStreamingResponse:', JSON.stringify(response));
+        return '';
       } catch (e) {
-        console.error('Error parsing OpenAI response:', e);
+        console.error('Error parsing OpenAI response:', e, 'Response:', JSON.stringify(response));
         return '';
       }
     },
@@ -76,8 +105,19 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          formattedRequest: formattedRequest,  // Wrap in formattedRequest property
-          apiKey                              // Add API key separately
+          // Don't wrap in formattedRequest property for middleware mode
+          // Instead, send the parameters directly
+          messages: formattedRequest.messages,
+          config: {
+            model: formattedRequest.model,
+            max_tokens: formattedRequest.max_tokens,
+            temperature: formattedRequest.temperature,
+            top_p: formattedRequest.top_p,
+            presence_penalty: formattedRequest.presence_penalty,
+            frequency_penalty: formattedRequest.frequency_penalty,
+            stream: formattedRequest.stream
+          },
+          apiKey
         })
       });
       
@@ -97,24 +137,35 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
           ? endpoint 
           : `/api${endpoint}`;
       
+      console.log('Submitting OpenAI stream request to:', apiEndpoint);
+      
+      // Send a properly formatted request with stream: true
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          formattedRequest: {
-            ...formattedRequest,
-            stream: true
-          },
+          // Send all parameters at the top level for consistency with server expectations
+          model: formattedRequest.model,
+          max_tokens: formattedRequest.max_tokens,
+          temperature: formattedRequest.temperature,
+          top_p: formattedRequest.top_p,
+          presence_penalty: formattedRequest.presence_penalty,
+          frequency_penalty: formattedRequest.frequency_penalty,
+          stream: true,  // Always true for streaming
+          messages: formattedRequest.messages,
           apiKey
         })
       });
       
       if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error('OpenAI API error response:', errorText);
+        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
       }
       
+      console.log('Stream response received, returning body');
       return response.body as ReadableStream;
     }
   },
@@ -209,19 +260,20 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
           ? endpoint 
           : `/api${endpoint}`;
       
+      // Send the request directly to the API
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // Wrap in formattedRequest property
-          formattedRequest: {
-            ...formattedRequest,
-            stream: false
-          },
-          // Add API key separately
-          apiKey
+          model: formattedRequest.model,
+          max_tokens: formattedRequest.max_tokens,
+          temperature: formattedRequest.temperature,
+          top_p: formattedRequest.top_p,
+          messages: formattedRequest.messages,
+          system: formattedRequest.system,
+          apiKey: apiKey
         })
       });
       

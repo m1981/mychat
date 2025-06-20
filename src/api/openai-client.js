@@ -1,3 +1,4 @@
+
 import OpenAI from 'openai';
 
 export class OpenAIClient {
@@ -10,10 +11,19 @@ export class OpenAIClient {
     // Format messages for OpenAI API if needed
     const formattedParams = this._formatParams(params);
     
-    return await this.client.chat.completions.create({
-      ...formattedParams,
-      stream: true
-    });
+    try {
+      // Return the stream directly from the OpenAI SDK
+      const stream = await this.client.chat.completions.create({
+        ...formattedParams,
+        stream: true
+      });
+      
+      // Ensure the stream is properly formatted
+      return stream;
+    } catch (error) {
+      console.error('Error creating streaming message:', error);
+      throw error;
+    }
   }
   
   async createMessage(params) {
@@ -26,22 +36,19 @@ export class OpenAIClient {
     });
   }
   
-  // Helper method to format messages according to OpenAI's API requirements
   _formatParams(params) {
-    // Make a copy to avoid modifying the original
-    const formattedParams = { ...params };
-    
-    // Remove any redundant config object if it exists
-    if (formattedParams.config) {
-      delete formattedParams.config;
-    }
-    
-    // Remove apiKey if it was accidentally included
-    if (formattedParams.apiKey) {
-      delete formattedParams.apiKey;
-    }
-    
-    return formattedParams;
+    // Convert generic params to OpenAI-specific format
+    // Make sure all required parameters are included
+    return {
+      model: params.model || 'gpt-4o',
+      max_tokens: params.max_tokens || 4096,
+      temperature: params.temperature || 0.7,
+      messages: params.messages,
+      // Include these parameters if they exist
+      presence_penalty: params.presence_penalty,
+      frequency_penalty: params.frequency_penalty,
+      top_p: params.top_p
+    };
   }
 }
 

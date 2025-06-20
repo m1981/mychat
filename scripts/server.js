@@ -1,3 +1,4 @@
+
 import express from 'express';
 import bodyParser from 'body-parser';
 import http from 'http';
@@ -160,7 +161,7 @@ async function createServer() {
   app.post('/api/chat/openai', async (req, res) => {
     console.log('OpenAI API request received');
     
-    // For non-streaming responses, use JSON content type
+    // Check for streaming flag at both top level and in config
     const isStreaming = req.body?.stream === true || req.body?.config?.stream === true;
     
     if (isStreaming) {
@@ -180,8 +181,17 @@ async function createServer() {
       // Log the request body for debugging
       console.log('Request body:', JSON.stringify(req.body, null, 2));
       
-      // Standardize request parameter extraction for OpenAI
-      const { messages, config, apiKey } = req.body;
+      // Extract API key and messages directly from request body or from nested config
+      const apiKey = req.body.apiKey;
+      const messages = req.body.messages;
+      
+      // Extract config parameters, either from top-level or from config object
+      const model = req.body.model || req.body.config?.model || 'gpt-4o';
+      const max_tokens = req.body.max_tokens || req.body.config?.max_tokens || 4096;
+      const temperature = req.body.temperature || req.body.config?.temperature || 0.7;
+      const top_p = req.body.top_p || req.body.config?.top_p || 1;
+      const presence_penalty = req.body.presence_penalty || req.body.config?.presence_penalty || 0;
+      const frequency_penalty = req.body.frequency_penalty || req.body.config?.frequency_penalty || 0;
 
       // Validate required fields
       if (!apiKey) {
@@ -190,15 +200,21 @@ async function createServer() {
         });
       }
 
-      // Create default config if not provided
-      const safeConfig = config || {};
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({
+          error: 'Messages array is required and must be an array'
+        });
+      }
 
-      // Create request params with safe defaults
+      // Create request params with extracted values
       const requestParams = {
-        model: safeConfig.model || 'gpt-4o',
-        max_tokens: safeConfig.max_tokens || 4096,
-        temperature: safeConfig.temperature || 0.7,
-        messages: messages,
+        model,
+        max_tokens,
+        temperature,
+        top_p,
+        presence_penalty,
+        frequency_penalty,
+        messages,
         stream: isStreaming
       };
       
@@ -213,14 +229,34 @@ async function createServer() {
         }, 15000);
         
         try {
-          console.log('Sending request to OpenAI with params:', JSON.stringify(requestParams, null, 2));
+          console.log('Sending streaming request to OpenAI with params:', JSON.stringify({
+            ...requestParams,
+            stream: true
+          }, null, 2));
           
           // Use your client's streaming method
           const stream = await openaiClient.createStreamingMessage(requestParams);
           
           // Process stream
           for await (const chunk of stream) {
-            res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+            // Log the raw chunk for debugging
+            console.log('Raw chunk from OpenAI:', JSON.stringify(chunk));
+            
+            // Format the chunk to match the expected format in the frontend
+            // The client expects a specific format with choices[0].delta.content
+            const formattedChunk = {
+              choices: [{
+                delta: {
+                  content: chunk.choices?.[0]?.delta?.content || ''
+                }
+              }]
+            };
+            
+            // Log the formatted chunk
+            console.log('Sending formatted chunk to client:', JSON.stringify(formattedChunk));
+            
+            // Make sure to properly format the SSE data
+            res.write(`data: ${JSON.stringify(formattedChunk)}\n\n`);
           }
         } catch (error) {
           console.error('Stream error:', error);
@@ -234,7 +270,7 @@ async function createServer() {
       } else {
         // Non-streaming implementation
         try {
-          console.log('Sending request to OpenAI with params:', JSON.stringify(requestParams, null, 2));
+          console.log('Sending non-streaming request to OpenAI with params:', JSON.stringify(requestParams, null, 2));
           
           // Use your client's non-streaming method
           const response = await openaiClient.createMessage(requestParams);
@@ -251,9 +287,9 @@ async function createServer() {
         res.status(500).json({ error: error.message });
       } else {
         try {
-        res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
-        res.write('data: [DONE]\n\n');
-        res.end();
+          res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+          res.write('data: [DONE]\n\n');
+          res.end();
         } catch (writeError) {
           console.error('Error writing error response:', writeError);
         }
