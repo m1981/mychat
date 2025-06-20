@@ -39,4 +39,6 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },
+  // Add global setup to configure logging
+  globalSetup: './e2e/global-setup',
 });
