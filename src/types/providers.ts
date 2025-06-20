@@ -20,7 +20,7 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
           max_tokens: config.max_tokens || 1000,
           temperature: config.temperature || 0.7,
           top_p: config.top_p || 1,
-          stream: config.stream || false,
+          stream: config.stream ?? false,
           messages: []
         };
       }
@@ -33,12 +33,13 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
         top_p: config.top_p,
         presence_penalty: config.presence_penalty,
         frequency_penalty: config.frequency_penalty,
-        stream: config.stream,
-        messages: messages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        }))
-        // No nested config object - this was redundant
+        stream: config.stream ?? false,
+        messages: messages
+          .filter(msg => msg.content && msg.content.trim() !== '')
+          .map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }))
       };
     },
     parseResponse: (response: ProviderResponse): string => {
@@ -51,7 +52,7 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
       }
       throw new Error('Invalid response format from OpenAI');
     },
-    parseStreamingResponse: (response: ProviderResponse): string => {
+     parseStreamingResponse: (response: ProviderResponse): string => {
       try {
         return response.choices?.[0]?.delta?.content || '';
       } catch (e) {
@@ -137,16 +138,19 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
           max_tokens: config.max_tokens || 1000,
           temperature: config.temperature || 0.7,
           top_p: config.top_p || 1,
-          stream: config.stream || false,
+          stream: config.stream ?? false,
           messages: []
         };
       }
       
+      // Filter out empty messages first
+      const filteredMessages = messages.filter(msg => msg.content && msg.content.trim() !== '');
+      
       // Extract system message if present
-      const systemMessage = messages.find(m => m.role === 'system');
+      const systemMessage = filteredMessages.find(m => m.role === 'system');
       
       // Format regular messages for Anthropic
-      const regularMessages = messages
+      const regularMessages = filteredMessages
         .filter(m => m.role !== 'system')
         .map(m => ({
           role: m.role === 'assistant' ? 'assistant' : 'user',
@@ -168,11 +172,11 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
         formattedRequest.system = systemMessage.content;
       }
       
-      // Add thinking configuration if enabled
-      if (config.thinking?.enabled) {
+      // Add thinking configuration if enabled - check both properties
+      if (config.thinking?.enabled || config.thinking_mode?.enabled) {
         formattedRequest.thinking = {
           type: "enabled",
-          budget_tokens: config.thinking.budget_tokens
+          budget_tokens: (config.thinking?.budget_tokens || config.thinking_mode?.budget_tokens || 16000)
         };
       }
       

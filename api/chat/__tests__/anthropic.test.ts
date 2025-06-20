@@ -40,7 +40,6 @@ describe('Anthropic API Handler', () => {
       [Symbol.asyncIterator]: async function* () {
         yield Buffer.from(JSON.stringify({
           // Update to match the expected format
-          formattedRequest: {
             messages: [{ role: 'user', content: 'Hello' }],
             system: 'You are a helpful assistant.',
             model: 'claude-3-5-sonnet-20240229',
@@ -51,7 +50,6 @@ describe('Anthropic API Handler', () => {
               type: 'enabled',
               budget_tokens: 10000
             }
-          },
           apiKey: 'test-api-key'
         }));
       }
