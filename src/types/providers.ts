@@ -70,17 +70,14 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
           ? endpoint 
           : `/api${endpoint}`;
       
-      // Send the request with properties at the top level, not nested
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // Spread the formatted request at the top level
-          ...formattedRequest,
-          // Add API key separately
-          apiKey
+          formattedRequest: formattedRequest,  // Nest under formattedRequest property
+          apiKey: apiKey                      // Keep apiKey at top level
         })
       });
       
@@ -235,7 +232,6 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
       const apiKey = store.getState().apiKeys.anthropic;
       const endpoint = PROVIDER_CONFIGS.anthropic.endpoints[0];
       
-      // Determine if we're using a local API endpoint or an external one
       const apiEndpoint = endpoint.startsWith('http') 
         ? endpoint 
         : endpoint.startsWith('/api') 
@@ -246,10 +242,11 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01'
         },
-        body: JSON.stringify({...formattedRequest, stream: true})
+        body: JSON.stringify({
+          formattedRequest: formattedRequest,  // Nest under formattedRequest property
+          apiKey: apiKey                      // Keep apiKey at top level
+        })
       });
       
       if (!response.ok) {
