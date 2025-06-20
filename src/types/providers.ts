@@ -94,7 +94,6 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
       const apiKey = store.getState().apiKeys.openai;
       const endpoint = PROVIDER_CONFIGS.openai.endpoints[0];
       
-      // Determine if we're using a local API endpoint or an external one
       const apiEndpoint = endpoint.startsWith('http') 
         ? endpoint 
         : endpoint.startsWith('/api') 
@@ -105,15 +104,9 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`  // API key in header, not body
         },
-        body: JSON.stringify({
-          // Spread the formatted request at the top level
-          ...formattedRequest,
-          // Ensure stream is true
-          stream: true,
-          // Add API key separately
-          apiKey
-        })
+        body: JSON.stringify({...formattedRequest, stream: true})  // No API key in body
       });
       
       if (!response.ok) {

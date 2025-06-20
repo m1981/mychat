@@ -75,6 +75,26 @@ describe('Providers', () => {
     beforeEach(() => {
       vi.clearAllMocks();
       
+      // Reset the fetch mock for each test
+      global.fetch = vi.fn().mockImplementation(() => 
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve(""),
+          json: () => Promise.resolve({}),
+          body: {
+            getReader: () => ({
+              read: vi.fn().mockResolvedValueOnce({
+                value: new TextEncoder().encode('data: {"choices":[{"delta":{"content":"Test"}}]}'),
+                done: false
+              }).mockResolvedValueOnce({
+                done: true
+              })
+            })
+          } as any
+        })
+      );
+      
       messages = [
         { role: 'system', content: 'You are a helpful assistant.' },
         { role: 'user', content: 'Hello!' }
@@ -166,7 +186,7 @@ describe('Providers', () => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            formattedRequest,
+            ...formattedRequest,  // Spread parameters at top level
             apiKey: 'mock-openai-key'
           })
         }
@@ -183,7 +203,7 @@ describe('Providers', () => {
         stream: false
       };
       
-      const stream = await openaiProvider.submitStream(formattedRequest);
+      const stream =  await openaiProvider.submitStream(formattedRequest);
       
       expect(global.fetch).toHaveBeenCalledWith(
         '/api/chat/openai',
@@ -230,6 +250,26 @@ describe('Providers', () => {
 
     beforeEach(() => {
       vi.clearAllMocks();
+      
+      // Reset the fetch mock for each test
+      global.fetch = vi.fn().mockImplementation(() => 
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve(""),
+          json: () => Promise.resolve({}),
+          body: {
+            getReader: () => ({
+              read: vi.fn().mockResolvedValueOnce({
+                value: new TextEncoder().encode('data: {"choices":[{"delta":{"content":"Test"}}]}'),
+                done: false
+              }).mockResolvedValueOnce({
+                done: true
+              })
+            })
+          } as any
+        })
+      );
       
       messages = [
         { role: 'system', content: 'You are a helpful assistant.' },
@@ -335,7 +375,7 @@ describe('Providers', () => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            formattedRequest,
+            ...formattedRequest,  // Spread parameters at top level
             apiKey: 'mock-anthropic-key'
           })
         }

@@ -49,7 +49,7 @@ describe('Anthropic API Handler', () => {
             thinking: {
               type: 'enabled',
               budget_tokens: 10000
-            }
+            },
           apiKey: 'test-api-key'
         }));
       }
