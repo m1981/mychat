@@ -76,10 +76,8 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // Spread the formatted request at the top level
-          ...formattedRequest,
-          // Add API key separately
-          apiKey
+          formattedRequest: formattedRequest,  // Wrap in formattedRequest property
+          apiKey                              // Add API key separately
         })
       });
       
@@ -105,11 +103,10 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // Spread the formatted request at the top level
-          ...formattedRequest,
-          // Ensure stream is true
-          stream: true,
-          // Add API key separately
+          formattedRequest: {
+            ...formattedRequest,
+            stream: true
+          },
           apiKey
         })
       });
