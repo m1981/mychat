@@ -806,3 +806,284 @@ export interface ModelConfig {
   [key: string]: any;
 }
 ```
+
+## Deployment Execution Flows
+
+The application supports two primary deployment modes with different execution flows: Next.js API routes for production and Express server for local development. Below are detailed sequence diagrams for both modes.
+
+### Next.js API Routes Execution Flow
+
+```mermaid
+sequenceDiagram
+    participant UI as React UI
+    participant PC as ProviderContext
+    participant API as AIProviderInterface
+    participant Hook as useChatCompletion
+    participant NextAPI as Next.js API Routes
+    participant ExtAPI as External Provider API
+    
+    UI->>PC: Get current provider
+    PC->>UI: Return provider implementation
+    UI->>Hook: Call generateCompletion/Stream
+    
+    Hook->>API: Call formatRequest()
+    API->>Hook: Return FormattedRequest
+    
+    Hook->>NextAPI: POST /api/chat/{provider}
+    Note over Hook,NextAPI: Includes formattedRequest and apiKey
+    
+    NextAPI->>ExtAPI: Initialize provider SDK and send request
+    Note over NextAPI,ExtAPI: Direct SDK call with apiKey
+    
+    alt Non-streaming response
+        ExtAPI->>NextAPI: Return complete response
+        NextAPI->>Hook: Return standardized ProviderResponse
+        Hook->>API: Call parseResponse()
+        API->>Hook: Return extracted content
+        Hook->>UI: Return final content
+    else Streaming response
+        ExtAPI-->>NextAPI: Stream response chunks
+        loop For each chunk
+            NextAPI-->>Hook: Stream chunk via SSE
+            Hook->>API: Call parseStreamingResponse()
+            API->>Hook: Return extracted content
+            Hook->>UI: Update UI with chunk
+        end
+    end
+```
+
+### Express Server Execution Flow
+
+```mermaid
+sequenceDiagram
+    participant UI as React UI
+    participant PC as ProviderContext
+    participant API as AIProviderInterface
+    participant Hook as useChatCompletion
+    participant Express as Express Server
+    participant Client as Provider Client
+    participant ExtAPI as External Provider API
+    
+    UI->>PC: Get current provider
+    PC->>UI: Return provider implementation
+    UI->>Hook: Call generateCompletion/Stream
+    
+    Hook->>API: Call formatRequest()
+    API->>Hook: Return FormattedRequest
+    
+    Hook->>Express: POST /api/{provider}
+    Note over Hook,Express: Includes messages, config, apiKey
+    
+    Express->>Client: Initialize client wrapper
+    Note over Express,Client: Create AnthropicClient/OpenAIClient
+    
+    alt Non-streaming response
+        Client->>ExtAPI: client.createMessage()
+        Note over Client,ExtAPI: SDK call with formatted params
+        ExtAPI->>Client: Return complete response
+        Client->>Express: Return response
+        Express->>Hook: Return standardized response
+        Hook->>API: Call parseResponse()
+        API->>Hook: Return extracted content
+        Hook->>UI: Return final content
+    else Streaming response
+        Client->>ExtAPI: client.createStreamingMessage()
+        Note over Client,ExtAPI: SDK call with stream=true
+        ExtAPI-->>Client: Stream response chunks
+        loop For each chunk
+            Client-->>Express: Process chunk
+            Express-->>Hook: Stream chunk via SSE
+            Hook->>API: Call parseStreamingResponse()
+            API->>Hook: Return extracted content
+            Hook->>UI: Update UI with chunk
+        end
+    end
+```
+
+## Client Wrappers and Server Script
+
+### `AnthropicClient` and `OpenAIClient`
+
+These client wrapper classes encapsulate the provider SDK interactions:
+
+**Motivation:**
+- **SRP**: Each client focuses solely on communicating with a specific AI service
+- **Encapsulation**: Hides the details of SDK initialization and request formatting
+- **Adapter Pattern**: Provides a consistent interface over different provider SDKs
+- **Testability**: Makes it easier to mock provider interactions for testing
+
+```typescript
+// src/api/anthropic-client.js
+export class AnthropicClient {
+  constructor(apiKey, requestId) {
+    this.client = new Anthropic({ apiKey });
+    this.requestId = requestId;
+  }
+  
+  async createStreamingMessage(params) {
+    const formattedParams = this._formatParams(params);
+    return await this.client.messages.create({
+      ...formattedParams,
+      stream: true
+    });
+  }
+  
+  async createMessage(params) {
+    const formattedParams = this._formatParams(params);
+    return await this.client.messages.create({
+      ...formattedParams,
+      stream: false
+    });
+  }
+  
+  _formatParams(params) {
+    // Convert generic params to Anthropic-specific format
+    return {
+      model: params.model || 'claude-3-7-sonnet-20250219',
+      max_tokens: params.max_tokens || 4096,
+      temperature: params.temperature || 0.7,
+      messages: params.messages,
+      system: params.system
+    };
+  }
+}
+
+// src/api/openai-client.js
+export class OpenAIClient {
+  constructor(apiKey, requestId) {
+    this.client = new OpenAI({ apiKey });
+    this.requestId = requestId;
+  }
+  
+  async createStreamingMessage(params) {
+    const formattedParams = this._formatParams(params);
+    return await this.client.chat.completions.create({
+      ...formattedParams,
+      stream: true
+    });
+  }
+  
+  async createMessage(params) {
+    const formattedParams = this._formatParams(params);
+    return await this.client.chat.completions.create({
+      ...formattedParams,
+      stream: false
+    });
+  }
+  
+  _formatParams(params) {
+    // Convert generic params to OpenAI-specific format
+    return {
+      model: params.model || 'gpt-4o',
+      max_tokens: params.max_tokens || 4096,
+      temperature: params.temperature || 0.7,
+      messages: params.messages
+    };
+  }
+}
+```
+
+### Express Server Script
+
+The `scripts/server.js` file implements an Express server that:
+
+```typescript
+// scripts/server.js (simplified)
+import express from 'express';
+import { AnthropicClient } from '../src/api/anthropic-client.js';
+import { OpenAIClient } from '../src/api/openai-client.js';
+
+const app = express();
+app.use(express.json());
+
+// Anthropic endpoint
+app.post('/api/anthropic', async (req, res) => {
+  const { messages, config, apiKey } = req.body;
+  const isStreaming = config?.stream === true;
+  const requestId = req.headers['x-request-id'] || uuidv4();
+  
+  try {
+    // Initialize client wrapper
+    const anthropicClient = new AnthropicClient(apiKey, requestId);
+    
+    // Create request parameters
+    const requestParams = {
+      model: config.model || 'claude-3-7-sonnet-20250219',
+      max_tokens: config.max_tokens || 4096,
+      temperature: config.temperature || 0.7,
+      messages: messages,
+      system: config.system
+    };
+    
+    if (isStreaming) {
+      // Handle streaming response
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      
+      const stream = await anthropicClient.createStreamingMessage(requestParams);
+      
+      // Process stream chunks
+      for await (const chunk of stream) {
+        res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      }
+      
+      res.write('data: [DONE]\n\n');
+      res.end();
+    } else {
+      // Handle non-streaming response
+      const response = await anthropicClient.createMessage(requestParams);
+      res.json(response);
+    }
+  } catch (error) {
+    console.error('API error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// OpenAI endpoint (similar structure)
+app.post('/api/openai', async (req, res) => {
+  // Similar implementation to the Anthropic endpoint
+});
+
+app.listen(3000, () => {
+  console.log('Server running on port 3000');
+});
+```
+
+## Development vs Production Configuration
+
+The application uses Vite's configuration to handle different environments:
+
+```typescript
+// vite.config.ts
+function createDevConfig(): UserConfig {
+  return {
+    server: {
+      // ...other config
+      proxy: {
+        '/api': {
+          target: 'http://127.0.0.1:3000',
+          changeOrigin: true,
+          secure: false,
+          ws: true,
+          // ...proxy configuration
+        }
+      }
+    }
+  };
+}
+```
+
+In development mode, API requests are proxied to the local Express server running on port 3000. In production, the Next.js API routes handle the requests directly.
+
+## Implementation Choices
+
+The dual implementation approach provides several benefits:
+
+1. **Development Experience**: The Express server provides a fast, hot-reloadable development environment
+2. **Production Scalability**: Next.js API routes offer serverless deployment options
+3. **Flexibility**: The same frontend code works with either backend implementation
+4. **Security**: Both implementations keep API keys server-side only
+
+This architecture maintains the provider abstraction layer while allowing for different backend implementations, all following the same interface contracts.
