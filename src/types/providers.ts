@@ -69,15 +69,17 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
         : endpoint.startsWith('/api') 
           ? endpoint 
           : `/api${endpoint}`;
-
+      
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          formattedRequest: formattedRequest,  // Nest under formattedRequest property
-          apiKey: apiKey                      // Keep apiKey at top level
+          // Spread the formatted request at the top level
+          ...formattedRequest,
+          // Add API key separately
+          apiKey
         })
       });
       
@@ -96,15 +98,19 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
         : endpoint.startsWith('/api') 
           ? endpoint 
           : `/api${endpoint}`;
-
+      
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          formattedRequest: {...formattedRequest, stream: true},  // Ensure stream is true
-          apiKey: apiKey
+          // Spread the formatted request at the top level
+          ...formattedRequest,
+          // Ensure stream is true
+          stream: true,
+          // Add API key separately
+          apiKey
         })
       });
       
@@ -207,24 +213,24 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
           : `/api${endpoint}`;
       
       try {
-        const response = await fetch(apiEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            formattedRequest: formattedRequest,  // Nest under formattedRequest property
-            apiKey: apiKey                      // Keep apiKey at top level
-          })
-        });
-        
-        if (!response.ok) {
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            ...formattedRequest, // Spread the properties directly
+          apiKey
+        })
+      });
+      
+      if (!response.ok) {
           const errorText = await response.text();
           console.error('❌ Anthropic API error:', response.status, errorText);
-          throw new Error(`Anthropic API error: ${response.status}`);
-        }
-        
-        return await response.json();
+        throw new Error(`Anthropic API error: ${response.status}`);
+      }
+      
+        return await response.json();;
       } catch (error) {
         console.error('❌ Anthropic submitCompletion - Error:', error);
         throw error;
@@ -239,16 +245,15 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
         : endpoint.startsWith('/api') 
           ? endpoint 
           : `/api${endpoint}`;
-
+      
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
         },
-        body: JSON.stringify({
-          formattedRequest: formattedRequest,  // Nest under formattedRequest property
-          apiKey: apiKey                      // Keep apiKey at top level
-        })
+        body: JSON.stringify({...formattedRequest, stream: true})
       });
       
       if (!response.ok) {
