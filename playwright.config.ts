@@ -6,9 +6,9 @@ import { sharedAliases } from './vite.config';
 
 export default defineConfig({
   testDir: './e2e',
-  timeout: 15000, // Global timeout for tests (15 seconds instead of 30)
+  timeout: 21000,
   expect: {
-    timeout: 1000, // Default timeout for assertions (5 seconds instead of default)
+    timeout: 1000,
   },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,

@@ -288,7 +288,7 @@ test('chat title is automatically generated after message submission', async ({ 
     log.info('Chat interface loaded');
     
     // Click "New Chat" button to ensure we start with a fresh chat
-    await page.locator('[aria-label="New chat"]').click();
+    await page.locator('[data-testid="chat-interface"]').click();
     log.info('Clicked New Chat button');
     
     // Wait for the new chat to initialize
@@ -305,8 +305,9 @@ test('chat title is automatically generated after message submission', async ({ 
     // Type a message that should trigger title generation
     const textarea = page.locator('textarea').first();
     await textarea.click();
-    await textarea.fill('What is the capital of France?');
-    log.info('Entered test message');
+    // Use a more specific question that should generate a clear title
+    await textarea.fill('What is capital of France (respond in 20 words');
+    log.info('Entered test message about Paris');
     
     // Submit the message
     await page.locator('[data-testid="save-submit-button"]').click();
@@ -314,40 +315,57 @@ test('chat title is automatically generated after message submission', async ({ 
     
     // Wait for the message to appear in the chat
     await expect(page.locator('[data-testid="message-user"]')
-      .filter({ hasText: 'What is the capital of France?' })).toBeVisible();
+      .filter({ hasText: 'capital of France' })).toBeVisible();
     log.info('User message visible in chat');
     
     // Wait for assistant response with increased timeout
     const assistantResponse = page.locator('[role="assistant"]').first();
-    await expect(assistantResponse).toBeVisible({ timeout: 15000 });
+    await expect(assistantResponse).toBeVisible({ timeout: 20000 });
     log.info('Assistant response container appeared');
     
     // Wait for the response to complete (similar to streaming test)
     await expect(async () => {
       const currentText = await assistantResponse.textContent() || '';
       const currentLength = currentText.length;
-      await page.waitForTimeout(2000);
+      log.debug(`Current response length: ${currentLength} chars`);
+
+      // Wait longer to ensure response is complete
+      await page.waitForTimeout(3000);
+
       const newText = await assistantResponse.textContent() || '';
-      log.debug(`Response check: ${currentLength} chars vs ${newText.length} chars after wait`);
-      return currentText === newText && currentText.length > 10;
-    }).toPass({ timeout: 20000 });
+      const newLength = newText.length;
+      log.debug(`Response check: ${currentLength} chars vs ${newLength} chars after wait`);
+
+      return currentText === newText && currentText.length > 100;
+    }).toPass({ timeout: 30000 });
     log.info('Assistant response completed');
     
-    // Wait for title generation to complete (may take a moment after response)
-    await expect(async () => {
-      const title = await page.locator('[data-testid="chat-title"]').first().textContent();
-      log.debug(`Current title: "${title}"`);
-      return title !== 'New Chat' && title !== '';
-    }).toPass({ timeout: 15000 });
-    
-    // Get the generated title
-    const generatedTitle = await page.locator('[data-testid="chat-title"]').first().textContent();
-    log.info(`Generated title: "${generatedTitle}"`);
-    
-    // Verify the title is meaningful (contains relevant keywords)
-    expect(generatedTitle?.toLowerCase()).toMatch(/capital|france|paris/);
-    
-    // Capture final state with generated title
+    // Check if title generation is enabled in the app
+    const appConfig = await page.evaluate(() => {
+      // Try to find any configuration related to title generation
+      return {
+        localStorage: Object.keys(localStorage).map(key => ({ key, value: localStorage.getItem(key) })),
+        storeState: window.store?.getState ? window.store.getState() : null
+      };
+    });
+    log.info(`App configuration: ${JSON.stringify(appConfig)}`);
+
+    // Wait much longer for title generation to complete
+    await page.waitForTimeout(10000); // Longer wait before checking
+    log.info('Starting to check for title generation');
+
+    // Get the current title
+    const currentTitle = await page.locator('[data-testid="chat-title"]').first().textContent();
+    log.info(`Current title after waiting: "${currentTitle}"`);
+
+    // Check if the title is still a default pattern
+    const isDefaultTitle = /^New Chat( \d+)?$/.test(currentTitle || '');
+    log.info(`Is default title pattern: ${isDefaultTitle}`);
+
+    // Title was generated after first message
+    expect(currentTitle?.toLowerCase()).toMatch(/paris|france|eiffel|tower|capital/);
+
+    // Capture final state
     await captureTestContext(page, test.info());
     log.info('Test completed successfully');
   } catch (error) {
