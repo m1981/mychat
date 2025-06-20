@@ -74,7 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ...formattedRequest,
           stream: true
         });
-
+        
         // Process each chunk
         for await (const chunk of stream) {
           lastPing = Date.now();
@@ -127,6 +127,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               break;
           }
         }
+      } catch (error) {
+        console.error('Anthropic API error:', error);
+        
+        // Return error response with type field
+        res.status(error.status || 500).json({
+          error: error.message || 'Unknown error',
+          status: error.status || 500,
+          type: error.type || 'unknown_error'  // Include the type field
+        });
       } finally {
         clearInterval(keepAliveInterval);
         res.write('data: [DONE]\n\n');
