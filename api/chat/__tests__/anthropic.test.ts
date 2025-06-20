@@ -39,7 +39,8 @@ describe('Anthropic API Handler', () => {
       // Mock the async iterator for req
       [Symbol.asyncIterator]: async function* () {
         yield Buffer.from(JSON.stringify({
-          // Update to match the expected format
+          // Update to match the expected format with formattedRequest wrapper
+          formattedRequest: {
             messages: [{ role: 'user', content: 'Hello' }],
             system: 'You are a helpful assistant.',
             model: 'claude-3-5-sonnet-20240229',
@@ -49,7 +50,8 @@ describe('Anthropic API Handler', () => {
             thinking: {
               type: 'enabled',
               budget_tokens: 10000
-            },
+            }
+          },
           apiKey: 'test-api-key'
         }));
       }

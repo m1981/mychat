@@ -69,7 +69,7 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
         : endpoint.startsWith('/api') 
           ? endpoint 
           : `/api${endpoint}`;
-      
+
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
@@ -96,14 +96,16 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
         : endpoint.startsWith('/api') 
           ? endpoint 
           : `/api${endpoint}`;
-      
+
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`  // API key in header, not body
         },
-        body: JSON.stringify({...formattedRequest, stream: true})  // No API key in body
+        body: JSON.stringify({
+          formattedRequest: {...formattedRequest, stream: true},  // Ensure stream is true
+          apiKey: apiKey
+        })
       });
       
       if (!response.ok) {
@@ -205,24 +207,24 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
           : `/api${endpoint}`;
       
       try {
-      const response = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            ...formattedRequest, // Spread the properties directly
-          apiKey
-        })
-      });
-      
-      if (!response.ok) {
+        const response = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            formattedRequest: formattedRequest,  // Nest under formattedRequest property
+            apiKey: apiKey                      // Keep apiKey at top level
+          })
+        });
+        
+        if (!response.ok) {
           const errorText = await response.text();
           console.error('❌ Anthropic API error:', response.status, errorText);
-        throw new Error(`Anthropic API error: ${response.status}`);
-      }
-      
-        return await response.json();;
+          throw new Error(`Anthropic API error: ${response.status}`);
+        }
+        
+        return await response.json();
       } catch (error) {
         console.error('❌ Anthropic submitCompletion - Error:', error);
         throw error;
@@ -237,7 +239,7 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
         : endpoint.startsWith('/api') 
           ? endpoint 
           : `/api${endpoint}`;
-      
+
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
