@@ -186,8 +186,8 @@ describe('Providers', () => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            ...formattedRequest,  // Spread parameters at top level
-            apiKey: 'mock-openai-key'
+            formattedRequest: formattedRequest,  // Wrapped in formattedRequest property
+            apiKey: 'mock-openai-key'           // API key as separate property
           })
         }
       );
@@ -203,17 +203,19 @@ describe('Providers', () => {
         stream: false
       };
       
-      const stream =  await openaiProvider.submitStream(formattedRequest);
+      const stream = await openaiProvider.submitStream(formattedRequest);
       
       expect(global.fetch).toHaveBeenCalledWith(
         '/api/chat/openai',
         {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer mock-openai-key'
+            'Content-Type': 'application/json'
           },
-          body: JSON.stringify({...formattedRequest, stream: true})
+          body: JSON.stringify({
+            formattedRequest: {...formattedRequest, stream: true},  // Wrapped with stream set to true
+            apiKey: 'mock-openai-key'                              // API key as separate property
+          })
         }
       );
       
@@ -375,11 +377,40 @@ describe('Providers', () => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            ...formattedRequest,  // Spread parameters at top level
-            apiKey: 'mock-anthropic-key'
+            formattedRequest: formattedRequest,  // Wrapped in formattedRequest property
+            apiKey: 'mock-anthropic-key'        // API key as separate property
           })
         }
       );
+    });
+
+    it('should submit stream request correctly', async () => {
+      const formattedRequest = {
+        messages: [{ role: 'user', content: 'Hello' }],
+        model: 'claude-3-7-sonnet-20250219',
+        max_tokens: 1000,
+        temperature: 0.7,
+        top_p: 1,
+        stream: false
+      };
+      
+      const stream = await anthropicProvider.submitStream(formattedRequest);
+      
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/chat/anthropic',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            formattedRequest: {...formattedRequest, stream: true},  // Wrapped with stream set to true
+            apiKey: 'mock-anthropic-key'                           // API key as separate property
+          })
+        }
+      );
+      
+      expect(stream).toBeDefined();
     });
 
     it('should parse response correctly with content array', () => {

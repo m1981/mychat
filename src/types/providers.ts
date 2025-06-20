@@ -212,29 +212,27 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
           ? endpoint 
           : `/api${endpoint}`;
       
-      try {
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            ...formattedRequest, // Spread the properties directly
+          // Wrap in formattedRequest property
+          formattedRequest: {
+            ...formattedRequest,
+            stream: false
+          },
+          // Add API key separately
           apiKey
         })
       });
       
       if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ Anthropic API error:', response.status, errorText);
         throw new Error(`Anthropic API error: ${response.status}`);
       }
       
-        return await response.json();;
-      } catch (error) {
-        console.error('❌ Anthropic submitCompletion - Error:', error);
-        throw error;
-      }
+      return await response.json();
     },
     submitStream: async (formattedRequest: FormattedRequest): Promise<ReadableStream> => {
       const apiKey = store.getState().apiKeys.anthropic;
@@ -250,10 +248,16 @@ export const providers: Record<ProviderKey, AIProviderInterface> = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01'
         },
-        body: JSON.stringify({...formattedRequest, stream: true})
+        body: JSON.stringify({
+          // Wrap in formattedRequest property
+          formattedRequest: {
+            ...formattedRequest,
+            stream: true
+          },
+          // Add API key separately
+          apiKey
+        })
       });
       
       if (!response.ok) {
