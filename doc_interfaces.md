@@ -141,7 +141,7 @@ export interface AIProviderInterface {
      * @param messages - Array of messages to send to the AI
      * @returns Formatted request ready to send to the provider's API
      */
-    formatRequest: (config: RequestConfig, messages: MessageInterface[]) => FormattedRequest;
+    formatRequest: (messages: MessageInterface[], config: RequestConfig, ) => FormattedRequest;
 
     /**
      * Extracts content from a provider's non-streaming response
