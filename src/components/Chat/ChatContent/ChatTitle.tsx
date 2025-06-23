@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 
-
 import ConfigMenu from '@components/ConfigMenu';
 import { DEFAULT_CHAT_CONFIG } from '@constants/chat';
+import { ProviderRegistry } from '@config/providers/provider.registry';
 import useStore from '@store/store';
 import { ChatInterface, ChatConfig } from '@type/chat';
-import { providers } from '@type/providers';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 
@@ -49,7 +48,7 @@ const ChatTitle = React.memo(() => {
         onClick={() => setIsModalOpen(true)}
       >
         <div className='text-center p-1 rounded-md bg-gray-300/20 dark:bg-gray-900/10 hover:bg-gray-300/50 dark:hover:bg-gray-900/50'>
-          {t('provider')}: {providers[config.provider].name}
+          {t('provider')}: {ProviderRegistry.getProvider(config.provider).name}
         </div>
         <div className='text-center p-1 rounded-md bg-gray-300/20 dark:bg-gray-900/10 hover:bg-gray-300/50 dark:hover:bg-gray-900/50'>
           {t('model')}: {config.modelConfig.model}
@@ -78,9 +77,7 @@ const ChatTitle = React.memo(() => {
         />
       )}
     </>
-  ) : (
-    <></>
-  );
+  ) : null;
 });
 
 export default ChatTitle;

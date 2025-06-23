@@ -7,7 +7,6 @@ import { ProviderModel } from '@config/providers/provider.config';
 import { ProviderRegistry } from '@config/providers/provider.registry';
 import DownChevronArrow from '@icon/DownChevronArrow';
 import { ChatConfig, ModelConfig, ProviderKey } from '@type/chat';
-import { providers } from '@type/providers';
 import { useTranslation } from 'react-i18next';
 
 const ConfigMenu = ({
@@ -25,7 +24,7 @@ const ConfigMenu = ({
   
   // Create a safe initial model config with defaults
   const safeModelConfig = config?.modelConfig || {
-    model: ProviderRegistry.getDefaultModelForProvider(_provider),
+    model: ProviderRegistry.getProviderImplementation(_provider).capabilities.defaultModel,
     max_tokens: 4096,
     temperature: 0.7,
     top_p: 1,
@@ -34,26 +33,70 @@ const ConfigMenu = ({
   };
   
   const [_modelConfig, _setModelConfig] = useState<ModelConfig>(safeModelConfig);
-  const { t } = useTranslation('model');
 
-  const handleConfirm = () => {
+  // Update local state when props change
+  useEffect(() => {
+    if (config?.provider) {
+      _setProvider(config.provider);
+    }
+    if (config?.modelConfig) {
+      _setModelConfig(config.modelConfig);
+    }
+  }, [config]);
+
+  // Handle provider change
+  const handleProviderChange = (provider: ProviderKey) => {
+    _setProvider(provider);
+    
+    // Get default model for this provider
+    const defaultModel = ProviderRegistry.getProviderImplementation(provider).capabilities.defaultModel;
+    
+    // Update model config with new provider and default model
+    _setModelConfig({
+      ..._modelConfig,
+      model: defaultModel
+    });
+  };
+
+  // Handle save
+  const handleSave = () => {
+    // Validate token limits
+    const validatedMaxTokens = validateMaxTokens(_modelConfig.max_tokens);
+    
+    // Create validated model config
+    const validatedModelConfig = {
+      ..._modelConfig,
+      max_tokens: validatedMaxTokens
+    };
+    
+    // If thinking is enabled, validate budget
+    if (validatedModelConfig.thinking?.enabled) {
+      validatedModelConfig.thinking.budget_tokens = validateThinkingBudget(
+        validatedModelConfig.thinking.budget_tokens,
+        validatedMaxTokens
+      );
+    }
+    
+    // Update config
     setConfig({
       provider: _provider,
-      modelConfig: _modelConfig,
+      modelConfig: validatedModelConfig
     });
+    
+    // Close modal
     setIsModalOpen(false);
   };
 
   return (
     <PopupModal
-      title={t('configuration') as string}
+      title='Chat Settings'
       setIsModalOpen={setIsModalOpen}
-      handleConfirm={handleConfirm}
+      handleConfirm={handleSave}
     >
       <div className='p-6 border-b border-gray-200 dark:border-gray-600'>
         <ModelSelector
           provider={_provider}
-          setProvider={_setProvider}
+          setProvider={handleProviderChange}
           modelConfig={_modelConfig}
           setModelConfig={_setModelConfig}
         />
@@ -101,17 +144,18 @@ export const ModelSelector = ({
   const [dropDown, setDropDown] = useState<boolean>(false);
   
   // Safely get provider information with fallbacks
-  const currentProvider = providers[provider] || providers[DEFAULT_PROVIDER];
-  const providerConfig = ProviderRegistry.getProvider(provider);
+  const currentProvider = ProviderRegistry.getProvider(provider);
+  const providerConfig = ProviderRegistry.getProviderConfig(provider);
   const providerCapabilities = ProviderRegistry.getProviderCapabilities(provider);
-
-  // Ensure selected model is valid for current provider
+  
+  // Get available providers
+  const availableProviders = ProviderRegistry.getAvailableProviders();
+  
+  // Check if current model is valid for this provider
   useEffect(() => {
-    // Skip if provider or modelConfig is undefined
-    if (!provider || !modelConfig) return;
-    
-    // Check if current model is valid for this provider
-    const isModelValid = currentProvider.models.includes(modelConfig.model);
+    const isModelValid = providerConfig.models.some(
+      (m: ProviderModel) => m.id === modelConfig?.model
+    );
     
     if (!isModelValid) {
       const defaultModel = providerConfig.models[0];
@@ -140,51 +184,41 @@ export const ModelSelector = ({
   }, [provider, modelConfig?.model]);
 
   return (
-    <div className='mb-4'>
-      <div className='flex gap-2 mb-2'>
+    <div className='flex flex-col gap-3'>
+      <div className='flex justify-between'>
+        <label className='block text-sm font-medium text-gray-900 dark:text-white'>
+          Provider
+        </label>
         <select
-          className='btn btn-neutral btn-small'
+          className='bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
           value={provider}
           onChange={(e) => setProvider(e.target.value as ProviderKey)}
         >
-          {Object.values(providers).map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
+          {availableProviders.map((key) => (
+            <option key={key} value={key}>
+              {ProviderRegistry.getProviderImplementation(key).name}
             </option>
           ))}
         </select>
-        <button
-          className='btn btn-neutral btn-small flex gap-1'
-          type='button'
-          onClick={() => setDropDown((prev) => !prev)}
-        >
-          {modelConfig?.model || providerCapabilities.defaultModel}
-          <DownChevronArrow />
-        </button>
       </div>
-      <div
-        className={`${
-          dropDown ? '' : 'hidden'
-        } absolute z-10 bg-white dark:bg-gray-800 rounded-lg shadow-xl...`}
-      >
-        <ul className='text-sm text-gray-700 dark:text-gray-200 p-0 m-0'>
+      <div className='flex justify-between'>
+        <label className='block text-sm font-medium text-gray-900 dark:text-white'>
+          Model
+        </label>
+        <select
+          className='bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
+          value={modelConfig?.model || providerCapabilities.defaultModel}
+          onChange={(e) => setModelConfig({
+            ...modelConfig,
+            model: e.target.value
+          })}
+        >
           {providerConfig.models.map((m: ProviderModel) => (
-            <li
-              className='px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer'
-              onClick={() => {
-                setModelConfig({
-                  ...modelConfig,
-                  model: m.id,
-                  max_tokens: m.maxCompletionTokens
-                });
-                setDropDown(false);
-              }}
-              key={m.id}
-            >
-              {m.id}
-            </li>
+            <option key={m.id} value={m.id}>
+              {m.name || m.id}
+            </option>
           ))}
-        </ul>
+        </select>
       </div>
     </div>
   );
@@ -422,38 +456,35 @@ export const ThinkingModeToggle = ({
       }
     });
   };
-
+  
   return (
-    <div className='mt-5 pt-5 border-t border-gray-500'>
-      <div className='flex items-center justify-between'>
-        <label className='block text-sm font-medium text-gray-900 dark:text-white'>
-          {t('thinking.label')}
+    <div className="flex flex-col gap-2 mt-4">
+      <div className="flex items-center justify-between">
+        <label className="block text-sm font-medium text-gray-900 dark:text-white">
+          {t('thinkingMode')}
         </label>
         <input
-          type='checkbox'
+          type="checkbox"
           checked={thinking.enabled}
           onChange={(e) => handleThinkingToggle(e.target.checked)}
-          className='toggle toggle-primary'
+          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
         />
       </div>
       
       {thinking.enabled && (
-        <div className='mt-4'>
-          <label className='block text-sm font-medium text-gray-900 dark:text-white'>
-            {t('thinking.budget')}: {thinking.budget_tokens}
+        <div className="flex flex-col gap-1">
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+            {t('thinkingBudget')}
           </label>
           <input
-            type='range'
+            type="number"
             value={thinking.budget_tokens}
-            onChange={(e) => handleBudgetChange(Number(e.target.value))}
+            onChange={(e) => handleBudgetChange(parseInt(e.target.value))}
             min={100}
-            max={modelConfig.max_tokens || 4096} // Cap at max_tokens with fallback
+            max={modelConfig.max_tokens || 4096}
             step={100}
-            className='w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer'
+            className="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           />
-          <div className='min-w-fit text-gray-500 dark:text-gray-300 text-xs mt-2'>
-            {t('thinking.description')}
-          </div>
         </div>
       )}
     </div>

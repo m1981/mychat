@@ -17,6 +17,7 @@
 
      // For testing purposes, directly get the provider if providerKey is provided
      if (providerKey) {
+       // Use the method that exists in the registry
        const directProvider = ProviderRegistry.getProvider(providerKey);
        return (
          <ProviderContext.Provider value={directProvider}>

@@ -1,96 +1,77 @@
 // provider.registry.ts - Registry that works with configurations only
-import { ProviderKey, ProviderCapabilities, AIProviderInterface, AIProviderBase } from '@type/provider';
+import { ProviderKey, ProviderCapabilities, AIProviderBase } from '@type/provider';
 import { ProviderConfig, PROVIDER_CONFIGS } from './provider.config';
 import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { AnthropicProvider } from '@providers/AnthropicProvider';
 import { OpenAIProvider } from '@providers/OpenAIProvider';
 
 export class ProviderRegistry {
-  static getProvider(key?: ProviderKey): ProviderConfig {
-    // Use default provider if key is undefined
-    const providerKey = key || DEFAULT_PROVIDER;
-    const provider = PROVIDER_CONFIGS[providerKey];
-    if (!provider) {
-      console.error(`Provider ${providerKey} not found, falling back to default`);
-      return PROVIDER_CONFIGS[DEFAULT_PROVIDER];
-    }
-    return provider;
-  }
-
-  static getDefaultModelForProvider(key?: ProviderKey): string {
-    return this.getProvider(key).defaultModel;
-  }
-
-  static validateModelForProvider(provider?: ProviderKey, modelId?: string): boolean {
-    if (!modelId) return false;
-    return this.getProvider(provider).models.some(model => model.id === modelId);
-  }
-
-  static getProviderCapabilities(provider?: ProviderKey): ProviderCapabilities {
-    const providerConfig = this.getProvider(provider);
-    const defaultModel = providerConfig.models.find(m => m.id === providerConfig.defaultModel);
-    
-    if (!defaultModel) {
-      console.error(`Default model not found for provider ${provider}, using fallback values`);
-      return {
-        supportsThinking: false,
-        maxCompletionTokens: 4096,
-        defaultModel: providerConfig.defaultModel || 'unknown'
-      };
-    }
-
-    const capabilities: ProviderCapabilities = {
-      supportsThinking: providerConfig.capabilities.supportsThinking,
-      maxCompletionTokens: defaultModel.maxCompletionTokens,
-      defaultModel: providerConfig.defaultModel
-    };
-    
-    // Add thinking-specific capabilities if supported
-    if (capabilities.supportsThinking) {
-      capabilities.defaultThinkingModel = providerConfig.defaultModel;
-    }
-    
-    return capabilities;
-  }
-
   // Singleton pattern for provider registry
-  static #providers = new Map<ProviderKey, AIProviderBase>();
+  private static providers = new Map<ProviderKey, AIProviderBase>();
   
   // Initialize providers
   static {
-    ProviderRegistry.#providers.set('anthropic', new AnthropicProvider());
-    ProviderRegistry.#providers.set('openai', new OpenAIProvider());
+    try {
+      // Create provider instances
+      const anthropicProvider = new AnthropicProvider();
+      const openaiProvider = new OpenAIProvider();
+      
+      // Register providers
+      ProviderRegistry.providers.set('anthropic', anthropicProvider);
+      ProviderRegistry.providers.set('openai', openaiProvider);
+    } catch (error) {
+      console.error('Error initializing providers:', error);
+      // Fallback initialization if constructor approach fails
+      ProviderRegistry.initializeProviders();
+    }
   }
   
-  // Get provider implementation
-  static getProviderImplementation(key?: ProviderKey): AIProviderInterface {
+  // Alternative initialization method as fallback
+  private static initializeProviders() {
+    // Implementation details...
+  }
+  
+  // Get provider implementation - this is the primary method
+  static getProvider(key?: ProviderKey): AIProviderBase {
     const providerKey = key || DEFAULT_PROVIDER;
-    const implementation = ProviderRegistry.#providers.get(providerKey);
+    const implementation = ProviderRegistry.providers.get(providerKey);
     
     if (!implementation) {
       console.error(`Provider implementation for ${providerKey} not found, falling back to default`);
-      return ProviderRegistry.#providers.get(DEFAULT_PROVIDER) as AIProviderInterface;
+      return ProviderRegistry.providers.get(DEFAULT_PROVIDER) as AIProviderBase;
     }
     
     return implementation;
   }
   
-  static getApiEndpoint(key?: ProviderKey): string {
-    const provider = this.getProvider(key);
-    if (!provider.endpoints || provider.endpoints.length === 0) {
-      console.error(`No endpoints configured for provider ${key}, using fallback`);
-      return '/api/chat/fallback';
-    }
-    return provider.endpoints[0];
+  // Alias for getProvider to maintain backward compatibility
+  static getProviderImplementation(key?: ProviderKey): AIProviderBase {
+    return ProviderRegistry.getProvider(key);
   }
-
-  // Get a list of all available provider keys
+  
+  // Get all available provider keys
   static getAvailableProviders(): ProviderKey[] {
-    return Array.from(ProviderRegistry.#providers.keys());
+    return Array.from(ProviderRegistry.providers.keys());
   }
-
-  // Check if a provider exists
+  
+  // Check if provider exists
   static hasProvider(key: ProviderKey): boolean {
-    return ProviderRegistry.#providers.has(key);
+    return ProviderRegistry.providers.has(key);
+  }
+  
+  // Get provider configuration
+  static getProviderConfig(key: ProviderKey): ProviderConfig {
+    return PROVIDER_CONFIGS[key];
+  }
+  
+  // Get provider capabilities
+  static getProviderCapabilities(key: ProviderKey): ProviderCapabilities {
+    const provider = ProviderRegistry.getProvider(key);
+    return provider.capabilities;
+  }
+  
+  // Register a new provider at runtime
+  static registerProvider(key: ProviderKey, provider: AIProviderBase): void {
+    ProviderRegistry.providers.set(key, provider);
   }
 }

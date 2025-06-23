@@ -20,7 +20,10 @@ const TokenCount = React.memo(() => {
 
   const { provider, model } = useMemo(() => {
     if (!currentChat) {
-      return { provider: 'openai' as const, model: ProviderRegistry.getProvider('openai').models[0].id };
+      return { 
+        provider: 'openai' as const, 
+        model: ProviderRegistry.getProviderImplementation('openai').capabilities.defaultModel 
+      };
     }
     return {
       provider: currentChat.config.provider,

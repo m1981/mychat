@@ -12,6 +12,17 @@ vi.mock('@config/models/model.registry', () => ({
       defaultResponseTokens: 4096,
       supportsThinking: true,
       defaultThinkingBudget: 16000
+    }),
+    getModelsForProvider: vi.fn().mockImplementation((provider) => {
+      if (provider === 'anthropic') {
+        return ['claude-3-7-sonnet-20250219'];
+      } else if (provider === 'openai') {
+        return ['gpt-4o'];
+      }
+      return [];
+    }),
+    isModelSupported: vi.fn().mockImplementation((modelId) => {
+      return ['claude-3-7-sonnet-20250219', 'gpt-4o'].includes(modelId);
     })
   }
 }));
@@ -20,39 +31,62 @@ vi.mock('@config/models/model.registry', () => ({
 import { ProviderRegistry } from '../provider.registry';
 
 describe('ProviderRegistry', () => {
-  describe('getDefaultModelForProvider', () => {
-    it('should return claude-3-7-sonnet-20250219 for anthropic provider', () => {
-      const model = ProviderRegistry.getDefaultModelForProvider('anthropic');
-      expect(model).toBe('claude-3-7-sonnet-20250219');
+  // Reset mocks before each test
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('getProviderImplementation', () => {
+    it('should return the correct provider implementation for anthropic', () => {
+      const provider = ProviderRegistry.getProviderImplementation('anthropic');
+      expect(provider.id).toBe('anthropic');
+      expect(provider.name).toBe('Anthropic');
     });
 
-    it('should return gpt-4o for openai provider', () => {
-      const model = ProviderRegistry.getDefaultModelForProvider('openai');
-      expect(model).toBe('gpt-4o');
+    it('should return the correct provider implementation for openai', () => {
+      const provider = ProviderRegistry.getProviderImplementation('openai');
+      expect(provider.id).toBe('openai');
+      expect(provider.name).toBe('OpenAI');
     });
 
-    it('should throw error for invalid provider', () => {
-      expect(() => {
-        ProviderRegistry.getDefaultModelForProvider('invalid-provider' as ProviderKey);
-      }).toThrow('Provider invalid-provider not found');
+    it('should return default provider when invalid provider key is given', () => {
+      const provider = ProviderRegistry.getProviderImplementation('invalid-provider' as ProviderKey);
+      // Default provider should be returned (assuming anthropic is default)
+      expect(provider.id).toBe('anthropic');
     });
   });
 
-  describe('validateModelForProvider', () => {
-    it('should return true for valid anthropic model', () => {
-      const isValid = ProviderRegistry.validateModelForProvider(
-        'anthropic',
-        'claude-3-7-sonnet-20250219'
-      );
-      expect(isValid).toBe(true);
+  describe('getAvailableProviders', () => {
+    it('should return all available provider keys', () => {
+      const providers = ProviderRegistry.getAvailableProviders();
+      expect(providers).toContain('anthropic');
+      expect(providers).toContain('openai');
+      expect(providers.length).toBe(2);
+    });
+  });
+
+  describe('hasProvider', () => {
+    it('should return true for valid providers', () => {
+      expect(ProviderRegistry.hasProvider('anthropic')).toBe(true);
+      expect(ProviderRegistry.hasProvider('openai')).toBe(true);
     });
 
-    it('should return false for invalid anthropic model', () => {
-      const isValid = ProviderRegistry.validateModelForProvider(
-        'anthropic',
-        'gpt-4o'
-      );
-      expect(isValid).toBe(false);
+    it('should return false for invalid providers', () => {
+      expect(ProviderRegistry.hasProvider('invalid-provider' as ProviderKey)).toBe(false);
+    });
+  });
+
+  describe('getProviderConfig', () => {
+    it('should return correct config for anthropic provider', () => {
+      const config = ProviderRegistry.getProviderConfig('anthropic');
+      expect(config.name).toBe('Anthropic');
+      expect(config.defaultModel).toBe('claude-3-7-sonnet-20250219');
+    });
+
+    it('should return correct config for openai provider', () => {
+      const config = ProviderRegistry.getProviderConfig('openai');
+      expect(config.name).toBe('OpenAI');
+      expect(config.defaultModel).toBe('gpt-4o');
     });
   });
 

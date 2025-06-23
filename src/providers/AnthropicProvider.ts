@@ -2,39 +2,40 @@ import { AIProviderBase, ProviderKey, ProviderCapabilities, MessageInterface, Re
 import { PROVIDER_CONFIGS } from '@config/providers/provider.config';
 import store from '@store/store';
 
-export class AnthropicProvider extends AIProviderBase {
+export class AnthropicProvider implements AIProviderBase {
+  id: ProviderKey;
+  name: string;
+  endpoints: string[];
+  models: string[];
+  capabilities: ProviderCapabilities;
+
   constructor() {
     // Get configuration from provider config
     const config = PROVIDER_CONFIGS.anthropic;
-    const capabilities: ProviderCapabilities = {
+    
+    this.id = 'anthropic';
+    this.name = config.name;
+    this.endpoints = config.endpoints;
+    this.models = config.models.map(m => m.id);
+    this.capabilities = {
       supportsThinking: config.capabilities.supportsThinking,
       maxCompletionTokens: config.models[0].maxCompletionTokens,
       defaultModel: config.defaultModel,
       defaultThinkingModel: config.defaultModel
     };
-    
-    super(
-      'anthropic',
-      config.name,
-      config.endpoints,
-      config.models.map(m => m.id),
-      capabilities
-    );
   }
 
-  formatRequest(messages: ReadonlyArray<MessageInterface>, config: Readonly<RequestConfig>): FormattedRequest {
-    // Filter out empty messages first
-    const filteredMessages = messages.filter(msg => msg.content && msg.content.trim() !== '');
-    
+  formatRequest(messages: MessageInterface[], config: RequestConfig): FormattedRequest {
     // Extract system message if present
-    const systemMessage = filteredMessages.find(m => m.role === 'system');
+    const systemMessage = messages.find(m => m.role === 'system');
     
-    // Format regular messages for Anthropic
-    const regularMessages = filteredMessages
+    // Filter out system messages and empty messages for the regular message array
+    const regularMessages = messages
       .filter(m => m.role !== 'system')
+      .filter(m => m.content.trim() !== '')
       .map(m => ({
         role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content
+        content: m.content,
       }));
     
     // Create formatted request
@@ -64,8 +65,8 @@ export class AnthropicProvider extends AIProviderBase {
   }
 
   parseResponse(response: unknown): string {
-    // Validate response using the protected helper method
-    this.validateResponse(response);
+    // Validate response
+    if (!response) return '';
     
     // Handle non-streaming response
     if (response.content && Array.isArray(response.content) && response.content.length > 0) {
@@ -77,13 +78,13 @@ export class AnthropicProvider extends AIProviderBase {
       return response.content;
     }
     
-    throw new Error('Invalid response format from Anthropic');
+    return '';
   }
 
   parseStreamingResponse(response: unknown): string {
     try {
       // Validate response
-      this.validateResponse(response);
+      if (!response) return '';
       
       if (response.type === 'content_block_delta') {
         return response.delta?.text || '';
@@ -158,12 +159,19 @@ export class AnthropicProvider extends AIProviderBase {
     // Get API key from store or environment
     return store.getState().apiKeys.anthropic;
   }
-
+  
   private formatEndpoint(endpoint: string): string {
-    return endpoint.startsWith('http') 
-      ? endpoint 
-      : endpoint.startsWith('/api') 
-        ? endpoint 
-        : `/api${endpoint}`;
+    // Format endpoint URL
+    if (endpoint.startsWith('http')) {
+      return endpoint;
+    }
+    return `${window.location.origin}${endpoint}`;
+  }
+  
+  // Helper method to validate response
+  private validateResponse(response: unknown): void {
+    if (!response) {
+      throw new Error('Empty response from Anthropic');
+    }
   }
 }

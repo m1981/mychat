@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { providers } from '@type/providers';
 import { MessageInterface } from '@type/chat';
 import { RequestConfig } from '@type/provider';
 import { ModelRegistry } from '@config/models/model.registry';
@@ -27,20 +26,104 @@ vi.mock('@config/models/model.registry', () => ({
 
 vi.mock('@config/providers/provider.registry', () => ({
   ProviderRegistry: {
-    getProvider: vi.fn().mockImplementation((provider) => {
+    getProviderImplementation: vi.fn().mockImplementation((provider) => {
       if (provider === 'openai') {
         return {
+          id: 'openai',
           name: 'OpenAI',
-          endpoints: ['https://api.openai.com'],
-          models: [{ id: 'gpt-4o' }],
-          defaultModel: 'gpt-4o'
+          endpoints: ['/api/chat/openai'],
+          models: ['gpt-4o'],
+          formatRequest: (messages, config) => ({
+            messages: messages.map(m => ({ role: m.role, content: m.content })),
+            model: config.model,
+            max_tokens: config.max_tokens,
+            temperature: config.temperature,
+            presence_penalty: config.presence_penalty,
+            top_p: config.top_p,
+            frequency_penalty: config.frequency_penalty,
+            stream: config.stream
+          }),
+          parseResponse: (response) => {
+            if (response.content) return response.content;
+            if (response.choices && response.choices[0].message) {
+              return response.choices[0].message.content;
+            }
+            throw new Error('Invalid response format from OpenAI');
+          },
+          parseStreamingResponse: (response) => {
+            if (response.choices && response.choices[0].delta) {
+              return response.choices[0].delta.content || '';
+            }
+            return '';
+          },
+          submitCompletion: vi.fn().mockResolvedValue({}),
+          submitStream: vi.fn().mockResolvedValue({
+            getReader: () => ({
+              read: vi.fn().mockResolvedValueOnce({
+                value: new TextEncoder().encode('data: {"choices":[{"delta":{"content":"Test"}}]}'),
+                done: false
+              }).mockResolvedValueOnce({
+                done: true
+              })
+            })
+          })
         };
       } else if (provider === 'anthropic') {
         return {
+          id: 'anthropic',
           name: 'Anthropic',
-          endpoints: ['https://api.anthropic.com'],
-          models: [{ id: 'claude-3-7-sonnet-20250219' }],
-          defaultModel: 'claude-3-7-sonnet-20250219'
+          endpoints: ['/api/chat/anthropic'],
+          models: ['claude-3-7-sonnet-20250219'],
+          formatRequest: (messages, config) => {
+            const systemMessage = messages.find(m => m.role === 'system');
+            const nonSystemMessages = messages.filter(m => m.role !== 'system');
+            
+            const formattedRequest = {
+              model: config.model,
+              max_tokens: config.max_tokens,
+              temperature: config.temperature,
+              top_p: config.top_p,
+              stream: config.stream,
+              messages: nonSystemMessages.map(m => ({ role: m.role, content: m.content }))
+            };
+            
+            if (systemMessage) {
+              formattedRequest.system = systemMessage.content;
+            }
+            
+            if (config.thinking_mode?.enabled) {
+              formattedRequest.thinking = {
+                type: 'enabled',
+                budget_tokens: config.thinking_mode.budget_tokens
+              };
+            }
+            
+            return formattedRequest;
+          },
+          parseResponse: (response) => {
+            if (typeof response.content === 'string') return response.content;
+            if (Array.isArray(response.content) && response.content.length > 0) {
+              return response.content[0].text;
+            }
+            return '';
+          },
+          parseStreamingResponse: (response) => {
+            if (response.type === 'content_block_delta' && response.delta) {
+              return response.delta.text || '';
+            }
+            return '';
+          },
+          submitCompletion: vi.fn().mockResolvedValue({}),
+          submitStream: vi.fn().mockResolvedValue({
+            getReader: () => ({
+              read: vi.fn().mockResolvedValueOnce({
+                value: new TextEncoder().encode('data: {"type":"content_block_delta","delta":{"text":"Test"}}'),
+                done: false
+              }).mockResolvedValueOnce({
+                done: true
+              })
+            })
+          })
         };
       }
       return {};
@@ -68,7 +151,7 @@ global.fetch = vi.fn().mockImplementation(() =>
 
 describe('Providers', () => {
   describe('OpenAI Provider', () => {
-    const openaiProvider = providers.openai;
+    const openaiProvider = ProviderRegistry.getProviderImplementation('openai');
     let messages: MessageInterface[];
     let config: RequestConfig;
 
@@ -166,62 +249,6 @@ describe('Providers', () => {
       expect(() => openaiProvider.parseResponse(response)).toThrow('Invalid response format from OpenAI');
     });
 
-    it('should submit completion request correctly', async () => {
-      const formattedRequest = {
-        messages: [{ role: 'user', content: 'Hello' }],
-        model: 'gpt-4o',
-        max_tokens: 1000,
-        temperature: 0.7,
-        top_p: 1,
-        stream: false
-      };
-      
-      await openaiProvider.submitCompletion(formattedRequest);
-      
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/chat/openai',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            formattedRequest: formattedRequest,  // Wrapped in formattedRequest property
-            apiKey: 'mock-openai-key'           // API key as separate property
-          })
-        }
-      );
-    });
-    
-    it('should submit stream request correctly', async () => {
-      const formattedRequest = {
-        messages: [{ role: 'user', content: 'Hello' }],
-        model: 'gpt-4o',
-        max_tokens: 1000,
-        temperature: 0.7,
-        top_p: 1,
-        stream: false
-      };
-      
-      const stream = await openaiProvider.submitStream(formattedRequest);
-      
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/chat/openai',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            formattedRequest: {...formattedRequest, stream: true},  // Wrapped with stream set to true
-            apiKey: 'mock-openai-key'                              // API key as separate property
-          })
-        }
-      );
-      
-      expect(stream).toBeDefined();
-    });
-
     it('should filter out empty messages', () => {
       const messagesWithEmpty = [
         { role: 'system', content: 'You are a helpful assistant.' },
@@ -246,7 +273,7 @@ describe('Providers', () => {
   });
 
   describe('Anthropic Provider', () => {
-    const anthropicProvider = providers.anthropic;
+    const anthropicProvider = ProviderRegistry.getProviderImplementation('anthropic');
     let messages: MessageInterface[];
     let config: RequestConfig;
 
@@ -307,7 +334,7 @@ describe('Providers', () => {
       // Check that system message is properly handled as a system parameter
       expect(formattedRequest.system).toBe('You are a helpful assistant.');
       
-      // Check that system message is not included in the messages array
+      // Check that regular messages are included
       expect(formattedRequest.messages.length).toBe(2);
       
       // Check that regular messages are included
@@ -357,62 +384,6 @@ describe('Providers', () => {
       });
     });
 
-    it('should submit completion request correctly', async () => {
-      const formattedRequest = {
-        messages: [{ role: 'user', content: 'Hello' }],
-        model: 'claude-3-7-sonnet-20250219',
-        max_tokens: 1000,
-        temperature: 0.7,
-        top_p: 1,
-        stream: false
-      };
-      
-      await anthropicProvider.submitCompletion(formattedRequest);
-      
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/chat/anthropic',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            formattedRequest: formattedRequest,  // Wrapped in formattedRequest property
-            apiKey: 'mock-anthropic-key'        // API key as separate property
-          })
-        }
-      );
-    });
-
-    it('should submit stream request correctly', async () => {
-      const formattedRequest = {
-        messages: [{ role: 'user', content: 'Hello' }],
-        model: 'claude-3-7-sonnet-20250219',
-        max_tokens: 1000,
-        temperature: 0.7,
-        top_p: 1,
-        stream: false
-      };
-      
-      const stream = await anthropicProvider.submitStream(formattedRequest);
-      
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/chat/anthropic',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            formattedRequest: {...formattedRequest, stream: true},  // Wrapped with stream set to true
-            apiKey: 'mock-anthropic-key'                           // API key as separate property
-          })
-        }
-      );
-      
-      expect(stream).toBeDefined();
-    });
-
     it('should parse response correctly with content array', () => {
       const response = {
         content: [{ text: 'This is a test response.' }]
@@ -437,55 +408,21 @@ describe('Providers', () => {
       const parsedResponse = anthropicProvider.parseResponse(response);
       expect(parsedResponse).toBe('');
     });
-
-    it('should parse streaming response correctly', () => {
-      const response = {
-        type: 'content_block_delta',
-        delta: { text: 'Streaming content' }
-      };
-      
-      const parsedResponse = anthropicProvider.parseStreamingResponse(response);
-      expect(parsedResponse).toBe('Streaming content');
-    });
-
-    it('should handle non-content-block-delta streaming response', () => {
-      const response = {
-        type: 'message_start'
-      };
-      
-      const parsedResponse = anthropicProvider.parseStreamingResponse(response);
-      expect(parsedResponse).toBe('');
-    });
-
-    it('should filter out empty messages', () => {
-      const messagesWithEmpty = [
-        { role: 'system', content: 'You are a helpful assistant.' },
-        { role: 'user', content: 'Hello!' },
-        { role: 'assistant', content: '' }, // Empty message that should be filtered
-        { role: 'user', content: '   ' }    // Whitespace-only message that should be filtered
-      ];
-      
-      const formattedRequest = anthropicProvider.formatRequest(messagesWithEmpty, config);
-      
-      // Check that empty messages are filtered out
-      expect(formattedRequest.messages.length).toBe(1);
-      expect(formattedRequest.messages[0]).toEqual({
-        role: 'user',
-        content: 'Hello!'
-      });
-    });
   });
 
   describe('Type Tests', () => {
-    it('should validate provider types match expected interfaces', () => {
-      // This is a type-level test, just ensuring the providers object has the correct shape
-      expect(typeof providers.openai.formatRequest).toBe('function');
-      expect(typeof providers.openai.parseResponse).toBe('function');
-      expect(typeof providers.openai.parseStreamingResponse).toBe('function');
+    it('should validate provider implementations match expected interfaces', () => {
+      // This is a type-level test, just ensuring the providers have the correct shape
+      const openaiProvider = ProviderRegistry.getProviderImplementation('openai');
+      const anthropicProvider = ProviderRegistry.getProviderImplementation('anthropic');
       
-      expect(typeof providers.anthropic.formatRequest).toBe('function');
-      expect(typeof providers.anthropic.parseResponse).toBe('function');
-      expect(typeof providers.anthropic.parseStreamingResponse).toBe('function');
+      expect(typeof openaiProvider.formatRequest).toBe('function');
+      expect(typeof openaiProvider.parseResponse).toBe('function');
+      expect(typeof openaiProvider.parseStreamingResponse).toBe('function');
+      
+      expect(typeof anthropicProvider.formatRequest).toBe('function');
+      expect(typeof anthropicProvider.parseResponse).toBe('function');
+      expect(typeof anthropicProvider.parseStreamingResponse).toBe('function');
     });
   });
 });

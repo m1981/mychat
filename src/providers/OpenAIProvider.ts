@@ -2,42 +2,39 @@ import { AIProviderBase, ProviderKey, ProviderCapabilities, MessageInterface, Re
 import { PROVIDER_CONFIGS } from '@config/providers/provider.config';
 import store from '@store/store';
 
-export class OpenAIProvider extends AIProviderBase {
+export class OpenAIProvider implements AIProviderBase {
+  id: ProviderKey;
+  name: string;
+  endpoints: string[];
+  models: string[];
+  capabilities: ProviderCapabilities;
+
   constructor() {
     // Get configuration from provider config
     const config = PROVIDER_CONFIGS.openai;
-    const capabilities: ProviderCapabilities = {
+    
+    this.id = 'openai';
+    this.name = config.name;
+    this.endpoints = config.endpoints;
+    this.models = config.models.map(m => m.id);
+    this.capabilities = {
       supportsThinking: config.capabilities.supportsThinking,
       maxCompletionTokens: config.models[0].maxCompletionTokens,
       defaultModel: config.defaultModel
     };
-    
-    super(
-      'openai',
-      config.name,
-      config.endpoints,
-      config.models.map(m => m.id),
-      capabilities
-    );
   }
 
-  formatRequest(messages: ReadonlyArray<MessageInterface>, config: Readonly<RequestConfig>): FormattedRequest {
-    // Validate inputs
-    if (!Array.isArray(messages)) {
-      console.error('Invalid messages parameter in OpenAI formatRequest:', messages);
-      // Return a minimal valid request to avoid crashing
-      return {
-        model: config.model || 'gpt-4o',
-        max_tokens: config.max_tokens || 1000,
-        temperature: config.temperature || 0.7,
-        top_p: config.top_p || 1,
-        stream: config.stream ?? false,
-        messages: []
-      };
-    }
-
-    // Format the request according to OpenAI's API
-    return {
+  formatRequest(messages: MessageInterface[], config: RequestConfig): FormattedRequest {
+    // Filter out empty messages
+    const filteredMessages = messages
+      .filter(m => m.content.trim() !== '')
+      .map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+    
+    // Create formatted request
+    const formattedRequest: FormattedRequest = {
       model: config.model,
       max_tokens: config.max_tokens,
       temperature: config.temperature,
@@ -45,27 +42,24 @@ export class OpenAIProvider extends AIProviderBase {
       presence_penalty: config.presence_penalty,
       frequency_penalty: config.frequency_penalty,
       stream: config.stream ?? false,
-      messages: messages
-        .filter(msg => msg.content && msg.content.trim() !== '')
-        .map(msg => ({
-          role: msg.role,
-          content: msg.content
-        }))
+      messages: filteredMessages
     };
+    
+    return formattedRequest;
   }
 
   parseResponse(response: unknown): string {
-    // Validate response using the protected helper method
-    this.validateResponse(response);
+    // Validate response
+    if (!response) return '';
     
-    // Handle non-streaming response
-    if (response.choices?.[0]?.message?.content) {
-      return response.choices[0].message.content;
+    // Handle direct content (for test compatibility)
+    if (response.content) {
+      return response.content;
     }
     
-    // If content is a string, return it (for test compatibility)
-    if (typeof response.content === 'string') {
-      return response.content;
+    // Handle standard OpenAI response format
+    if (response.choices && response.choices[0].message) {
+      return response.choices[0].message.content;
     }
     
     throw new Error('Invalid response format from OpenAI');
@@ -74,18 +68,11 @@ export class OpenAIProvider extends AIProviderBase {
   parseStreamingResponse(response: unknown): string {
     try {
       // Validate response
-      this.validateResponse(response);
+      if (!response) return '';
       
-      // Handle delta content for streaming
-      if (response.choices?.[0]?.delta?.content !== undefined) {
-        return response.choices[0].delta.content;
+      if (response.choices && response.choices[0].delta) {
+        return response.choices[0].delta.content || '';
       }
-      
-      // Handle case where content might be directly on the response
-      if (typeof response.content === 'string') {
-        return response.content;
-      }
-      
       return '';
     } catch (e) {
       console.error('Error parsing OpenAI response:', e);
@@ -106,13 +93,7 @@ export class OpenAIProvider extends AIProviderBase {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: formattedRequest.model,
-        max_tokens: formattedRequest.max_tokens,
-        temperature: formattedRequest.temperature,
-        top_p: formattedRequest.top_p,
-        presence_penalty: formattedRequest.presence_penalty,
-        frequency_penalty: formattedRequest.frequency_penalty,
-        messages: formattedRequest.messages,
+        ...formattedRequest,
         apiKey
       })
     });
@@ -130,31 +111,20 @@ export class OpenAIProvider extends AIProviderBase {
     
     const apiEndpoint = this.formatEndpoint(endpoint);
     
-    console.log('Submitting OpenAI stream request to:', apiEndpoint);
-    
-    // Send a properly formatted request with stream: true
     const response = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: formattedRequest.model,
-        max_tokens: formattedRequest.max_tokens,
-        temperature: formattedRequest.temperature,
-        top_p: formattedRequest.top_p,
-        presence_penalty: formattedRequest.presence_penalty,
-        frequency_penalty: formattedRequest.frequency_penalty,
-        stream: true,  // Always true for streaming
-        messages: formattedRequest.messages,
+        ...formattedRequest,
+        stream: true,
         apiKey
       })
     });
     
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API error response:', errorText);
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
     
     return response.body as ReadableStream;
@@ -165,12 +135,12 @@ export class OpenAIProvider extends AIProviderBase {
     // Get API key from store or environment
     return store.getState().apiKeys.openai;
   }
-
+  
   private formatEndpoint(endpoint: string): string {
-    return endpoint.startsWith('http') 
-      ? endpoint 
-      : endpoint.startsWith('/api') 
-        ? endpoint 
-        : `/api${endpoint}`;
+    // Format endpoint URL
+    if (endpoint.startsWith('http')) {
+      return endpoint;
+    }
+    return `${window.location.origin}${endpoint}`;
   }
 }

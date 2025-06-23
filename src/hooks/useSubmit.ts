@@ -7,7 +7,7 @@ import { SubmissionLock } from '@src/services/SubmissionLock';
 import { ChatSubmissionService } from '@src/services/SubmissionService';
 import useStore from '@store/store';
 import { ModelConfig } from '@type/chat';
-import { providers } from '@type/providers';
+import { ProviderRegistry } from '@config/providers/provider.registry';
 import { debug } from '@utils/debug';
 
 import { useMessageManager } from './useMessageManager';
@@ -104,7 +104,7 @@ function useSubmit(dependencies: SubmitDependencies = {}) {
     return {
       currentChat,
       providerKey,
-      provider: providers[providerKey],
+      provider: ProviderRegistry.getProviderImplementation(providerKey),
       apiKey: key,
       renderCount: renderCountRef.current
     };
