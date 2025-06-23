@@ -10,14 +10,9 @@ export interface SubmissionService {
 export class ChatSubmissionService implements SubmissionService {
   constructor(
     private provider: AIProviderInterface,
-    private apiKey: string,
-    private contentCallback: (content: string) => void,
-    private streamHandler: {
-      processStream: (reader: ReadableStreamDefaultReader<Uint8Array>, callback: (content: string) => void) => Promise<void>
-    }
+    private apiKey: string
   ) {
-    // Add validation for API key
-    if (!this.apiKey) {
+    if (!apiKey) {
       console.error('⚠️ No API key provided for provider:', provider.id);
     }
   }

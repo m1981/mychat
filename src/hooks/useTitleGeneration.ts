@@ -15,11 +15,7 @@ export function useTitleGeneration(providerKey: ProviderKey): UseTitleGeneration
     setChats: state.setChats
   }));
   
-  const generateTitle = useCallback(async (
-    messages: MessageInterface[], 
-    config: ModelConfig,
-    chatIndex?: number
-  ) => {
+  const generateTitle = useCallback(async (messages: MessageInterface[], chatId: string) => {
     try {
       // Skip if not enough messages
       if (messages.length < 2) {
@@ -59,7 +55,7 @@ export function useTitleGeneration(providerKey: ProviderKey): UseTitleGeneration
       ];
       
       // Get provider implementation from registry
-      const providerInstance = ProviderRegistry.getProviderImplementation(providerKey);
+      const providerInstance = ProviderRegistry.getProvider(providerKey);
       
       // FIX: Ensure we're passing parameters in the correct order
       // First parameter should be messages array, second parameter should be config

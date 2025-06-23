@@ -1,13 +1,12 @@
 import { useRef, useEffect } from 'react';
 import { ChatStreamHandler } from '@src/handlers/ChatStreamHandler';
-import { ChatSubmissionService } from '@services/SubmissionService';
 import { ProviderRegistry } from '@config/providers/provider.registry';
 
-// Make the dependency on ChatSubmissionService explicit
+// Update to use getProviderImplementation
 export function useStreamHandler(
   providerKey: string,
-  submissionService?: ChatSubmissionService // Optional parameter
-) {
+  dependencies: UseStreamHandlerDependencies = {}
+): UseStreamHandlerReturn {
   const provider = ProviderRegistry.getProvider(providerKey);
   
   // Create stream handler ref with explicit service dependency

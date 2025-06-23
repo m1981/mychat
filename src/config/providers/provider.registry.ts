@@ -44,11 +44,7 @@ export class ProviderRegistry {
     return implementation;
   }
   
-  // Alias for getProvider to maintain backward compatibility
-  static getProviderImplementation(key?: ProviderKey): AIProviderBase {
-    return ProviderRegistry.getProvider(key);
-  }
-  
+
   // Get all available provider keys
   static getAvailableProviders(): ProviderKey[] {
     return Array.from(ProviderRegistry.providers.keys());

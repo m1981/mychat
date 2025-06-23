@@ -1,9 +1,9 @@
 export class ChatStreamHandler {
   private decoder: TextDecoder;
-  private provider: any; // Replace 'any' with proper provider type
+  private provider: AIProviderInterface; // Replace 'any' with proper provider type
   private aborted: boolean = false;
 
-  constructor(decoder: TextDecoder, provider: any) {
+  constructor(decoder: TextDecoder, provider: AIProviderInterface) {
     this.decoder = decoder;
     this.provider = provider;
   }

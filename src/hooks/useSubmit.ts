@@ -104,7 +104,7 @@ function useSubmit(dependencies: SubmitDependencies = {}) {
     return {
       currentChat,
       providerKey,
-      provider: ProviderRegistry.getProviderImplementation(providerKey),
+      provider: ProviderRegistry.getProvider(providerKey),
       apiKey: key,
       renderCount: renderCountRef.current
     };

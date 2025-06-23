@@ -26,7 +26,7 @@ vi.mock('@config/models/model.registry', () => ({
 
 vi.mock('@config/providers/provider.registry', () => ({
   ProviderRegistry: {
-    getProviderImplementation: vi.fn().mockImplementation((provider) => {
+    getProvider: vi.fn().mockImplementation((provider) => {
       if (provider === 'openai') {
         return {
           id: 'openai',
@@ -151,7 +151,7 @@ global.fetch = vi.fn().mockImplementation(() =>
 
 describe('Providers', () => {
   describe('OpenAI Provider', () => {
-    const openaiProvider = ProviderRegistry.getProviderImplementation('openai');
+    const openaiProvider = ProviderRegistry.getProvider('openai');
     let messages: MessageInterface[];
     let config: RequestConfig;
 
@@ -273,7 +273,7 @@ describe('Providers', () => {
   });
 
   describe('Anthropic Provider', () => {
-    const anthropicProvider = ProviderRegistry.getProviderImplementation('anthropic');
+    const anthropicProvider = ProviderRegistry.getProvider('anthropic');
     let messages: MessageInterface[];
     let config: RequestConfig;
 
@@ -413,8 +413,8 @@ describe('Providers', () => {
   describe('Type Tests', () => {
     it('should validate provider implementations match expected interfaces', () => {
       // This is a type-level test, just ensuring the providers have the correct shape
-      const openaiProvider = ProviderRegistry.getProviderImplementation('openai');
-      const anthropicProvider = ProviderRegistry.getProviderImplementation('anthropic');
+      const openaiProvider = ProviderRegistry.getProvider('openai');
+      const anthropicProvider = ProviderRegistry.getProvider('anthropic');
       
       expect(typeof openaiProvider.formatRequest).toBe('function');
       expect(typeof openaiProvider.parseResponse).toBe('function');

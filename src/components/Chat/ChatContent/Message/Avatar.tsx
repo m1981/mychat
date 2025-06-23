@@ -29,13 +29,9 @@ const UserAvatar = () => {
 
 const AssistantAvatar = () => {
   const provider = useStore(
-    (state) =>
-      state.chats &&
-      state.chats.length > 0 &&
-      state.currentChatIndex >= 0 &&
-      state.currentChatIndex < state.chats.length
-        ? state.chats[state.currentChatIndex].config.provider
-        : 'anthropic'
+    state => state.chats[state.currentChatIndex]
+      ? state.chats[state.currentChatIndex].config.provider
+      : 'openai'
   );
 
   return (

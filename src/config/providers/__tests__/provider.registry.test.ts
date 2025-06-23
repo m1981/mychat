@@ -36,21 +36,21 @@ describe('ProviderRegistry', () => {
     vi.clearAllMocks();
   });
 
-  describe('getProviderImplementation', () => {
+  describe('getProvider', () => {
     it('should return the correct provider implementation for anthropic', () => {
-      const provider = ProviderRegistry.getProviderImplementation('anthropic');
+      const provider = ProviderRegistry.getProvider('anthropic');
       expect(provider.id).toBe('anthropic');
       expect(provider.name).toBe('Anthropic');
     });
 
     it('should return the correct provider implementation for openai', () => {
-      const provider = ProviderRegistry.getProviderImplementation('openai');
+      const provider = ProviderRegistry.getProvider('openai');
       expect(provider.id).toBe('openai');
       expect(provider.name).toBe('OpenAI');
     });
 
     it('should return default provider when invalid provider key is given', () => {
-      const provider = ProviderRegistry.getProviderImplementation('invalid-provider' as ProviderKey);
+      const provider = ProviderRegistry.getProvider('invalid-provider' as ProviderKey);
       // Default provider should be returned (assuming anthropic is default)
       expect(provider.id).toBe('anthropic');
     });

@@ -1,118 +1,83 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { ProviderProvider, useProvider } from '@contexts/ProviderContext';
 import React from 'react';
+import { render, screen } from '@testing-library/react';
+import { ProviderContext, ProviderProvider, useProvider } from '../ProviderContext';
+import { mockAnthropicProvider, mockOpenAIProvider } from '../../test/mocks/providerRegistryMock';
 
-// Mock store
+// Mock the ProviderRegistry directly in vi.mock
+vi.mock('@config/providers/provider.registry', () => {
+  return {
+    ProviderRegistry: {
+      getProvider: vi.fn().mockImplementation((key) => {
+        if (key === 'anthropic') return mockAnthropicProvider;
+        if (key === 'openai') return mockOpenAIProvider;
+        return mockAnthropicProvider; // Default fallback
+      })
+    }
+  };
+});
+
+// Mock the store
 vi.mock('@store/store', () => ({
   default: () => ({
     currentChatIndex: 0,
-    chats: [],
-    apiKeys: {}
+    chats: [
+      {
+        id: 'test-chat',
+        config: {
+          provider: 'anthropic',
+          modelConfig: {
+            model: 'claude-3-7-sonnet-20250219',
+            max_tokens: 4096,
+            temperature: 0.7,
+            top_p: 1
+          }
+        }
+      }
+    ],
+    apiKeys: {
+      anthropic: 'test-key',
+      openai: 'test-key'
+    }
   })
-}));
-
-// Mock provider registry
-vi.mock('@config/providers/provider.registry', () => ({
-  ProviderRegistry: {
-    getProvider: vi.fn().mockImplementation((key) => {
-      if (key === 'openai') {
-        return {
-          id: 'openai',
-          name: 'OpenAI',
-          defaultModel: 'gpt-4o',
-          endpoints: ['/api/chat/openai'],
-          models: [
-            {
-              id: 'gpt-4o',
-              name: 'GPT-4o',
-              maxCompletionTokens: 16384,
-              cost: {
-                input: { price: 0.0025, unit: 1000 },
-                output: { price: 0.01, unit: 1000 }
-              }
-            }
-          ]
-        };
-      }
-      if (key === 'anthropic') {
-        return {
-          id: 'anthropic',
-          name: 'Anthropic',
-          defaultModel: 'claude-3-7-sonnet-20250219',
-          endpoints: ['/api/chat/anthropic'],
-          models: [
-            {
-              id: 'claude-3-7-sonnet-20250219',
-              name: 'Claude 3.7 Sonnet',
-              maxCompletionTokens: 8192,
-              cost: {
-                input: { price: 0.003, unit: 1000 },
-                output: { price: 0.015, unit: 1000 }
-              }
-            }
-          ]
-        };
-      }
-      return null;
-    })
-  }
 }));
 
 // Test component that uses the provider context
 const TestComponent = () => {
   const provider = useProvider();
-  return <div data-testid="provider-id">{provider.id}</div>;
+  return <div data-testid="provider-name">{provider.name}</div>;
 };
 
 describe('ProviderContext', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-  
-  it('should provide OpenAI provider when specified', () => {
+  it('provides the correct provider based on providerKey prop', () => {
     render(
       <ProviderProvider providerKey="openai">
         <TestComponent />
       </ProviderProvider>
     );
     
-    expect(screen.getByTestId('provider-id')).toHaveTextContent('openai');
+    expect(screen.getByTestId('provider-name')).toHaveTextContent('OpenAI');
   });
   
-  it('should provide Anthropic provider when specified', () => {
+  it('provides the default provider when no providerKey is specified', () => {
     render(
-      <ProviderProvider providerKey="anthropic">
+      <ProviderProvider>
         <TestComponent />
       </ProviderProvider>
     );
     
-    expect(screen.getByTestId('provider-id')).toHaveTextContent('anthropic');
+    expect(screen.getByTestId('provider-name')).toHaveTextContent('Anthropic');
   });
   
-  it('should throw error when useProvider is used outside ProviderProvider', () => {
-    // Suppress console errors for this test
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  it('throws an error when useProvider is used outside of ProviderProvider', () => {
+    // Suppress console.error for this test
+    const originalConsoleError = console.error;
+    console.error = vi.fn();
     
-    // Expect render to throw
     expect(() => {
       render(<TestComponent />);
     }).toThrow('useProvider must be used within a ProviderProvider');
     
-    consoleErrorSpy.mockRestore();
-  });
-  
-  it('should pass provider to nested components', () => {
-    render(
-      <ProviderProvider providerKey="openai">
-        <div>
-          <div>
-            <TestComponent />
-          </div>
-        </div>
-      </ProviderProvider>
-    );
-    
-    expect(screen.getByTestId('provider-id')).toHaveTextContent('openai');
+    // Restore console.error
+    console.error = originalConsoleError;
   });
 });

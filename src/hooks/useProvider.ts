@@ -5,11 +5,11 @@ import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 
 export function useProvider(providerKey?: ProviderKey) {
   const [provider, setProvider] = useState<AIProviderBase>(
-    ProviderRegistry.getProviderImplementation(providerKey || DEFAULT_PROVIDER)
+    ProviderRegistry.getProvider(providerKey || DEFAULT_PROVIDER)
   );
   
   useEffect(() => {
-    setProvider(ProviderRegistry.getProviderImplementation(providerKey || DEFAULT_PROVIDER));
+    setProvider(ProviderRegistry.getProvider(providerKey || DEFAULT_PROVIDER));
   }, [providerKey]);
   
   return provider;

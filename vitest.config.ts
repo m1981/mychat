@@ -191,6 +191,7 @@ export default defineConfig({
       '@models': path.resolve(__dirname, './src/config/models'),
       '@api': path.resolve(__dirname, './src/api'),
       '@components': path.resolve(__dirname, './src/components'),
+      '@services': path.resolve(__dirname, './src/services'),
     },
   },
 });
