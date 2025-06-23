@@ -1,8 +1,9 @@
 // provider.registry.ts - Registry that works with configurations only
-import { ProviderKey, ProviderCapabilities, AIProviderInterface } from '@type/provider';
+import { ProviderKey, ProviderCapabilities, AIProviderInterface, AIProviderBase } from '@type/provider';
 import { ProviderConfig, PROVIDER_CONFIGS } from './provider.config';
-import { providers } from '@type/providers';
 import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
+import { AnthropicProvider } from '@providers/AnthropicProvider';
+import { OpenAIProvider } from '@providers/OpenAIProvider';
 
 export class ProviderRegistry {
   static getProvider(key?: ProviderKey): ProviderConfig {
@@ -52,13 +53,25 @@ export class ProviderRegistry {
     return capabilities;
   }
 
+  // Singleton pattern for provider registry
+  static #providers = new Map<ProviderKey, AIProviderBase>();
+  
+  // Initialize providers
+  static {
+    ProviderRegistry.#providers.set('anthropic', new AnthropicProvider());
+    ProviderRegistry.#providers.set('openai', new OpenAIProvider());
+  }
+  
+  // Get provider implementation
   static getProviderImplementation(key?: ProviderKey): AIProviderInterface {
     const providerKey = key || DEFAULT_PROVIDER;
-    const implementation = providers[providerKey];
+    const implementation = ProviderRegistry.#providers.get(providerKey);
+    
     if (!implementation) {
       console.error(`Provider implementation for ${providerKey} not found, falling back to default`);
-      return providers[DEFAULT_PROVIDER];
+      return ProviderRegistry.#providers.get(DEFAULT_PROVIDER) as AIProviderInterface;
     }
+    
     return implementation;
   }
   
@@ -69,5 +82,15 @@ export class ProviderRegistry {
       return '/api/chat/fallback';
     }
     return provider.endpoints[0];
+  }
+
+  // Get a list of all available provider keys
+  static getAvailableProviders(): ProviderKey[] {
+    return Array.from(ProviderRegistry.#providers.keys());
+  }
+
+  // Check if a provider exists
+  static hasProvider(key: ProviderKey): boolean {
+    return ProviderRegistry.#providers.has(key);
   }
 }

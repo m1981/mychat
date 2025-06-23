@@ -102,9 +102,9 @@ graph TD
 
 ## Core Interfaces
 
-### `AIProviderInterface`
+### `AIProviderInterface` and `AIProviderBase`
 
-The main interface that all AI providers must implement.
+The main interface and abstract base class that all AI providers must implement.
 
 **Motivation:**
 - **Single Responsibility Principle (SRP)**: Each provider implementation focuses solely on handling communication with a specific AI service.
@@ -112,64 +112,80 @@ The main interface that all AI providers must implement.
 - **Interface Segregation Principle (ISP)**: The interface defines only the essential methods needed by all providers.
 - **Dependency Inversion Principle (DIP)**: Components depend on abstractions (the interface) rather than concrete implementations.
 - **React Context Pattern**: Enables dependency injection through React's context system.
+- **Type Safety**: Uses abstract classes, readonly properties, and strict typing to prevent runtime errors.
 
 ```typescript
-export interface AIProviderInterface {
-    /**
-     * Unique identifier for the provider
-     */
-    id: string;
+export abstract class AIProviderBase {
+  readonly id: ProviderKey;
+  readonly name: string;
+  readonly endpoints: ReadonlyArray<string>;
+  readonly models: ReadonlyArray<string>;
 
-    /**
-     * Display name of the provider
-     */
-    name: string;
+  constructor(
+    id: ProviderKey,
+    name: string,
+    endpoints: ReadonlyArray<string>,
+    models: ReadonlyArray<string>
+  ) {
+    this.id = id;
+    this.name = name;
+    this.endpoints = endpoints;
+    this.models = models;
+  }
 
-    /**
-     * List of API endpoints this provider can use
-     */
-    endpoints: string[];
+  /**
+   * Converts application request format to provider-specific format
+   * @param messages - Array of messages to send to the AI
+   * @param config - Configuration for the request
+   * @returns Formatted request ready to send to the provider's API
+   */
+  abstract formatRequest(
+    messages: ReadonlyArray<MessageInterface>, 
+    config: Readonly<RequestConfig>
+  ): FormattedRequest;
 
-    /**
-     * List of model IDs supported by this provider
-     */
-    models: string[];
+  /**
+   * Extracts content from a provider's non-streaming response
+   * @param response - Raw response from the provider's API
+   * @returns Extracted content as a string
+   */
+  abstract parseResponse(response: unknown): string;
 
-    /**
-     * Converts application request format to provider-specific format
-     * @param config - Configuration for the request
-     * @param messages - Array of messages to send to the AI
-     * @returns Formatted request ready to send to the provider's API
-     */
-    formatRequest: (messages: MessageInterface[], config: RequestConfig, ) => FormattedRequest;
+  /**
+   * Extracts content from a provider's streaming response chunk
+   * @param response - Raw response chunk from the provider's API
+   * @returns Extracted content as a string
+   */
+  abstract parseStreamingResponse(response: unknown): string;
 
-    /**
-     * Extracts content from a provider's non-streaming response
-     * @param response - Raw response from the provider's API
-     * @returns Extracted content as a string
-     */
-    parseResponse: (response: any) => string;
+  /**
+   * Submits a completion request to the provider
+   * @param formattedRequest - Request formatted for the provider's API
+   * @returns Promise resolving to the provider's response
+   */
+  abstract submitCompletion(
+    formattedRequest: Readonly<FormattedRequest>
+  ): Promise<ProviderResponse>;
 
-    /**
-     * Extracts content from a provider's streaming response chunk
-     * @param response - Raw response chunk from the provider's API
-     * @returns Extracted content as a string
-     */
-    parseStreamingResponse: (response: any) => string;
-
-    /**
-     * Submits a completion request to the provider
-     * @param formattedRequest - Request formatted for the provider's API
-     * @returns Promise resolving to the provider's response
-     */
-    submitCompletion: (formattedRequest: FormattedRequest) => Promise<ProviderResponse>;
-
-    /**
-     * Submits a streaming request to the provider
-     * @param formattedRequest - Request formatted for the provider's API
-     * @returns Promise resolving to a ReadableStream of response chunks
-     */
-    submitStream: (formattedRequest: FormattedRequest) => Promise<ReadableStream>;
+  /**
+   * Submits a streaming request to the provider
+   * @param formattedRequest - Request formatted for the provider's API
+   * @returns Promise resolving to a ReadableStream of response chunks
+   */
+  abstract submitStream(
+    formattedRequest: Readonly<FormattedRequest>
+  ): Promise<ReadableStream>;
+  
+  /**
+   * Validates that a response matches the expected format
+   * @param response - Raw response from the provider's API
+   * @throws TypeError if the response is invalid
+   */
+  protected validateResponse(response: unknown): asserts response is ProviderResponse {
+    if (!response || typeof response !== 'object') {
+      throw new TypeError('Invalid response format: response must be an object');
+    }
+  }
 }
 ```
 
@@ -182,31 +198,32 @@ Configuration for AI requests, extending the base model config.
 - **OCP**: Extensible through optional fields for provider-specific features.
 - **Composition over Inheritance**: Extends `ModelConfig` to reuse common configuration.
 - **React Props Pattern**: Follows React's pattern of passing configuration as structured objects.
+- **Immutability**: Uses readonly properties to prevent accidental mutation.
 
 ```typescript
-export interface RequestConfig extends ModelConfig {
+export interface RequestConfig extends BaseModelConfig {
+  /**
+   * Whether to stream the response (true) or receive it all at once (false)
+   * Optional in incoming config, defaults to false
+   */
+  readonly stream?: boolean;
+
+  /**
+   * Configuration for thinking mode, which allows the AI to "think" before responding
+   * This enables more thoughtful and comprehensive responses by allocating tokens for reasoning
+   */
+  readonly thinking?: Readonly<{
     /**
-     * Whether to stream the response (true) or receive it all at once (false)
-     * Optional in incoming config, defaults to false
+     * Whether thinking mode is enabled for this request
      */
-    stream?: boolean;
+    readonly enabled: boolean;
 
     /**
-     * Configuration for thinking mode, which allows the AI to "think" before responding
-     * This enables more thoughtful and comprehensive responses by allocating tokens for reasoning
+     * Maximum number of tokens to allocate for thinking
+     * Higher values allow for more complex reasoning but consume more tokens
      */
-    thinking_mode?: {
-        /**
-         * Whether thinking mode is enabled for this request
-         */
-        enabled: boolean;
-
-        /**
-         * Maximum number of tokens to allocate for thinking
-         * Higher values allow for more complex reasoning but consume more tokens
-         */
-        budget_tokens: number;
-    };
+    readonly budget_tokens: number;
+  }>;
 }
 ```
 
@@ -219,90 +236,89 @@ The standardized request format that providers convert to their specific API for
 - **Liskov Substitution Principle (LSP)**: All provider-specific request formats can be derived from this base structure.
 - **OCP**: Extensible through the index signature for provider-specific fields.
 - **Information Hiding**: Abstracts provider-specific request details from components.
+- **Type Safety**: Uses discriminated unions and readonly properties.
 
 ```typescript
 export interface FormattedRequest {
+  /**
+   * Array of messages in provider-specific format
+   * Each provider may have different message structure requirements
+   */
+  readonly messages: readonly unknown[];
+
+  /**
+   * Model identifier to use for this request (e.g., "gpt-4o", "claude-3-7-sonnet")
+   */
+  readonly model: string;
+
+  /**
+   * Maximum number of tokens to generate in the response
+   */
+  readonly max_tokens: number;
+
+  /**
+   * Controls randomness: 0 = deterministic, 1 = maximum randomness
+   * Lower values make output more focused and deterministic
+   * Higher values introduce more randomness and creativity
+   */
+  readonly temperature: number;
+
+  /**
+   * Controls diversity via nucleus sampling
+   * 0.1 = only consider tokens in the top 10% probability mass
+   * 1.0 = consider all tokens (equivalent to no nucleus sampling)
+   */
+  readonly top_p: number;
+
+  /**
+   * Whether to stream the response (true) or receive it all at once (false)
+   */
+  readonly stream: boolean;
+
+  /**
+   * Thinking configuration for providers that support it (e.g., Anthropic)
+   * Enables the AI to reason through complex problems before responding
+   */
+  readonly thinking?: {
     /**
-     * Array of messages in provider-specific format
-     * Each provider may have different message structure requirements
+     * Type of thinking mode
+     * - "enabled": AI will use thinking capabilities
+     * - "disabled": AI will not use thinking capabilities
      */
-    messages: any[];
+    readonly type: 'enabled' | 'disabled';
 
     /**
-     * Model identifier to use for this request (e.g., "gpt-4o", "claude-3-7-sonnet")
+     * Maximum number of tokens to allocate for thinking
+     * Higher values allow for more complex reasoning but consume more tokens
      */
-    model: string;
+    readonly budget_tokens: number;
+  };
 
-    /**
-     * Maximum number of tokens to generate in the response
-     */
-    max_tokens: number;
+  /**
+   * System message for providers that support it separately from messages
+   * (e.g., Anthropic treats system messages differently)
+   */
+  readonly system?: string;
 
-    /**
-     * Controls randomness: 0 = deterministic, 1 = maximum randomness
-     * Lower values make output more focused and deterministic
-     * Higher values introduce more randomness and creativity
-     */
-    temperature: number;
+  /**
+   * Reduces repetition of the same tokens
+   * Higher values decrease likelihood of repeating the same phrases
+   * Optional, as not all providers support this
+   */
+  readonly presence_penalty?: number;
 
-    /**
-     * Controls diversity via nucleus sampling
-     * 0.1 = only consider tokens comprising the top 10% probability mass
-     * 1.0 = consider all tokens (but still weighted by probability)
-     */
-    top_p?: number;
+  /**
+   * Reduces repetition of the same topics
+   * Higher values decrease likelihood of discussing the same topics
+   * Optional, as not all providers support this
+   */
+  readonly frequency_penalty?: number;
 
-    /**
-     * Whether to stream the response
-     * When true, the response will be delivered in chunks
-     * When false, the response will be delivered all at once
-     */
-    stream: boolean;
-
-    /**
-     * Thinking configuration for providers that support it (e.g., Anthropic)
-     * Enables the AI to reason through complex problems before responding
-     */
-    thinking?: {
-        /**
-         * Type of thinking mode
-         * - "enabled": AI will use thinking capabilities
-         * - "disabled": AI will not use thinking capabilities
-         */
-        type: "enabled" | "disabled";
-
-        /**
-         * Maximum number of tokens to allocate for thinking
-         * Higher values allow for more complex reasoning but consume more tokens
-         */
-        budget_tokens: number;
-    };
-
-    /**
-     * System message for providers that support it separately from messages
-     * (e.g., Anthropic treats system messages differently)
-     */
-    system?: string;
-
-    /**
-     * Reduces repetition of the same tokens
-     * Higher values decrease likelihood of repeating the same phrases
-     * Optional, as not all providers support this
-     */
-    presence_penalty?: number;
-
-    /**
-     * Reduces repetition of the same topics
-     * Higher values decrease likelihood of discussing the same topics
-     * Optional, as not all providers support this
-     */
-    frequency_penalty?: number;
-
-    /**
-     * Allow additional provider-specific request fields
-     * Enables extensibility for provider-specific parameters
-     */
-    [key: string]: unknown;
+  /**
+   * Allow additional provider-specific fields
+   * Enables extensibility for provider-specific parameters
+   */
+  readonly [key: string]: unknown;
 }
 ```
 
@@ -315,68 +331,20 @@ A standardized response format that providers convert their API responses to.
 - **LSP**: All provider-specific responses can be mapped to this common structure.
 - **OCP**: Extensible through the index signature for provider-specific fields.
 - **Adapter Pattern**: Acts as an adapter between provider-specific responses and application-wide format.
+- **Type Safety**: Uses discriminated unions for different response formats.
 
 ```typescript
-export interface ProviderResponse {
-    /**
-     * Main content of the response
-     * Can be a string or an array of content blocks (for providers like Anthropic)
-     */
-    content?: string | Array<{text: string}>;
-
-    /**
-     * Array of choices (for providers like OpenAI)
-     * Each choice contains a message or delta with content
-     */
-    choices?: Array<{
-        /**
-         * Complete message in non-streaming responses
-         */
-        message?: {
-            /**
-             * Content of the message
-             */
-            content?: string
-        };
-
-        /**
-         * Delta in streaming responses
-         */
-        delta?: {
-            /**
-             * Content chunk in the delta
-             */
-            content?: string
-        };
-    }>;
-
-    /**
-     * Type of response (for providers like Anthropic)
-     * E.g., "content_block_delta" for streaming responses
-     */
-    type?: string;
-
-    /**
-     * Delta information for streaming responses (for providers like Anthropic)
-     */
-    delta?: {
-        /**
-         * Text chunk in the delta
-         */
-        text?: string;
-
-        /**
-         * Additional provider-specific delta fields
-         */
-        [key: string]: unknown;
-    };
-
-    /**
-     * Allow additional provider-specific response fields
-     * Enables extensibility for provider-specific response data
-     */
-    [key: string]: unknown;
-}
+export type ProviderResponse = 
+  | { type?: string; content: string; [key: string]: unknown }
+  | { type?: string; content: ReadonlyArray<{readonly text: string}>; [key: string]: unknown }
+  | { type?: string; choices: ReadonlyArray<{
+      readonly message?: { readonly content?: string };
+      readonly delta?: { readonly content?: string };
+    }>; [key: string]: unknown }
+  | { type: 'content_block_delta'; delta: { 
+      readonly text?: string;
+      readonly [key: string]: unknown;
+    }; [key: string]: unknown };
 ```
 
 ### `MessageInterface`
