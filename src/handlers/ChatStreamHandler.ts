@@ -1,12 +1,11 @@
-import { AIProviderInterface } from '@type/provider';
-import { debug } from '@utils/debug';
+import { AIProviderBase } from '@type/provider';
 
 export class ChatStreamHandler {
   private decoder: TextDecoder;
-  private provider: AIProviderInterface;
+  private provider: AIProviderBase;
   private aborted: boolean = false;
 
-  constructor(decoder: TextDecoder, provider: AIProviderInterface) {
+  constructor(decoder: TextDecoder, provider: AIProviderBase) {
     this.decoder = decoder;
     this.provider = provider;
     

@@ -76,7 +76,7 @@ export function useTitleGeneration(providerKey: ProviderKey): UseTitleGeneration
       });
 
       debug.log('chat', 'Submitting title generation request');
-      // Submit request using the correct method from AIProviderInterface
+      // Submit request using the correct method from AIProviderBase
       const response = await providerInstance.submitCompletion(formattedRequest);
       
       // Parse response using the correct method

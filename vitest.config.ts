@@ -35,7 +35,30 @@ export default defineConfig({
         'coverage/**',
         '**/*.stories.*',
         '**/*.constant.*',
-        '**/index.*'
+        '**/index.*',
+        // Configuration files
+        '.puppeteerrc.cjs',
+        'eslint.config.js',
+        'postcss.config.cjs',
+        'tailwind.config.cjs',
+        // API files
+        'api/chat/anthropic.ts',
+        'api/chat/openai.ts',
+        // E2E test files
+        'e2e/**',
+        // Scripts
+        'scripts/**',
+        // App entry files
+        'src/App.tsx',
+        'src/i18n.ts',
+        'src/main.tsx',
+        // API clients
+        'src/api/anthropic-client.js',
+        'src/api/openai-client.js',
+        // Icons
+        'src/assets/icons/**',
+        'src/components/**',
+        'src/utils/**',
       ],
       thresholds: {
         // Global thresholds

@@ -1,12 +1,12 @@
    import React, { createContext, useContext, useState, useEffect } from 'react';
-   import { AIProviderInterface } from '@type/provider';
+   import { AIProviderBase } from '@type/provider';
    import { ProviderKey } from '@type/chat';
    import { ProviderRegistry } from '@config/providers/provider.registry';
    import useStore from '@store/store';
    import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 
    // Create context with null as default value
-   export const ProviderContext = createContext<AIProviderInterface | null>(null);
+   export const ProviderContext = createContext<AIProviderBase | null>(null);
 
    // Provider component that wraps your app and makes the provider available
    export const ProviderProvider: React.FC<{
@@ -27,7 +27,7 @@
      }
 
      // For normal app usage, use state and effect
-     const [provider, setProvider] = useState<AIProviderInterface | null>(() => {
+     const [provider, setProvider] = useState<AIProviderBase | null>(() => {
        const effectiveProviderKey = chats?.[currentChatIndex]?.config?.provider || DEFAULT_PROVIDER;
        return ProviderRegistry.getProvider(effectiveProviderKey);
      });
@@ -46,7 +46,7 @@
    };
 
    // Hook to use the provider context
-   export const useProvider = (): AIProviderInterface => {
+   export const useProvider = (): AIProviderBase => {
      const context = useContext(ProviderContext);
      if (context === null) {
        throw new Error('useProvider must be used within a ProviderProvider');

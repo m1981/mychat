@@ -1,6 +1,6 @@
 import useStore from '@store/store';
 import { MessageInterface } from '@type/chat';
-import { AIProviderInterface, ModelConfig, RequestConfig } from '@type/provider';
+import { AIProviderBase, ModelConfig, RequestConfig } from '@type/provider';
 import { debug } from '@utils/debug';
 
 export interface SubmissionService {
@@ -13,7 +13,7 @@ export interface StreamHandler {
 
 export class ChatSubmissionService implements SubmissionService {
   constructor(
-    private provider: AIProviderInterface,
+    private provider: AIProviderBase,
     private apiKey: string,
     private contentCallback: (content: string) => void,
     private streamHandler?: StreamHandler
