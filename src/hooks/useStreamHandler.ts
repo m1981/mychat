@@ -1,45 +1,57 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { ChatStreamHandler } from '@src/handlers/ChatStreamHandler';
-import { ChatSubmissionService } from '@services/SubmissionService';
 import { ProviderRegistry } from '@config/providers/provider.registry';
+import { debug } from '@utils/debug';
 
 // Define the dependencies interface
 interface UseStreamHandlerDependencies {
-  submissionService?: ChatSubmissionService;
   decoder?: TextDecoder;
 }
 
 // Define the return type
 type UseStreamHandlerReturn = ChatStreamHandler;
 
-// Update to use getProvider
+// Update to use getProvider and fix infinite loop
 export function useStreamHandler(
   providerKey: string,
   dependencies: UseStreamHandlerDependencies = {}
 ): UseStreamHandlerReturn {
-  const provider = ProviderRegistry.getProvider(providerKey);
-  const { submissionService, decoder = new TextDecoder() } = dependencies;
+  const { decoder = new TextDecoder() } = dependencies;
   
-  // Create stream handler ref with explicit service dependency
-  const streamHandlerRef = useRef<ChatStreamHandler>(
-    new ChatStreamHandler(
-      decoder, 
-      provider
-    )
-  );
+  // Use ref to store the provider to avoid re-renders
+  const providerRef = useRef(ProviderRegistry.getProvider(providerKey));
   
-  // Update when provider or service changes
+  // Update provider ref when providerKey changes
   useEffect(() => {
-    console.log('🔄 Setting up stream handler with provider:', providerKey);
-    streamHandlerRef.current = new ChatStreamHandler(
-      decoder, 
-      provider
-    );
+    debug.log('stream', `🔄 Updating provider reference for: ${providerKey}`);
+    providerRef.current = ProviderRegistry.getProvider(providerKey);
+  }, [providerKey]);
+  
+  // Use ref to store the handler instance to avoid re-renders
+  const handlerRef = useRef<ChatStreamHandler | null>(null);
+  
+  // Initialize the handler if it doesn't exist
+  if (!handlerRef.current) {
+    debug.log('stream', `🔄 Creating initial stream handler for provider: ${providerKey}`);
+    handlerRef.current = new ChatStreamHandler(decoder, providerRef.current);
+  }
+  
+  // Update handler when dependencies change
+  useEffect(() => {
+    debug.log('stream', `🔄 Setting up stream handler with provider: ${providerKey}`);
+    
+    // Only create a new handler if the provider or decoder changed
+    const newHandler = new ChatStreamHandler(decoder, providerRef.current);
+    handlerRef.current = newHandler;
     
     return () => {
-      console.log('🧹 Cleaning up stream handler resources');
+      debug.log('stream', '🧹 Cleaning up stream handler resources');
+      // Any cleanup needed for the handler
     };
-  }, [provider, providerKey, decoder]);
+  }, [providerKey, decoder]);
   
-  return streamHandlerRef.current;
+  // Use useMemo to ensure we don't create a new reference on every render
+  return useMemo(() => {
+    return handlerRef.current as ChatStreamHandler;
+  }, [handlerRef.current]);
 }

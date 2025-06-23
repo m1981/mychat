@@ -7,26 +7,42 @@ export interface SubmissionService {
   submit(messages: MessageInterface[], config: RequestConfig): Promise<void>;
 }
 
+export interface StreamHandler {
+  processStream(reader: ReadableStreamDefaultReader<Uint8Array>, onContent: (content: string) => void): Promise<void>;
+}
+
 export class ChatSubmissionService implements SubmissionService {
   constructor(
     private provider: AIProviderInterface,
-    private apiKey: string
+    private apiKey: string,
+    private contentCallback: (content: string) => void,
+    private streamHandler?: StreamHandler
   ) {
     if (!apiKey) {
-      console.error('⚠️ No API key provided for provider:', provider.id);
+      debug.error('submit', '⚠️ No API key provided for provider:', provider.id);
+    }
+    
+    if (!streamHandler) {
+      debug.error('submit', '⚠️ No stream handler provided for ChatSubmissionService');
     }
   }
 
   async submit(messages: MessageInterface[], config: RequestConfig): Promise<void> {
-    debug.log('submission', `🔐 Submitting with API key: ${this.apiKey ? 'Key exists' : 'Key missing'}`);
+    debug.log('submit', `🔐 Submitting with API key: ${this.apiKey ? 'Key exists' : 'Key missing'}`);
+    debug.log('submit', `🔄 Stream handler: ${this.streamHandler ? 'exists' : 'missing'}`);
     
     if (!this.apiKey) {
       throw new Error('API key is missing. Please add your API key in settings.');
     }
     
+    if (!this.streamHandler) {
+      debug.error('submit', 'Stream handler is missing. Cannot process streaming response.');
+      throw new Error('Stream handler is missing. Cannot process streaming response.');
+    }
+    
     // Validate that messages is an array
     if (!Array.isArray(messages)) {
-      console.error('Invalid messages parameter:', messages);
+      debug.error('submit', 'Invalid messages parameter:', messages);
       throw new Error('Messages must be an array');
     }
     
@@ -43,6 +59,7 @@ export class ChatSubmissionService implements SubmissionService {
     };
     
     // Format request using provider's implementation
+    debug.log('submit', `📝 Formatting request for provider: ${this.provider.id}`);
     const formattedRequest = this.provider.formatRequest(messages, safeConfig);
 
     try {
@@ -57,7 +74,7 @@ export class ChatSubmissionService implements SubmissionService {
           ? endpoint 
           : `/api${endpoint}`;
       
-      debug.log('submission', `📤 Submitting to endpoint: ${apiEndpoint}`);
+      debug.log('submit', `📤 Submitting to endpoint: ${apiEndpoint}`);
       
       // Prepare the request body
       const requestBody = {
@@ -68,6 +85,7 @@ export class ChatSubmissionService implements SubmissionService {
       };
 
       // Make the API request
+      debug.log('submit', `🚀 Making fetch request to ${apiEndpoint}`);
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
@@ -100,13 +118,15 @@ export class ChatSubmissionService implements SubmissionService {
       const reader = response.body?.getReader();
       if (!reader) throw new Error('Response body is null');
 
+      debug.log('submit', `📥 Processing stream response`);
       await this.streamHandler.processStream(reader, this.contentCallback);
+      debug.log('submit', `✅ Stream processing complete`);
     } catch (error) {
-      if (error instanceof Error) {
-        console.error('Submission error details:', error);
-        throw error;
+      if (error instanceof Error && error.name === 'AbortError') {
+        debug.log('submit', `🛑 Request was aborted: ${error.message}`);
       } else {
-        throw new Error('Unknown error during submission');
+        debug.error('submit', `❌ Submit error:`, error);
+        throw error;
       }
     }
   }

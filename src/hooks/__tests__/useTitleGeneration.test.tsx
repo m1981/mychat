@@ -113,7 +113,7 @@ describe('useTitleGeneration', () => {
   });
   
   it('should generate a title for a chat', async () => {
-    const { result } = renderHook(() => useTitleGeneration());
+    const { result } = renderHook(() => useTitleGeneration('anthropic'));
     
     const messages: MessageInterface[] = [
       { id: '1', role: 'user', content: 'What is React?' },
@@ -128,15 +128,11 @@ describe('useTitleGeneration', () => {
     };
     
     await act(async () => {
-      await result.current.generateTitle(messages, config);
+      await result.current.generateTitle(messages, config, 0); // Pass the chat index
     });
     
     // Verify provider methods were called correctly
     expect(mocks.provider.formatRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ 
-        model: 'gpt-4o',
-        stream: false 
-      }),
       expect.arrayContaining([
         expect.objectContaining({ 
           role: 'system',
@@ -146,7 +142,11 @@ describe('useTitleGeneration', () => {
           role: 'user',
           content: expect.stringContaining('What is React?') 
         })
-      ])
+      ]),
+      expect.objectContaining({ 
+        model: 'gpt-4o',
+        stream: false 
+      })
     );
     
     expect(mocks.provider.submitCompletion).toHaveBeenCalled();

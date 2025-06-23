@@ -201,6 +201,12 @@ function useSubmit(dependencies: SubmitDependencies = {}) {
         ...currentChat.config.modelConfig
       };
       
+      // Ensure we have a valid stream handler
+      if (!streamHandler) {
+        debug.error('useSubmit', '[useSubmit] Stream handler is missing');
+        throw new Error('Stream handler is missing');
+      }
+
       // Create submission service
       debug.log('useSubmit', '[useSubmit] Creating submission service');
       const submissionService = new ChatSubmissionService(
@@ -243,7 +249,18 @@ function useSubmit(dependencies: SubmitDependencies = {}) {
       const latestChat = latestState.chats[latestState.currentChatIndex];
       const latestMessages = latestChat.messages;
 
-      await titleGeneration.generateTitle(latestMessages, modelConfig);
+      try {
+        // Pass the model config to the generateTitle function
+        await titleGeneration.generateTitle(
+          latestMessages, 
+          modelConfig,
+          latestState.currentChatIndex // Explicitly pass the chat index
+        );
+        debug.log('useSubmit', '[useSubmit] Title generation complete');
+      } catch (titleError) {
+        debug.error('useSubmit', '[useSubmit] Title generation error:', titleError);
+        // Don't throw the error, just log it - we don't want to fail the whole submission
+      }
       
       // Complete successfully
       debug.log('useSubmit', '[useSubmit] Submission complete');
