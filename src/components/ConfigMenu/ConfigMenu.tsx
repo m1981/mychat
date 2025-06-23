@@ -8,6 +8,7 @@ import { ProviderRegistry } from '@config/providers/provider.registry';
 import DownChevronArrow from '@icon/DownChevronArrow';
 import { ChatConfig, ModelConfig, ProviderKey } from '@type/chat';
 import { useTranslation } from 'react-i18next';
+import debug from 'debug';
 
 const ConfigMenu = ({
   setIsModalOpen,
@@ -24,7 +25,7 @@ const ConfigMenu = ({
   
   // Create a safe initial model config with defaults
   const safeModelConfig = config?.modelConfig || {
-    model: ProviderRegistry.getProviderImplementation(_provider).capabilities.defaultModel,
+    model: ProviderRegistry.getProvider(_provider).capabilities.defaultModel,
     max_tokens: 4096,
     temperature: 0.7,
     top_p: 1,
@@ -49,7 +50,7 @@ const ConfigMenu = ({
     _setProvider(provider);
     
     // Get default model for this provider
-    const defaultModel = ProviderRegistry.getProviderImplementation(provider).capabilities.defaultModel;
+    const defaultModel = ProviderRegistry.getProvider(provider).capabilities.defaultModel;
     
     // Update model config with new provider and default model
     _setModelConfig({
@@ -60,31 +61,52 @@ const ConfigMenu = ({
 
   // Handle save
   const handleSave = () => {
-    // Validate token limits
-    const validatedMaxTokens = validateMaxTokens(_modelConfig.max_tokens);
+    debug.log('ui', `[ConfigMenu] Saving configuration: provider=${_provider}, model=${_modelConfig.model}`);
+    debug.log('ui', `[ConfigMenu] Full model config: ${JSON.stringify(_modelConfig)}`);
     
-    // Create validated model config
-    const validatedModelConfig = {
-      ..._modelConfig,
-      max_tokens: validatedMaxTokens
-    };
-    
-    // If thinking is enabled, validate budget
-    if (validatedModelConfig.thinking?.enabled) {
-      validatedModelConfig.thinking.budget_tokens = validateThinkingBudget(
-        validatedModelConfig.thinking.budget_tokens,
-        validatedMaxTokens
-      );
+    try {
+      // Validate token limits
+      if (!_modelConfig.model) {
+        debug.error('ui', '[ConfigMenu] Model is undefined, using default model for provider');
+        // Get default model for this provider
+        const defaultModel = ProviderRegistry.getProvider(_provider).capabilities.defaultModel;
+        _modelConfig.model = defaultModel;
+      }
+      
+      debug.log('ui', `[ConfigMenu] Validating max tokens for model "${_modelConfig.model}"`);
+      const validatedMaxTokens = validateMaxTokens(_modelConfig.max_tokens, _modelConfig.model);
+      debug.log('ui', `[ConfigMenu] Validated max tokens: ${validatedMaxTokens} (original: ${_modelConfig.max_tokens})`);
+      
+      // Create validated model config
+      const validatedModelConfig = {
+        ..._modelConfig,
+        max_tokens: validatedMaxTokens
+      };
+      
+      // If thinking is enabled, validate budget
+      if (validatedModelConfig.thinking?.enabled) {
+        debug.log('ui', `[ConfigMenu] Validating thinking budget: ${validatedModelConfig.thinking.budget_tokens}`);
+        validatedModelConfig.thinking.budget_tokens = validateThinkingBudget(
+          validatedModelConfig.thinking.budget_tokens,
+          validatedMaxTokens
+        );
+        debug.log('ui', `[ConfigMenu] Validated thinking budget: ${validatedModelConfig.thinking.budget_tokens}`);
+      }
+      
+      // Update config
+      debug.log('ui', `[ConfigMenu] Setting final config: provider=${_provider}, model=${validatedModelConfig.model}`);
+      setConfig({
+        provider: _provider,
+        modelConfig: validatedModelConfig
+      });
+      
+      // Close modal
+      setIsModalOpen(false);
+    } catch (error) {
+      debug.error('ui', `[ConfigMenu] Error saving configuration: ${error.message}`);
+      // Show error to user
+      alert(`Error saving configuration: ${error.message}`);
     }
-    
-    // Update config
-    setConfig({
-      provider: _provider,
-      modelConfig: validatedModelConfig
-    });
-    
-    // Close modal
-    setIsModalOpen(false);
   };
 
   return (
@@ -196,7 +218,7 @@ export const ModelSelector = ({
         >
           {availableProviders.map((key) => (
             <option key={key} value={key}>
-              {ProviderRegistry.getProviderImplementation(key).name}
+              {ProviderRegistry.getProvider(key).name}
             </option>
           ))}
         </select>

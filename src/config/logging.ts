@@ -8,7 +8,8 @@ export const LOG_MODULES = [
   'useSubmit', 
   'scrollToEdit',
   'focus',
-  'streaming'  // Add streaming as a log module
+  'streaming',
+  'model'
 ] as const;
 
 export type LogModule = typeof LOG_MODULES[number];
@@ -24,7 +25,8 @@ export const DEBUG_MODULE: Record<Uppercase<LogModule>, LogModule> = {
   USESUBMIT: 'useSubmit',
   SCROLLTOEDIT: 'scrollToEdit',
   FOCUS: 'focus',
-  STREAMING: 'streaming'
+  STREAMING: 'streaming',
+  MODEL: 'model'
 } as const;
 
 export interface LogConfig {

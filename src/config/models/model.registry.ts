@@ -1,6 +1,7 @@
 // src/config/models/model.registry.ts
 import { ProviderKey } from '@type/chat';
 import { ModelCapabilities } from '@type/model';
+import { debug } from '@utils/debug';
 
 export class ModelRegistry {
   private static modelCapabilities: Map<string, ModelCapabilities> = new Map([
@@ -21,33 +22,72 @@ export class ModelRegistry {
   ]);
 
   static getModelCapabilities(modelId: string): ModelCapabilities {
-    const capabilities = this.modelCapabilities.get(modelId);
-    if (!capabilities) {
+    debug.log('models', `Getting capabilities for model: "${modelId}"`);
+    
+    if (!modelId) {
+      debug.error('models', `Invalid model ID: ${modelId}`);
       throw new Error(`Model ${modelId} not found in registry`);
     }
+    
+    const capabilities = this.modelCapabilities.get(modelId);
+    if (!capabilities) {
+      debug.error('models', `Model "${modelId}" not found in registry`);
+      debug.log('models', `Available models: ${Array.from(this.modelCapabilities.keys()).join(', ')}`);
+      throw new Error(`Model ${modelId} not found in registry`);
+    }
+    
+    debug.log('models', `Found capabilities for model "${modelId}": ${JSON.stringify(capabilities)}`);
     return capabilities;
   }
 
   static validateResponseTokens(modelId: string, requestedTokens?: number): number {
-    const capabilities = this.getModelCapabilities(modelId);
-    if (!requestedTokens) {
-      return capabilities.defaultResponseTokens;
+    debug.log('models', `Validating response tokens: modelId="${modelId}", requestedTokens=${requestedTokens}`);
+    
+    try {
+      const capabilities = this.getModelCapabilities(modelId);
+      if (!requestedTokens) {
+        debug.log('models', `No tokens requested, using default: ${capabilities.defaultResponseTokens}`);
+        return capabilities.defaultResponseTokens;
+      }
+      
+      const validatedTokens = Math.min(requestedTokens, capabilities.maxResponseTokens);
+      debug.log('models', `Validated tokens: ${validatedTokens} (requested: ${requestedTokens}, max: ${capabilities.maxResponseTokens})`);
+      return validatedTokens;
+    } catch (error) {
+      debug.error('models', `Error validating response tokens: ${error.message}`);
+      return requestedTokens || 4096; // Safe default
     }
-    return Math.min(requestedTokens, capabilities.maxResponseTokens);
   }
 
   static getModelsForProvider(provider: ProviderKey): string[] {
-    return Array.from(this.modelCapabilities.entries())
+    debug.log('models', `Getting models for provider: "${provider}"`);
+    
+    const models = Array.from(this.modelCapabilities.entries())
       .filter(([_, caps]) => caps.provider === provider)
       .map(([modelId]) => modelId);
+      
+    debug.log('models', `Found ${models.length} models for provider "${provider}": ${models.join(', ')}`);
+    return models;
   }
 
   static validateModelForProvider(provider: ProviderKey, modelId: string): boolean {
-    const capabilities = this.modelCapabilities.get(modelId);
-    return capabilities?.provider === provider;
+    debug.log('models', `Validating model "${modelId}" for provider "${provider}"`);
+    
+    try {
+      const capabilities = this.modelCapabilities.get(modelId);
+      const isValid = capabilities?.provider === provider;
+      debug.log('models', `Model "${modelId}" ${isValid ? 'is' : 'is not'} valid for provider "${provider}"`);
+      return isValid;
+    } catch (error) {
+      debug.error('models', `Error validating model for provider: ${error.message}`);
+      return false;
+    }
   }
 
   static isModelSupported(modelId: string): boolean {
-    return this.modelCapabilities.has(modelId);
+    debug.log('models', `Checking if model "${modelId}" is supported`);
+    const isSupported = this.modelCapabilities.has(modelId);
+    debug.log('models', `Model "${modelId}" is ${isSupported ? 'supported' : 'not supported'}`);
+    return isSupported;
   }
 }

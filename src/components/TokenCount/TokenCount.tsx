@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-
 import { ProviderRegistry } from '@config/providers/provider.registry';
 import useStore from '@store/store';
 import countTokens from '@utils/messageUtils';
@@ -22,7 +21,7 @@ const TokenCount = React.memo(() => {
     if (!currentChat) {
       return { 
         provider: 'openai' as const, 
-        model: ProviderRegistry.getProviderImplementation('openai').capabilities.defaultModel 
+        model: ProviderRegistry.getProviderCapabilities('openai').defaultModel 
       };
     }
     return {
@@ -32,7 +31,7 @@ const TokenCount = React.memo(() => {
   }, [currentChat]);
 
   const cost = useMemo(() => {
-    const providerConfig = ProviderRegistry.getProvider(provider);
+    const providerConfig = ProviderRegistry.getProviderConfig(provider);
     const modelConfig = providerConfig.models.find(m => m.id === model);
     
     if (!modelConfig?.cost) {
