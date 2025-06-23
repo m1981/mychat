@@ -53,7 +53,12 @@ function createBaseConfig(): UserConfig {
 // Development-specific configurations
 function createDevConfig(): UserConfig {
   return {
+    build: {
+      sourcemap: true,
+    },
     server: {
+      sourcemapIgnoreList: false,
+
       hmr: {
         protocol: 'ws',
         host: 'localhost',
