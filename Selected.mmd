@@ -1,0 +1,137 @@
+classDiagram
+    direction TB
+    
+    %% Interfaces
+    class AIProviderInterface {
+        <<interface>>
+        +formatRequest(messages, config) FormattedRequest
+        +parseResponse(response) string
+        +parseStreamingResponse(response) string
+        +getCapabilities() ProviderCapabilities
+    }
+    
+    class MessageInterface {
+        <<interface>>
+        +id: string
+        +role: Role
+        +content: string
+        +timestamp: number
+    }
+    
+    %% Base Classes
+    class AIProviderBase {
+        <<abstract>>
+        #store: Store
+        +formatRequest(messages, config) FormattedRequest
+        +parseResponse(response) string
+        +parseStreamingResponse(response) string
+        +getCapabilities() ProviderCapabilities
+    }
+    
+    %% Provider Implementations
+    class AnthropicProvider {
+        +formatRequest(messages, config) FormattedRequest
+        +parseResponse(response) string
+        +parseStreamingResponse(response) string
+        +getCapabilities() ProviderCapabilities
+    }
+    
+    class OpenAIProvider {
+        +formatRequest(messages, config) FormattedRequest
+        +parseResponse(response) string
+        +parseStreamingResponse(response) string
+        +getCapabilities() ProviderCapabilities
+    }
+    
+    %% Configuration
+    class ProviderConfig {
+        +id: ProviderKey
+        +name: string
+        +description: string
+        +models: string[]
+        +capabilities: ProviderCapabilities
+    }
+    
+    class ModelConfig {
+        +provider: ProviderKey
+        +model: string
+        +temperature: number
+        +maxTokens: number
+    }
+    
+    %% Services
+    class ChatSubmissionService {
+        -provider: AIProviderInterface
+        -store: Store
+        +submit(messages, config) Promise
+        +streamResponse(messages, config) Stream
+    }
+    
+    class StorageService {
+        +saveChat(chat) Promise
+        +loadChat(id) Promise
+        +deleteChat(id) Promise
+        +checkQuota() boolean
+    }
+    
+    %% Registry
+    class ProviderRegistry {
+        -providers: Map~ProviderKey, AIProviderInterface~
+        -configs: Map~ProviderKey, ProviderConfig~
+        +getProvider(key) AIProviderInterface
+        +getConfig(key) ProviderConfig
+        +registerProvider(key, provider)
+    }
+    
+    %% Context
+    class ProviderContext {
+        +currentProvider: ProviderKey
+        +setProvider(key) void
+        +getProvider() AIProviderInterface
+    }
+    
+    %% Hooks
+    class useMessageManager {
+        +messages: MessageInterface[]
+        +addMessage(message) void
+        +updateMessage(id, content) void
+        +deleteMessage(id) void
+    }
+    
+    class useStreamHandler {
+        +isStreaming: boolean
+        +streamedContent: string
+        +handleStream(stream) void
+        +stopStream() void
+    }
+    
+    class useSubmissionState {
+        +isSubmitting: boolean
+        +error: Error|null
+        +setSubmitting(state) void
+        +setError(error) void
+    }
+    
+    class useTitleGeneration {
+        +generateTitle(messages) Promise
+        +isGenerating: boolean
+    }
+    
+    %% Relationships
+    AIProviderInterface <|.. AIProviderBase : implements
+    AIProviderBase <|-- AnthropicProvider : extends
+    AIProviderBase <|-- OpenAIProvider : extends
+    
+    ProviderRegistry --> AIProviderInterface : manages
+    ProviderRegistry --> ProviderConfig : contains
+    
+    ChatSubmissionService --> AIProviderInterface : uses
+    ChatSubmissionService --> MessageInterface : processes
+    ChatSubmissionService --> ModelConfig : configures with
+    
+    ProviderContext --> ProviderRegistry : accesses
+    
+    useTitleGeneration --> ChatSubmissionService : uses
+    useMessageManager --> MessageInterface : manages
+    
+    StorageService --> MessageInterface : persists
