@@ -1,8 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ProviderRegistry } from '@config/providers/provider.registry';
 import { MessageInterface } from '@type/chat';
 import { RequestConfig } from '@type/provider';
-import { ModelRegistry } from '@config/models/model.registry';
-import { ProviderRegistry } from '@config/providers/provider.registry';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock dependencies
 vi.mock('@store/store', () => ({

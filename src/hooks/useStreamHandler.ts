@@ -1,6 +1,7 @@
-import { useRef, useEffect, useState, useMemo } from 'react';
-import { ChatStreamHandler } from '@src/handlers/ChatStreamHandler';
+import { useRef, useEffect, useMemo } from 'react';
+
 import { ProviderRegistry } from '@config/providers/provider.registry';
+import { ChatStreamHandler } from '@src/handlers/ChatStreamHandler';
 import { debug } from '@utils/debug';
 
 // Define the dependencies interface

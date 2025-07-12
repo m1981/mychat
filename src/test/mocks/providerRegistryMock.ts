@@ -1,5 +1,4 @@
 import { vi } from 'vitest';
-import type { ProviderKey, AIProviderBase, ProviderCapabilities } from '@type/provider';
 
 /**
  * Creates a mock for the ProviderRegistry

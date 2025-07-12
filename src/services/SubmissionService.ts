@@ -1,6 +1,6 @@
 import useStore from '@store/store';
 import { MessageInterface } from '@type/chat';
-import { AIProviderBase, ModelConfig, RequestConfig } from '@type/provider';
+import { AIProviderBase, RequestConfig } from '@type/provider';
 import { debug } from '@utils/debug';
 
 export interface SubmissionService {

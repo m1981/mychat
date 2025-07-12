@@ -58,6 +58,7 @@ vi.mock('@utils/debug', () => ({
 // NOW import the modules that depend on the mocks
 import { renderHook, act } from '@testing-library/react';
 import useStore from '@store/store';
+
 import { useMessageEditor } from '../useMessageEditor';
 
 describe('useMessageEditor - Use Case 3: Edit Existing Message', () => {

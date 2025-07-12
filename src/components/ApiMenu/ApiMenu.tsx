@@ -1,9 +1,9 @@
 import { useState } from 'react';
 
 import PopupModal from '@components/PopupModal';
+import { ProviderRegistry } from '@config/providers/provider.registry';
 import AnthropicIcon from '@icon/AnthropicIcon';
 import OpenAIIcon from '@icon/OpenAIIcon';
-import { ProviderRegistry } from '@config/providers/provider.registry';
 import useStore from '@store/store';
 import { ProviderKey } from '@type/chat';
 import { useTranslation } from 'react-i18next';

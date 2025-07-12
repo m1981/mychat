@@ -1,9 +1,10 @@
    import React, { createContext, useContext, useState, useEffect } from 'react';
-   import { AIProviderBase } from '@type/provider';
-   import { ProviderKey } from '@type/chat';
+
+   import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
    import { ProviderRegistry } from '@config/providers/provider.registry';
    import useStore from '@store/store';
-   import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
+   import { ProviderKey } from '@type/chat';
+   import { AIProviderBase } from '@type/provider';
 
    // Create context with null as default value
    export const ProviderContext = createContext<AIProviderBase | null>(null);

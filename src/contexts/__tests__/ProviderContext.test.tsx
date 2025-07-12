@@ -1,7 +1,9 @@
 import React from 'react';
+
 import { render, screen } from '@testing-library/react';
-import { ProviderContext, ProviderProvider, useProvider } from '../ProviderContext';
+
 import { mockAnthropicProvider, mockOpenAIProvider } from '../../test/mocks/providerRegistryMock';
+import { ProviderProvider, useProvider } from '../ProviderContext';
 
 // Mock the ProviderRegistry directly in vi.mock
 vi.mock('@config/providers/provider.registry', () => {

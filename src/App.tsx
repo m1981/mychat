@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import Chat from '@components/Chat';
 import Debug from '@components/Debug';
 import Menu from '@components/Menu';
+import { ProviderProvider } from '@contexts/ProviderContext';
 import useInitialiseNewChat from '@hooks/useInitialiseNewChat';
 import * as Sentry from '@sentry/react';
 import useStore from '@store/store';
@@ -10,7 +11,6 @@ import { ChatInterface } from '@type/chat';
 import { Theme } from '@type/theme';
 import { getEnvVar } from '@utils/env';
 import { Toaster } from 'react-hot-toast';
-import { ProviderProvider } from '@contexts/ProviderContext';
 
 import i18n from './i18n';
 

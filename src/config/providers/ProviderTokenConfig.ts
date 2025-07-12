@@ -1,5 +1,4 @@
 import { ProviderKey } from '../../types/provider';
-import { DEFAULT_TOKEN_CONFIG } from '../tokens/TokenConfig';
 
 interface ProviderTokenDefaults {
   defaultMaxTokens: number;

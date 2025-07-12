@@ -1,9 +1,10 @@
 // provider.registry.ts - Registry that works with configurations only
-import { ProviderKey, ProviderCapabilities, AIProviderBase } from '@type/provider';
-import { ProviderConfig, PROVIDER_CONFIGS } from './provider.config';
 import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { AnthropicProvider } from '@providers/AnthropicProvider';
 import { OpenAIProvider } from '@providers/OpenAIProvider';
+import { ProviderKey, ProviderCapabilities, AIProviderBase } from '@type/provider';
+
+import { ProviderConfig, PROVIDER_CONFIGS } from './provider.config';
 
 export class ProviderRegistry {
   // Singleton pattern for provider registry

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
 import { ProviderRegistry } from '@config/providers/provider.registry';
+import { describe, it, expect, vi } from 'vitest';
 
 // Mock the ProviderRegistry before importing any modules that use it
 vi.mock('@config/providers/provider.registry', () => {

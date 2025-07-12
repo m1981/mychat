@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 
 import ConfigMenu from '@components/ConfigMenu';
-import { DEFAULT_CHAT_CONFIG } from '@constants/chat';
 import { ProviderRegistry } from '@config/providers/provider.registry';
+import { DEFAULT_CHAT_CONFIG } from '@constants/chat';
 import useStore from '@store/store';
 import { ChatInterface, ChatConfig } from '@type/chat';
 import { useTranslation } from 'react-i18next';

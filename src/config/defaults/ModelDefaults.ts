@@ -1,6 +1,5 @@
 import { ModelConfig } from '../chat/ModelConfig';
 import { ModelRegistry } from '../models/model.registry';
-import { ProviderRegistry } from '../providers/provider.registry';
 import { DEFAULT_TOKEN_CONFIG } from '../tokens/TokenConfig';
 
 export const createDefaultModelConfig = (providerId: string, modelId: string): ModelConfig => {

@@ -1,5 +1,5 @@
+import { DEFAULT_TOKEN_CONFIG } from '../tokens/TokenConfig';
 import { ProviderKey } from '../types/provider';
-import { DEFAULT_TOKEN_CONFIG, validateMaxTokens } from '../tokens/TokenConfig';
 
 export interface ModelConfig {
   provider: ProviderKey;

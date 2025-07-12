@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { validateMaxTokens, validateThinkingBudget } from '../../config/tokens/TokenConfig';
+
 
 import PopupModal from '@components/PopupModal';
 import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { ProviderModel } from '@config/providers/provider.config';
 import { ProviderRegistry } from '@config/providers/provider.registry';
-import DownChevronArrow from '@icon/DownChevronArrow';
 import { ChatConfig, ModelConfig, ProviderKey } from '@type/chat';
-import { useTranslation } from 'react-i18next';
 import debug from 'debug';
+import { useTranslation } from 'react-i18next';
+
+import { validateMaxTokens, validateThinkingBudget } from '../../config/tokens/TokenConfig';
 
 const ConfigMenu = ({
   setIsModalOpen,

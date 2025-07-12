@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AnthropicProvider } from '../AnthropicProvider';
-import { OpenAIProvider } from '../OpenAIProvider';
 import { MessageInterface } from '@type/chat';
 import { RequestConfig } from '@type/provider';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { AnthropicProvider } from '../AnthropicProvider';
+import { OpenAIProvider } from '../OpenAIProvider';
 
 // Mock fetch for testing
 global.fetch = vi.fn();

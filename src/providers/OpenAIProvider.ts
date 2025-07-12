@@ -1,6 +1,6 @@
-import { AIProviderBase, ProviderKey, ProviderCapabilities, MessageInterface, RequestConfig, FormattedRequest, ProviderResponse } from '@type/provider';
 import { PROVIDER_CONFIGS } from '@config/providers/provider.config';
 import store from '@store/store';
+import { AIProviderBase, ProviderKey, ProviderCapabilities, MessageInterface, RequestConfig, FormattedRequest, ProviderResponse } from '@type/provider';
 
 export class OpenAIProvider implements AIProviderBase {
   id: ProviderKey;

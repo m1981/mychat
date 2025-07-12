@@ -1,11 +1,6 @@
 
 /* eslint-env node */
 import Anthropic from '@anthropic-ai/sdk';
-import type {
-  ContentBlockStopEvent,
-  MessageStopEvent
-} from '@anthropic-ai/sdk';
-import type { MessageInterface } from '@type/chat';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 export const config = {

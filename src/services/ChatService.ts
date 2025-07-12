@@ -1,6 +1,6 @@
 import { ProviderRegistry } from '@config/providers/provider.registry';
-import { ProviderKey, RequestConfig } from '@type/provider';
 import { MessageInterface } from '@type/chat';
+import { ProviderKey, RequestConfig } from '@type/provider';
 
 export class ChatService {
   async submitChat(messages: MessageInterface[], config: RequestConfig, providerKey?: ProviderKey) {
