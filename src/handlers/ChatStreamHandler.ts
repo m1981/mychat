@@ -1,4 +1,5 @@
 import { AIProviderBase } from '@type/provider';
+import { debug } from '@utils/debug';
 
 export class ChatStreamHandler {
   private decoder: TextDecoder;
