@@ -166,7 +166,7 @@ function useSubmit(dependencies: SubmitDependencies = {}) {
       debug.error('useSubmit', '[useSubmit] No API key found for provider:', providerSetup.providerKey);
       
       // For production, show the error
-      setError(`No API key found for ${providerSetup.providerKey}. Please add your API key in settings.`);
+      setError(`API key not found for ${providerSetup.providerKey}. Please add your API key in settings.`);
       return;
     }
     

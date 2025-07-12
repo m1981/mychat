@@ -8,52 +8,9 @@ const log = {
   error: (message: string) => console.error(`[TEST ERROR] ${message}`)
 };
 
-// Setup function to inject API keys before tests
-async function setupApiKeys(page) {
-  // Get API keys from environment variables
-  const openaiKey = process.env.VITE_OPENAI_API_KEY || process.env.TEST_OPENAI_API_KEY || '';
-  const anthropicKey = process.env.VITE_ANTHROPIC_API_KEY || process.env.TEST_ANTHROPIC_API_KEY || '';
-  
-  log.info('Setting up API keys: ' + 
-    (openaiKey ? 'OpenAI key present' : 'OpenAI key missing') + ', ' +
-    (anthropicKey ? 'Anthropic key present' : 'Anthropic key missing')
-  );
-  
-  // Set API keys via localStorage
-  await page.addInitScript(({ openaiKey, anthropicKey }) => {
-    const store = {
-      apiKeys: {
-        openai: openaiKey,
-        anthropic: anthropicKey
-      },
-      apiEndpoints: {
-        openai: '/api/chat/openai',
-        anthropic: '/api/chat/anthropic'
-      },
-      firstVisit: false
-    };
-    localStorage.setItem('auth-store', JSON.stringify(store));
-    console.log('API keys set in localStorage:', JSON.stringify({
-      openai: openaiKey ? 'present' : 'missing',
-      anthropic: anthropicKey ? 'present' : 'missing'
-    }));
-  }, { openaiKey, anthropicKey });
-
-  // Add a check to verify localStorage after navigation
-  await page.goto('/');
-  const storedData = await page.evaluate(() => {
-    const storedData = localStorage.getItem('auth-store');
-    console.log('Stored auth data after page load:', storedData);
-    return storedData;
-  });
-  
-  log.info('Auth store verification: ' + (storedData ? 'Data present' : 'No data found'));
-}
 
 test('user can type and submit a message', async ({ page }) => {
-  // Setup API keys
-  await setupApiKeys(page);
-  
+
   // Add debug log to check store state before submission
   await page.evaluate(() => {
     console.log('Current store state:', JSON.stringify(window.store?.getState?.() || 'Store not available'));
@@ -183,9 +140,7 @@ test('user can edit and save a message', async ({ page }) => {
 });
 
 test('streaming response appears progressively in chat area', async ({ page }) => {
-  // Setup API keys with focus on Anthropic
-  await setupApiKeys(page);
-  
+
   // Navigate to the app
   await page.goto('/');
   
@@ -274,9 +229,6 @@ test('streaming response appears progressively in chat area', async ({ page }) =
 });
 
 test('chat title is automatically generated after message submission', async ({ page }) => {
-  // Setup API keys
-  await setupApiKeys(page);
-  
   // Navigate to the app
   await page.goto('/');
   

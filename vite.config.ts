@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import react from '@vitejs/plugin-react-swc';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import type { UserConfig } from 'vite';
 import topLevelAwait from 'vite-plugin-top-level-await';
 import wasm from 'vite-plugin-wasm';
@@ -200,6 +200,11 @@ function createProdConfig(): UserConfig {
 }
 
 export default defineConfig(({ command, mode }) => {
+  // Load env file based on mode
+  const env = loadEnv(mode, process.cwd(), '');
+  
+  console.log('Environment variables loaded:', Object.keys(env).filter(k => k.startsWith('VITE_')));
+  
   if (command === 'serve') {
     console.log('🚀 Running development config with mode:', mode);
     console.log('📁 Current working directory:', process.cwd());
