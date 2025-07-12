@@ -1,37 +1,189 @@
-graph TD
+classDiagram
+    direction TB
 
-    subgraph "SOLID Design: Clear Responsibilities"
-        A2[useTitleGeneration] -->|"Uses"| B2[TitleGenerationService]
-        B2 -->|"Depends On"| C2[CompletionSubmissionService]
-        B2 -->|"Depends On"| D2[MessageFormatter]
-        B2 -->|"Depends On"| E2[StateUpdater]
-        F2[ChatSubmissionService] -->|"Implements"| C2
-        F2 -->|"Implements"| G2[StreamingSubmissionService]
-        H2[TitleMessageFormatter] -->|"Implements"| D2
-        I2[ChatStateUpdater] -->|"Implements"| E2
-        
-        style A2 fill:#ccffcc,stroke:#00aa00
-        style B2 fill:#ccffcc,stroke:#00aa00
-        style C2 fill:#ccffcc,stroke:#00aa00
-        style D2 fill:#ccffcc,stroke:#00aa00
-        style E2 fill:#ccffcc,stroke:#00aa00
-        style F2 fill:#ccffcc,stroke:#00aa00
-        style G2 fill:#ccffcc,stroke:#00aa00
-        style H2 fill:#ccffcc,stroke:#00aa00
-        style I2 fill:#ccffcc,stroke:#00aa00
-    end
-    
+%% Interfaces
+    class AIProviderInterface {
+        <<interface>>
+        +formatRequest(messages, config) FormattedRequest
+        +parseResponse(response) string
+        +parseStreamingResponse(response) string
+        +getCapabilities() ProviderCapabilities
+    }
 
-    
-    %% Annotations for SOLID Design
-    S2[SRP Benefit:<br/>Single responsibility<br/>per component]
-    O2[OCP Benefit:<br/>Extend without modifying]
-    L2[LSP Benefit:<br/>Consistent interfaces]
-    I2[ISP Benefit:<br/>Focused interfaces<br/>for specific use cases]
-    D2[DIP Benefit:<br/>Depend on abstractions<br/>not implementations]
-    
-    S2 --- B2
-    O2 --- C2
-    L2 --- F2
-    I2 --- G2
-    D2 --- B2
+    class MessageInterface {
+        <<interface>>
+        +id: string
+        +role: Role
+        +content: string
+        +timestamp: number
+    }
+
+    class RequestFormatterInterface {
+        <<interface>>
+        +formatRequest(messages, config) FormattedRequest
+    }
+
+    class ResponseParserInterface {
+        <<interface>>
+        +parseResponse(response) string
+        +parseStreamingResponse(response) string
+    }
+
+    class CapabilitiesProviderInterface {
+        <<interface>>
+        +getCapabilities() ProviderCapabilities
+    }
+
+    AIProviderInterface --|> RequestFormatterInterface : extends
+    AIProviderInterface --|> ResponseParserInterface : extends
+    AIProviderInterface --|> CapabilitiesProviderInterface : extends
+
+%% Base Classes
+    class AIProviderBase {
+        <<abstract>>
+        #store: Store
+        +formatRequest(messages, config) FormattedRequest
+        +parseResponse(response) string
+        +parseStreamingResponse(response) string
+        +getCapabilities() ProviderCapabilities
+    }
+
+%% Provider Implementations
+    class AnthropicProvider {
+        +formatRequest(messages, config) FormattedRequest
+        +parseResponse(response) string
+        +parseStreamingResponse(response) string
+        +getCapabilities() ProviderCapabilities
+    }
+
+    class OpenAIProvider {
+        +formatRequest(messages, config) FormattedRequest
+        +parseResponse(response) string
+        +parseStreamingResponse(response) string
+        +getCapabilities() ProviderCapabilities
+    }
+
+%% Configuration
+    class ProviderConfig {
+        +id: ProviderKey
+        +name: string
+        +description: string
+        +models: string[]
+        +capabilities: ProviderCapabilities
+    }
+
+    class ModelConfig {
+        +provider: ProviderKey
+        +model: string
+        +temperature: number
+        +maxTokens: number
+    }
+
+%% Service Interfaces
+    class ChatSubmissionServiceInterface {
+        <<interface>>
+        +submit(messages, config) Promise
+        +streamResponse(messages, config) Stream
+    }
+
+    class StorageServiceInterface {
+        <<interface>>
+        +saveChat(chat) Promise
+        +loadChat(id) Promise
+        +deleteChat(id) Promise
+        +checkQuota() boolean
+    }
+
+%% Services
+    class ChatSubmissionService {
+        -provider: AIProviderInterface
+        -store: Store
+        +submit(messages, config) Promise
+        +streamResponse(messages, config) Stream
+    }
+
+    class StorageService {
+        +saveChat(chat) Promise
+        +loadChat(id) Promise
+        +deleteChat(id) Promise
+        +checkQuota() boolean
+    }
+
+%% Registry
+    class ProviderRegistry {
+        -providers: Map~ProviderKey, AIProviderInterface~
+        -configs: Map~ProviderKey, ProviderConfig~
+        +getProvider(key) AIProviderInterface
+        +getConfig(key) ProviderConfig
+        +registerProvider(key, provider)
+        +getAvailableProviders() ProviderKey[]
+        +hasProvider(key) boolean
+    }
+
+    class ProviderFactory {
+        +createProvider(key: ProviderKey) AIProviderInterface
+    }
+
+    ProviderRegistry --> ProviderFactory : uses
+
+%% Context
+    class ProviderContext {
+        +currentProvider: ProviderKey
+        +setProvider(key) void
+        +getProvider() AIProviderInterface
+        +getAvailableProviders() ProviderKey[]
+        +isProviderAvailable(key) boolean
+    }
+
+%% Hooks
+    class useMessageManager {
+        +messages: MessageInterface[]
+        +addMessage(message) void
+        +updateMessage(id, content) void
+        +deleteMessage(id) void
+    }
+
+    class useStreamHandler {
+        +isStreaming: boolean
+        +streamedContent: string
+        +handleStream(stream) void
+        +stopStream() void
+    }
+
+    class useSubmissionState {
+        +isSubmitting: boolean
+        +error: Error|null
+        +setSubmitting(state) void
+        +setError(error) void
+    }
+
+    class useTitleGeneration {
+        +generateTitle(messages) Promise
+        +isGenerating: boolean
+    }
+
+%% Relationships
+    AIProviderInterface <|.. AIProviderBase : implements
+    AIProviderBase <|-- AnthropicProvider : extends
+    AIProviderBase <|-- OpenAIProvider : extends
+
+    ProviderRegistry --> AIProviderInterface : manages
+    ProviderRegistry --> ProviderConfig : contains
+
+    ChatSubmissionService --> AIProviderInterface : uses
+    ChatSubmissionService --> MessageInterface : processes
+    ChatSubmissionService --> ModelConfig : configures with
+
+    ProviderContext --> ProviderRegistry : accesses
+
+    useTitleGeneration --> ChatSubmissionService : uses
+    useMessageManager --> MessageInterface : manages
+
+    StorageService --> MessageInterface : persists
+
+    ChatSubmissionServiceInterface <|.. ChatSubmissionService : implements
+    StorageServiceInterface <|.. StorageService : implements
+
+%% Make hook dependencies explicit
+    useStreamHandler --> ChatSubmissionService : uses
+    useSubmissionState --> ChatSubmissionService : uses
