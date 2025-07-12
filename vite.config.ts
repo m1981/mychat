@@ -27,7 +27,7 @@ const sharedAliases = {
 };
 
 // Shared base configuration
-function createBaseConfig(): UserConfig {
+function createBaseConfig(env: Record<string, string>): UserConfig {
   return {
     plugins: [
       react(),
@@ -43,6 +43,9 @@ function createBaseConfig(): UserConfig {
     },
     define: {
       'process.cwd': 'function() { return "/" }',
+      // Explicitly include VITE_ environment variables
+      'import.meta.env.VITE_OPENAI_API_KEY': JSON.stringify(env.VITE_OPENAI_API_KEY || ''),
+      'import.meta.env.VITE_ANTHROPIC_API_KEY': JSON.stringify(env.VITE_ANTHROPIC_API_KEY || ''),
       'process.env': JSON.stringify({
         ...process.env,
         npm_package_version: process.env.npm_package_version || '1.0.4'
@@ -204,15 +207,19 @@ export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   
   console.log('Environment variables loaded:', Object.keys(env).filter(k => k.startsWith('VITE_')));
-  
+  console.log('API keys present:', {
+    openai: env.VITE_OPENAI_API_KEY ? 'yes' : 'no',
+    anthropic: env.VITE_ANTHROPIC_API_KEY ? 'yes' : 'no'
+  });
+
   if (command === 'serve') {
     console.log('🚀 Running development config with mode:', mode);
     console.log('📁 Current working directory:', process.cwd());
     console.log('📦 Node modules exists:', fs.existsSync('/app/node_modules'));
-    return { ...createBaseConfig(), ...createDevConfig() };
+    return { ...createBaseConfig(env), ...createDevConfig() };
   } else if (command === 'build') {
     console.log('📦 Building production bundle with mode:', mode);
-    return { ...createBaseConfig(), ...createProdConfig() };
+    return { ...createBaseConfig(env), ...createProdConfig() };
   }
   throw new Error('Unknown command');
 });
