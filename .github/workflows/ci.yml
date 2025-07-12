@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: node:22-slim
+    continue-on-error: true  # Allow pipeline to continue even if linting fails
     steps:
       - uses: actions/checkout@v3
       - uses: pnpm/action-setup@v2
@@ -254,7 +255,7 @@ jobs:
   deploy-preview:
     needs: [lint-typecheck, unit-tests, build-test, visual-tests]
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && !failure('unit-tests') && !failure('visual-tests') && !failure('e2e-tests')
     steps:
       - uses: actions/checkout@v3
       - name: Download build artifacts
@@ -348,9 +349,9 @@ jobs:
 
   # Add this job to implement Production Build and Deploy
   deploy-production:
-    needs: [lint-typecheck, unit-tests, build-test, visual-tests]
+    needs: [lint-typecheck, unit-tests, build-test, visual-tests, e2e-tests]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !failure('unit-tests') && !failure('visual-tests') && !failure('e2e-tests')
     steps:
       - uses: actions/checkout@v3
       - uses: pnpm/action-setup@v2

@@ -25,3 +25,11 @@ src/constants/SupportedLanguages.ts
 src/hooks/useSSE.ts
 src/store/migrate.ts
 src/utils/messageUtils.ts
+src/api/anthropic-client.js
+src/api/openai-client.js
+src/config/providers/ProviderTokenConfig.ts
+src/hooks/useProvider.ts
+src/providers/ProviderComponent.ts
+src/providers/factory.ts
+src/services/ChatService.ts
+src/test/mocks/providerRegistryMock.ts
