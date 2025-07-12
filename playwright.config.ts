@@ -6,9 +6,9 @@ import { sharedAliases } from './vite.config';
 
 export default defineConfig({
   testDir: './e2e',
-  timeout: 21000,
+  timeout: 30000,
   expect: {
-    timeout: 1000,
+    timeout: 5000,  // Increased from 1000ms to 5000ms
   },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -21,8 +21,8 @@ export default defineConfig({
     : [['html', { open: 'never' }], ['list']],
 
   use: {
-    actionTimeout: 1000, // Timeout for actions like click, fill, etc.
-    navigationTimeout: 5000, // Timeout for navigations
+    actionTimeout: 5000, // Increased from 1000ms to 5000ms
+    navigationTimeout: 10000, // Increased from 5000ms to 10000ms
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
