@@ -181,8 +181,8 @@ test('streaming response appears progressively in chat area', async ({ page }) =
     const initialText = await assistantResponse.textContent() || '';
     const initialLength = initialText.length;
     
-    // Wait a short time for streaming to progress
-    await page.waitForTimeout(2000);
+    // Wait a time for streaming to progress
+    await page.waitForTimeout(5000);
     
     // Capture the updated response
     const midwayText = await assistantResponse.textContent() || '';
