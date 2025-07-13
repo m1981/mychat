@@ -1,3 +1,4 @@
+
 graph TD
     Start[Workflow Trigger] --> TriggerType{Trigger Type?}
 
@@ -9,35 +10,37 @@ graph TD
 %% PR and Push Branch
     TriggerType -->|PR/Push| MainFlow[Main Flow]
 
-%% Main Parallel Jobs
+%% Main Parallel Jobs - Now with failure handling
     MainFlow --> Lint[Lint & Typecheck]
     MainFlow --> Unit[Unit Tests]
     MainFlow --> Build[Build Test]
     MainFlow --> Visual[Visual Tests]
+    MainFlow --> E2E[E2E Tests]
 
-%% Visual Testing Flow
-    Visual --> StartApp[Start App]
-    StartApp --> RunTests[Run BackstopJS Tests]
-    RunTests --> Results{Test Results}
-    Results -->|Pass| Report[Generate Report]
-    Results -->|Fail| Report
-    Report --> DeployPages[Deploy to GitHub Pages]
-    DeployPages --> PRComment[Create PR Comment]
+%% Test Results
+    Unit --> UnitResult{Unit Tests Pass?}
+    Visual --> VisualResult{Visual Tests Pass?}
+    E2E --> E2EResult{E2E Tests Pass?}
 
-%% Unit Test Artifacts
-    Unit --> Coverage[Upload Coverage]
+%% Critical Failure Path
+    UnitResult -->|No| PipelineFail[Pipeline Fails]
+    VisualResult -->|No| PipelineFail
+    E2EResult -->|No| PipelineFail
 
-%% Build Artifacts
-    Build --> BuildArtifacts[Upload Build]
+%% Non-Critical Paths
+    Lint --> LintResult{Lint Passes?}
+    LintResult -->|No| ContinuePipeline[Continue Pipeline]
+    LintResult -->|Yes| ContinuePipeline
+    
+    Build --> BuildResult{Build Passes?}
+    BuildResult -->|No| ContinuePipeline
+    BuildResult -->|Yes| ContinuePipeline
+
+%% Success Path
+    UnitResult & VisualResult & E2EResult -->|All Pass| DeployType{Deploy Type?}
 
 %% Deployment Flows
-    Lint & Unit & Build & Visual --> DeployType{Deploy Type?}
-
-%% PR Flow
     DeployType -->|PR| Preview[Deploy Preview]
-    Preview --> E2E[E2E Tests]
-
-%% Main Branch Flow
     DeployType -->|Main Branch| Prod[Deploy Production]
 
 %% Accept References Flow
@@ -50,8 +53,9 @@ graph TD
     classDef condition fill:#fcf,stroke:#333,stroke-width:2px
     classDef job fill:#cfc,stroke:#333,stroke-width:2px
     classDef artifact fill:#cff,stroke:#333,stroke-width:2px
+    classDef failure fill:#fcc,stroke:#333,stroke-width:2px
 
     class Start trigger
-    class TriggerType,Action,Results,DeployType condition
-    class Lint,Unit,Build,Visual,Preview,E2E,Prod,AcceptRef job
-    class Coverage,BuildArtifacts,Report artifact
+    class TriggerType,Action,UnitResult,VisualResult,E2EResult,DeployType,LintResult,BuildResult condition
+    class Lint,Unit,Build,Visual,E2E,Preview,Prod,AcceptRef job
+    class PipelineFail failure
