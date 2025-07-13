@@ -1,8 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
 import path from 'path';
+import fs from 'fs';
 
 // Reuse your existing path aliases
 import { sharedAliases } from './vite.config';
+
+// Ensure logs directory exists
+const logsDir = path.join(process.cwd(), 'test-results', 'server-logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
 
 export default defineConfig({
   testDir: './e2e',
@@ -17,7 +24,11 @@ export default defineConfig({
 
   // Enhanced reporting configuration
   reporter: process.env.CI 
-    ? [['html'], ['junit', { outputFile: 'test-results/e2e-junit-results.xml' }]] 
+    ? [
+        ['html'], 
+        ['junit', { outputFile: 'test-results/e2e-junit-results.xml' }],
+        ['json', { outputFile: 'test-results/test-results.json' }]
+      ] 
     : [['html', { open: 'never' }], ['list']],
 
   use: {
@@ -34,10 +45,19 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: process.env.CI ? 'cd dist && npx serve -s -l 5173' : 'pnpm dev',
+    command: process.env.CI 
+      ? 'cd dist && NODE_ENV=test DEBUG=app:* npx serve -s -l 5173 > ../test-results/server-logs/server.log 2>&1' 
+      : 'DEBUG=app:* pnpm dev | tee test-results/server-logs/server.log',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
+    stdout: 'pipe',
+    stderr: 'pipe',
+    env: {
+      NODE_ENV: 'test',
+      DEBUG: 'app:*,api:*,pw:api',
+      DEBUG_COLORS: 'true',
+    },
   },
   // Add global setup to configure logging
   globalSetup: './e2e/global-setup',

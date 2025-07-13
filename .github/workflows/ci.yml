@@ -292,6 +292,8 @@ jobs:
           # Also set in environment for the current process
           echo "VITE_OPENAI_API_KEY=${VITE_OPENAI_API_KEY}" >> $GITHUB_ENV
           echo "VITE_ANTHROPIC_API_KEY=${VITE_ANTHROPIC_API_KEY}" >> $GITHUB_ENV
+          # Create logs directory
+          mkdir -p test-results/server-logs
       
       # Build the app for testing
       - name: Build app
@@ -300,45 +302,34 @@ jobs:
           VITE_ANTHROPIC_API_KEY: ${{ secrets.VITE_ANTHROPIC_API_KEY }}
         run: NODE_ENV=test pnpm build:vite --mode test
       
-      # Run Playwright tests with environment variables
+      # Run Playwright tests with environment variables and logging
       - name: Run E2E tests
         env:
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:5173
-          # Pass API keys directly in environment
           VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY }}
           VITE_ANTHROPIC_API_KEY: ${{ secrets.VITE_ANTHROPIC_API_KEY }}
-        run: NODE_ENV=test pnpm test:e2e
-      
-      # Prepare Playwright reports for GitHub Pages
-      - name: Prepare Playwright reports for GitHub Pages
-        if: always()
+          DEBUG: "app:*,api:*,pw:api"
         run: |
-          # Get branch name or use PR number
-          if [[ $GITHUB_REF == refs/pull/* ]]; then
-            BRANCH_PATH="pr-$(echo $GITHUB_REF | sed 's/refs\/pull\///' | sed 's/\/merge//')"
-          else
-            BRANCH_PATH=$(echo $GITHUB_REF | sed 's/refs\/heads\///' | sed 's/\//-/g')
-          fi
+          # Run tests with debug output
+          NODE_ENV=test DEBUG=app:*,api:*,pw:api pnpm test:e2e
           
-          # Create directory for e2e reports
-          mkdir -p gh-pages-report/$BRANCH_PATH/e2e-tests
-          
-          # Copy Playwright report
-          cp -r playwright-report/* gh-pages-report/$BRANCH_PATH/e2e-tests/ || true
-          
-          # Update index page to include link to E2E tests
-          if [ -f gh-pages-report/index.html ]; then
-            # Add link to E2E tests before closing </ul> tag
-            sed -i "s|</ul>|  <li><a href='./$BRANCH_PATH/e2e-tests/'>E2E Test Report (Latest - $(date))</a></li>\n</ul>|" gh-pages-report/index.html
+          # Process logs for better readability
+          if [ -f test-results/server-logs/server.log ]; then
+            # Add timestamps and format logs
+            cat test-results/server-logs/server.log | awk '{print strftime("[%Y-%m-%d %H:%M:%S]"), $0}' > test-results/server-logs/formatted-server.log
+            # Create a summary of errors
+            grep -i "error\|exception\|fail" test-results/server-logs/server.log > test-results/server-logs/errors.log || true
           fi
       
-      # Upload test results as artifacts (for download from Actions page)
+      # Upload all test results including logs
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: playwright-report/
+          name: playwright-report-with-logs
+          path: |
+            playwright-report/
+            test-results/
           retention-days: 30
       
       # Upload test traces for debugging
