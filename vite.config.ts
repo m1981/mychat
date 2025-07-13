@@ -126,6 +126,8 @@ function createProdConfig(): UserConfig {
     plugins: [],
     optimizeDeps: {
       include: ['mermaid'],
+      // Explicitly exclude the problematic SDKs
+      exclude: ['@anthropic-ai/sdk', 'openai'],
       esbuildOptions: {
         target: 'esnext',
         platform: 'browser',
@@ -142,6 +144,8 @@ function createProdConfig(): UserConfig {
           'openai'
         ],
         output: {
+          // Ensure external modules are properly handled
+          format: 'es',
           sourcemapExcludeSources: false,
           manualChunks: {
             'core-vendor': ['react', 'react-dom', 'zustand'],

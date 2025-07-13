@@ -1,5 +1,4 @@
-import { ProviderKey } from '../../types/provider';
-
+import { FormattedRequest, ProviderKey, ProviderResponse } from '../../types/provider';
 import { ProviderClientAdapter } from './provider-client-adapter';
 
 /**
@@ -14,22 +13,22 @@ export class ProviderClientFactory {
    * @returns A client adapter instance
    */
   static createClient(provider: ProviderKey, apiKey: string, requestId?: string): ProviderClientAdapter {
-    // Check if we're running in a browser environment
-    const isBrowser = typeof window !== 'undefined';
-    
-    if (isBrowser) {
-      // In browser, return a fetch-based adapter
+    // Always use the browser adapter in client-side code
+    // This prevents any attempt to load Node.js modules in the browser
+    if (typeof window !== 'undefined') {
       return new BrowserClientAdapter(provider, apiKey, requestId);
     }
     
-    // In Node.js environment, dynamically require the appropriate adapter
-    // This code will never be included in the browser bundle
+    // Server-side code path - only executed in Node.js
+    // We use dynamic require() to prevent static analysis from including these in the bundle
     try {
       if (provider === 'openai') {
-        // Using require instead of import to avoid bundling
+        // Using dynamic require to avoid bundling
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const { OpenAIClientAdapter } = require('./openai-client');
         return new OpenAIClientAdapter(apiKey, requestId);
       } else if (provider === 'anthropic') {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const { AnthropicClientAdapter } = require('./anthropic-client');
         return new AnthropicClientAdapter(apiKey, requestId);
       }

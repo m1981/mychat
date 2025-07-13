@@ -1,7 +1,6 @@
-import OpenAI from 'openai';
-
+// Only import types, not the actual SDK
+import type { OpenAI as OpenAIType } from 'openai';
 import { FormattedRequest, ProviderResponse } from '../../types/provider';
-
 import { ProviderClientAdapter } from './provider-client-adapter';
 
 /**
@@ -9,11 +8,19 @@ import { ProviderClientAdapter } from './provider-client-adapter';
  * Handles direct SDK interaction in both server and client environments
  */
 export class OpenAIClientAdapter implements ProviderClientAdapter {
-  private client: OpenAI;
+  private client: any; // Use any to avoid direct SDK import
   private requestId: string;
   
   constructor(apiKey: string, requestId?: string) {
-    this.client = new OpenAI({ apiKey });
+    // Dynamically import the SDK only on the server
+    if (typeof window === 'undefined') {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const OpenAI = require('openai');
+      this.client = new OpenAI({ apiKey });
+    } else {
+      // This should never be called in browser, but prevents errors if it somehow is
+      this.client = null;
+    }
     this.requestId = requestId || Date.now().toString(36);
   }
   

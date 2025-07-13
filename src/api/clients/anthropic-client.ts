@@ -1,20 +1,24 @@
-import Anthropic from '@anthropic-ai/sdk';
-
+// Only import types, not the actual SDK
+import type { AI } from '@anthropic-ai/sdk';
 import { FormattedRequest, ProviderResponse } from '../../types/provider';
-
 import { ProviderClientAdapter } from './provider-client-adapter';
 
 /**
- * Adapter for Anthropic API client
- * Handles direct SDK interaction in both server and client environments
+ * Adapter for Anthropic's Claude API
  */
 export class AnthropicClientAdapter implements ProviderClientAdapter {
-  private client: Anthropic;
-  private requestId: string;
-  
-  constructor(apiKey: string, requestId?: string) {
-    this.client = new Anthropic({ apiKey });
-    this.requestId = requestId || Date.now().toString(36);
+  private client: any; // Use any to avoid direct SDK import
+
+  constructor(private apiKey: string, private requestId?: string) {
+    // Dynamically import the SDK only on the server
+    if (typeof window === 'undefined') {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const Anthropic = require('@anthropic-ai/sdk');
+      this.client = new Anthropic({ apiKey });
+    } else {
+      // This should never be called in browser, but prevents errors if it somehow is
+      this.client = null;
+    }
   }
   
   /**
