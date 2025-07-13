@@ -1,6 +1,9 @@
 import { PROVIDER_CONFIGS } from '@config/providers/provider.config';
-import store from '@store/store';
+import { OpenAIClientAdapter } from '@api/clients/openai-client';
 import { AIProviderBase, ProviderKey, ProviderCapabilities, MessageInterface, RequestConfig, FormattedRequest, ProviderResponse } from '@type/provider';
+import { getApiKey } from '@utils/auth';
+import useStore from '@store/store';
+import { debug } from '@utils/debug';
 
 export class OpenAIProvider implements AIProviderBase {
   id: ProviderKey;
@@ -81,66 +84,25 @@ export class OpenAIProvider implements AIProviderBase {
   }
 
   async submitCompletion(formattedRequest: Readonly<FormattedRequest>): Promise<ProviderResponse> {
-    const apiKey = this.getApiKey();
-    const endpoint = this.endpoints[0];
+    // Get API key from store first
+    const storeApiKeys = useStore.getState().apiKeys;
+    const apiKey = storeApiKeys[this.id] || getApiKey(this.id);
     
-    const apiEndpoint = this.formatEndpoint(endpoint);
-    
-    // Send the request directly to the API
-    const response = await fetch(apiEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...formattedRequest,
-        apiKey
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+    if (!apiKey) {
+      debug.error('provider', `No API key found for ${this.id}`);
+      throw new Error(`No API key found for ${this.id}`);
     }
     
-    return await response.json();
+    debug.log('provider', `Submitting completion with API key: ${apiKey ? 'present' : 'missing'}`);
+    const client = new OpenAIClientAdapter(apiKey);
+    return await client.createCompletion(formattedRequest);
   }
 
   async submitStream(formattedRequest: Readonly<FormattedRequest>): Promise<ReadableStream> {
-    const apiKey = this.getApiKey();
-    const endpoint = this.endpoints[0];
+    const apiKey = getApiKey(this.id);
+    if (!apiKey) throw new Error(`No API key found for ${this.id}`);
     
-    const apiEndpoint = this.formatEndpoint(endpoint);
-    
-    const response = await fetch(apiEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...formattedRequest,
-        stream: true,
-        apiKey
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-    
-    return response.body as ReadableStream;
-  }
-
-  // Private helper methods
-  private getApiKey(): string {
-    // Get API key from store or environment
-    return store.getState().apiKeys.openai;
-  }
-  
-  private formatEndpoint(endpoint: string): string {
-    // Format endpoint URL
-    if (endpoint.startsWith('http')) {
-      return endpoint;
-    }
-    return `${window.location.origin}${endpoint}`;
+    const client = new OpenAIClientAdapter(apiKey);
+    return await client.createStreamingCompletion(formattedRequest);
   }
 }

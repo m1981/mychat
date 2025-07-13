@@ -1,5 +1,5 @@
 // src/config/models/model.registry.ts
-import { ProviderKey } from '@type/chat';
+import { ProviderKey } from '@type/provider';
 import { ModelCapabilities } from '@type/model';
 import { debug } from '@utils/debug';
 

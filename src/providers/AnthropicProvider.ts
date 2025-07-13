@@ -1,13 +1,14 @@
 import { PROVIDER_CONFIGS } from '@config/providers/provider.config';
-import store from '@store/store';
+import { AnthropicClientAdapter } from '@api/clients/anthropic-client';
 import { AIProviderBase, ProviderKey, ProviderCapabilities, MessageInterface, RequestConfig, FormattedRequest, ProviderResponse } from '@type/provider';
+import { getApiKey } from '@utils/auth';
 
 export class AnthropicProvider implements AIProviderBase {
-  id: ProviderKey;
-  name: string;
-  endpoints: string[];
-  models: string[];
-  capabilities: ProviderCapabilities;
+  readonly id: ProviderKey;
+  readonly name: string;
+  readonly endpoints: string[];
+  readonly models: string[];
+  readonly capabilities: ProviderCapabilities;
 
   constructor() {
     // Get configuration from provider config
@@ -24,154 +25,75 @@ export class AnthropicProvider implements AIProviderBase {
       defaultThinkingModel: config.defaultModel
     };
   }
-
+  
   formatRequest(messages: MessageInterface[], config: RequestConfig): FormattedRequest {
-    // Extract system message if present
-    const systemMessage = messages.find(m => m.role === 'system');
-    
-    // Filter out system messages and empty messages for the regular message array
-    const regularMessages = messages
-      .filter(m => m.role !== 'system')
-      .filter(m => m.content.trim() !== '')
-      .map(m => ({
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content,
-      }));
-    
-    // Create formatted request
-    const formattedRequest: FormattedRequest = {
+    // Format messages for Anthropic API
+    return {
       model: config.model,
       max_tokens: config.max_tokens,
       temperature: config.temperature,
       top_p: config.top_p,
-      stream: config.stream ?? false,
-      messages: regularMessages
+      messages: messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      })),
+      stream: config.stream || false,
+      // Add thinking mode if supported and enabled
+      ...(config.thinking?.enabled && {
+        thinking: {
+          type: "thinking_out_loud",
+          budget_tokens: config.thinking.budget_tokens
+        }
+      })
     };
-    
-    // Add system message if present
-    if (systemMessage) {
-      formattedRequest.system = systemMessage.content;
-    }
-    
-    // Add thinking configuration if enabled
-    if (config.thinking?.enabled || config.thinking_mode?.enabled) {
-      formattedRequest.thinking = {
-        type: "enabled",
-        budget_tokens: (config.thinking?.budget_tokens || config.thinking_mode?.budget_tokens || 16000)
-      };
-    }
-    
-    return formattedRequest;
   }
-
-  parseResponse(response: unknown): string {
-    // Validate response
-    if (!response) return '';
+  
+  async submitCompletion(formattedRequest: FormattedRequest): Promise<ProviderResponse> {
+    const apiKey = getApiKey(this.id);
+    if (!apiKey) throw new Error(`No API key found for ${this.id}`);
     
-    // Handle non-streaming response
-    if (response.content && Array.isArray(response.content) && response.content.length > 0) {
+    const client = new AnthropicClientAdapter(apiKey);
+    return await client.createCompletion(formattedRequest);
+  }
+  
+  async submitStream(formattedRequest: FormattedRequest): Promise<ReadableStream> {
+    const apiKey = getApiKey(this.id);
+    if (!apiKey) throw new Error(`No API key found for ${this.id}`);
+    
+    const client = new AnthropicClientAdapter(apiKey);
+    return await client.createStreamingCompletion(formattedRequest);
+  }
+  
+  parseResponse(response: any): string {
+    console.debug('[AnthropicProvider] Parsing response:', JSON.stringify(response));
+    
+    // Check if response is in the standard format we expect
+    if (response?.choices?.[0]?.message?.content) {
+      return response.choices[0].message.content;
+    }
+    
+    // Handle Anthropic-specific format if it comes through directly
+    if (response?.content?.[0]?.text) {
       return response.content[0].text;
     }
     
-    // If content is a string, return it (for test compatibility)
-    if (typeof response.content === 'string') {
-      return response.content;
+    // Fallback for any other format
+    return '';
+  }
+  
+  parseStreamingResponse(chunk: any): string {
+    console.debug('[AnthropicProvider] Parsing streaming chunk:', JSON.stringify(chunk));
+    
+    // Handle formatted chunks from the API route
+    if (chunk.choices && chunk.choices[0] && chunk.choices[0].delta) {
+      return chunk.choices[0].delta.content || '';
+    }
+    
+    // Handle raw Anthropic chunks
+    if (chunk.type === 'content_block_delta') {
+      return chunk.delta?.text || '';
     }
     
     return '';
-  }
-
-  parseStreamingResponse(response: unknown): string {
-    try {
-      // Validate response
-      if (!response) return '';
-      
-      if (response.type === 'content_block_delta') {
-        return response.delta?.text || '';
-      }
-      return '';
-    } catch (e) {
-      console.error('Error parsing Anthropic response:', e);
-      return '';
-    }
-  }
-
-  async submitCompletion(formattedRequest: Readonly<FormattedRequest>): Promise<ProviderResponse> {
-    const apiKey = this.getApiKey();
-    const endpoint = this.endpoints[0];
-    
-    const apiEndpoint = this.formatEndpoint(endpoint);
-    
-    // Send the request directly to the API
-    const response = await fetch(apiEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: formattedRequest.model,
-        max_tokens: formattedRequest.max_tokens,
-        temperature: formattedRequest.temperature,
-        top_p: formattedRequest.top_p,
-        messages: formattedRequest.messages,
-        system: formattedRequest.system,
-        thinking: formattedRequest.thinking,
-        apiKey
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Anthropic API error: ${response.status}`);
-    }
-    
-    return await response.json();
-  }
-
-  async submitStream(formattedRequest: Readonly<FormattedRequest>): Promise<ReadableStream> {
-    const apiKey = this.getApiKey();
-    const endpoint = this.endpoints[0];
-    
-    const apiEndpoint = this.formatEndpoint(endpoint);
-    
-    const response = await fetch(apiEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        formattedRequest: {
-          ...formattedRequest,
-          stream: true
-        },
-        apiKey
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Anthropic API error: ${response.status}`);
-    }
-    
-    return response.body as ReadableStream;
-  }
-
-  // Private helper methods
-  private getApiKey(): string {
-    // Get API key from store or environment
-    return store.getState().apiKeys.anthropic;
-  }
-  
-  private formatEndpoint(endpoint: string): string {
-    // Format endpoint URL
-    if (endpoint.startsWith('http')) {
-      return endpoint;
-    }
-    return `${window.location.origin}${endpoint}`;
-  }
-  
-  // Helper method to validate response
-  private validateResponse(response: unknown): void {
-    if (!response) {
-      throw new Error('Empty response from Anthropic');
-    }
   }
 }

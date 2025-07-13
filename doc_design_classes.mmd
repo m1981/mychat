@@ -8,6 +8,8 @@ classDiagram
         +parseResponse(response) string
         +parseStreamingResponse(response) string
         +getCapabilities() ProviderCapabilities
+        +submitCompletion(formattedRequest) Promise~ProviderResponse~
+        +submitStream(formattedRequest) Promise~ReadableStream~
     }
 
     class MessageInterface {
@@ -34,6 +36,12 @@ classDiagram
         +getCapabilities() ProviderCapabilities
     }
 
+    class ProviderClientAdapter {
+        <<interface>>
+        +createCompletion(formattedRequest) Promise~ProviderResponse~
+        +createStreamingCompletion(formattedRequest) Promise~ReadableStream~
+    }
+
     AIProviderInterface --|> RequestFormatterInterface : extends
     AIProviderInterface --|> ResponseParserInterface : extends
     AIProviderInterface --|> CapabilitiesProviderInterface : extends
@@ -46,6 +54,8 @@ classDiagram
         +parseResponse(response) string
         +parseStreamingResponse(response) string
         +getCapabilities() ProviderCapabilities
+        +submitCompletion(formattedRequest) Promise~ProviderResponse~
+        +submitStream(formattedRequest) Promise~ReadableStream~
     }
 
 %% Provider Implementations
@@ -54,6 +64,8 @@ classDiagram
         +parseResponse(response) string
         +parseStreamingResponse(response) string
         +getCapabilities() ProviderCapabilities
+        +submitCompletion(formattedRequest) Promise~ProviderResponse~
+        +submitStream(formattedRequest) Promise~ReadableStream~
     }
 
     class OpenAIProvider {
@@ -61,6 +73,31 @@ classDiagram
         +parseResponse(response) string
         +parseStreamingResponse(response) string
         +getCapabilities() ProviderCapabilities
+        +submitCompletion(formattedRequest) Promise~ProviderResponse~
+        +submitStream(formattedRequest) Promise~ReadableStream~
+    }
+
+%% Client Adapters
+    class AnthropicClientAdapter {
+        -client: Anthropic
+        +constructor(apiKey, requestId?)
+        +createCompletion(formattedRequest) Promise~ProviderResponse~
+        +createStreamingCompletion(formattedRequest) Promise~ReadableStream~
+        -adaptRequestFormat(request) Object
+    }
+
+    class OpenAIClientAdapter {
+        -client: OpenAI
+        -requestId?: string
+        +constructor(apiKey, requestId?)
+        +createCompletion(formattedRequest) Promise~ProviderResponse~
+        +createStreamingCompletion(formattedRequest) Promise~ReadableStream~
+        -adaptRequestFormat(request) Object
+    }
+
+    class ProviderClientFactory {
+        <<static>>
+        +createClient(provider, apiKey, requestId?) ProviderClientAdapter
     }
 
 %% Configuration
@@ -120,12 +157,6 @@ classDiagram
         +hasProvider(key) boolean
     }
 
-    class ProviderFactory {
-        +createProvider(key: ProviderKey) AIProviderInterface
-    }
-
-    ProviderRegistry --> ProviderFactory : uses
-
 %% Context
     class ProviderContext {
         +currentProvider: ProviderKey
@@ -167,6 +198,15 @@ classDiagram
     AIProviderBase <|-- AnthropicProvider : extends
     AIProviderBase <|-- OpenAIProvider : extends
 
+    ProviderClientAdapter <|.. AnthropicClientAdapter : implements
+    ProviderClientAdapter <|.. OpenAIClientAdapter : implements
+    
+    AnthropicProvider --> AnthropicClientAdapter : uses
+    OpenAIProvider --> OpenAIClientAdapter : uses
+    
+    ProviderClientFactory --> AnthropicClientAdapter : creates
+    ProviderClientFactory --> OpenAIClientAdapter : creates
+
     ProviderRegistry --> AIProviderInterface : manages
     ProviderRegistry --> ProviderConfig : contains
 
@@ -183,7 +223,3 @@ classDiagram
 
     ChatSubmissionServiceInterface <|.. ChatSubmissionService : implements
     StorageServiceInterface <|.. StorageService : implements
-
-%% Make hook dependencies explicit
-    useStreamHandler --> ChatSubmissionService : uses
-    useSubmissionState --> ChatSubmissionService : uses

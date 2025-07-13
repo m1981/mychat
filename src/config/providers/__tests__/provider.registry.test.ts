@@ -1,5 +1,5 @@
 // src/config/providers/__tests__/provider.registry.test.ts
-import { ProviderKey } from '@type/chat';
+import { ProviderKey } from '@type/provider';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock ModelRegistry before importing modules that use it

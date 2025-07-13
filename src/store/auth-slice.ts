@@ -1,6 +1,6 @@
 
 import { officialAPIEndpoint } from '@constants/auth';
-import { ProviderKey } from '@type/chat';
+import { ProviderKey } from '@type/provider';
 import { getEnvVar } from '@utils/env';
 
 import { StoreSlice } from './store';

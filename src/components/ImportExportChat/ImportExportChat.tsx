@@ -5,7 +5,7 @@ import PopupModal from '@components/PopupModal';
 import { ProviderRegistry } from '@config/providers/provider.registry';
 import ExportIcon from '@icon/ExportIcon';
 import useStore from '@store/store';
-import { ChatInterface, FolderCollection, ProviderKey } from '@type/chat';
+import { ProviderKey } from '@type/provider';
 import { Export } from '@type/export';
 import { getToday } from '@utils/date';
 import downloadFile from '@utils/downloadFile';

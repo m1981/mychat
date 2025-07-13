@@ -3,7 +3,7 @@
    import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
    import { ProviderRegistry } from '@config/providers/provider.registry';
    import useStore from '@store/store';
-   import { ProviderKey } from '@type/chat';
+   import { ProviderKey } from '@type/provider';
    import { AIProviderBase } from '@type/provider';
 
    // Create context with null as default value

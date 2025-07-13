@@ -251,11 +251,19 @@ function useSubmit(dependencies: SubmitDependencies = {}) {
       const latestMessages = latestChat.messages;
 
       try {
+        // Log API key status before title generation
+        debug.log('useSubmit', `[useSubmit] API key for title generation: ${providerSetup.apiKey ? 'present' : 'missing'}`);
+        debug.log('useSubmit', `[useSubmit] Provider for title generation: ${providerSetup.providerKey}`);
+        
         // Pass the model config to the generateTitle function
         await titleGeneration.generateTitle(
           latestMessages, 
-          modelConfig,
-          latestState.currentChatIndex // Explicitly pass the chat index
+          {
+            ...modelConfig,
+            // Explicitly include the provider key in the config
+            provider: providerSetup.providerKey
+          },
+          latestState.currentChatIndex
         );
         debug.log('useSubmit', '[useSubmit] Title generation complete');
       } catch (titleError) {

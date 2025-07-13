@@ -1,4 +1,4 @@
-import { ProviderKey } from '@type/chat';
+import { ProviderKey } from '@type/provider';
 import { ModelConfig } from '@type/provider';
 
 /**

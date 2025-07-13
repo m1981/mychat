@@ -7,6 +7,8 @@ import type { UserConfig } from 'vite';
 import topLevelAwait from 'vite-plugin-top-level-await';
 import wasm from 'vite-plugin-wasm';
 
+// Import shared proxy configuration
+import { createProxyConfig } from './src/config/proxy-config';
 
 // Shared aliases for all configurations
 const sharedAliases = {
@@ -87,33 +89,7 @@ function createDevConfig(): UserConfig {
         strict: false,
         allow: ['/app']
       },
-      proxy: {
-        '/api': {
-          target: 'http://127.0.0.1:3000',
-          changeOrigin: true,
-          secure: false,
-          ws: true,
-          configure: (proxy) => {
-            // Increase timeouts
-            proxy.options.proxyTimeout = 120000; // 2 minutes
-            proxy.options.timeout = 120000;
-            
-            // Disable connection pooling to prevent socket reuse issues
-            proxy.options.agent = false;
-            
-            // Handle proxy errors
-            proxy.on('error', (err, req, res) => {
-              console.log('Proxy error:', err);
-              if (!res.headersSent) {
-                res.writeHead(500, {
-                  'Content-Type': 'application/json'
-                });
-              }
-              res.end(JSON.stringify({ error: 'Proxy error', details: err.message }));
-            });
-          }
-        }
-      }
+      proxy: createProxyConfig()
     },
     optimizeDeps: {
       exclude: ['@webassembly/*']

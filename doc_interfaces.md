@@ -33,6 +33,13 @@ graph TD
         AP[Anthropic Provider]
     end
 
+    subgraph "Client Adapters"
+        PCA[ProviderClientAdapter]
+        OAICA[OpenAIClientAdapter]
+        AACA[AnthropicClientAdapter]
+        PCF[ProviderClientFactory]
+    end
+
     subgraph "Interfaces"
         API[AIProviderInterface]
         RC[RequestConfig]
@@ -67,6 +74,14 @@ graph TD
     PR --> AP
     OP -.implements.-> API
     AP -.implements.-> API
+
+    %% Client adapter relationships
+    OP --> OAICA
+    AP --> AACA
+    OAICA -.implements.-> PCA
+    AACA -.implements.-> PCA
+    PCF --> OAICA
+    PCF --> AACA
 
     %% Hook dependencies
     Chat --> UCC
@@ -113,6 +128,18 @@ The main interface and abstract base class that all AI providers must implement.
 - **Dependency Inversion Principle (DIP)**: Components depend on abstractions (the interface) rather than concrete implementations.
 - **React Context Pattern**: Enables dependency injection through React's context system.
 - **Type Safety**: Uses abstract classes, readonly properties, and strict typing to prevent runtime errors.
+
+### `ProviderClientAdapter` Interface
+
+A new interface that defines the contract for provider-specific client adapters.
+
+**Motivation:**
+- **SRP**: Separates SDK interaction from provider business logic.
+- **OCP**: New client adapters can be added without modifying existing code.
+- **ISP**: Defines only the methods needed for API communication.
+- **DIP**: Provider implementations depend on the adapter interface, not concrete implementations.
+- **Adapter Pattern**: Provides a consistent interface over different provider SDKs.
+- **Testability**: Makes it easier to mock API interactions for testing.
 
 ```typescript
 export abstract class AIProviderBase {
@@ -624,6 +651,7 @@ sequenceDiagram
     participant FC as Frontend Client
     participant PR as ProviderRegistry
     participant API as AIProviderInterface
+    participant CA as ClientAdapter
     participant BE as Backend API Routes
     participant EP as External Provider APIs
     
@@ -632,9 +660,11 @@ sequenceDiagram
     FC->>API: Call formatRequest()
     API-->>FC: Return FormattedRequest
     FC->>BE: POST /api/chat/{provider} with FormattedRequest
-    BE->>EP: Forward request to external API
-    EP-->>BE: Return provider-specific response
-    BE-->>FC: Return standardized ProviderResponse
+    BE->>CA: Create client adapter
+    CA->>EP: Forward request to external API
+    EP-->>CA: Return provider-specific response
+    CA-->>BE: Return standardized response
+    BE-->>FC: Return ProviderResponse
     FC->>API: Call parseResponse() or parseStreamingResponse()
     API-->>FC: Return extracted content
 ```
@@ -651,19 +681,19 @@ sequenceDiagram
 When the frontend makes a request to the backend, it follows this standardized format:
 
 ```typescript
-interface BackendRequestBody {
-  /**
-   * Provider-specific formatted request created by AIProviderInterface.formatRequest
-   * Contains all necessary parameters for the AI provider API
-   */
-  formattedRequest: FormattedRequest;
-  
-  /**
-   * API key for the provider
-   * Retrieved from secure storage and sent to the backend
-   * Never exposed in client-side code
-   */
-  apiKey: string;
+// POST /api/chat/{provider}
+{
+  "formattedRequest": {
+    "model": "gpt-4o",
+    "max_tokens": 4096,
+    "temperature": 0.7,
+    "messages": [
+      { "role": "system", "content": "You are a helpful assistant." },
+      { "role": "user", "content": "Hello, world!" }
+    ],
+    "stream": false
+  },
+  "apiKey": "sk-..." // Only sent to backend, never exposed in frontend
 }
 ```
 
@@ -678,18 +708,23 @@ interface BackendRequestBody {
 The backend returns responses in a standardized format that matches the `ProviderResponse` interface:
 
 ```typescript
-interface ProviderResponse {
-  content?: string | Array<{text: string}>;
-  choices?: Array<{
-    message?: { content?: string };
-    delta?: { content?: string };
-  }>;
-  type?: string;
-  delta?: { 
-    text?: string;
-    [key: string]: unknown;
-  };
-  [key: string]: unknown;
+// Response from /api/chat/{provider}
+{
+  "id": "chatcmpl-123",
+  "object": "chat.completion",
+  "created": 1677858242,
+  "model": "gpt-4o",
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "Hello! How can I help you today?"
+      },
+      "finish_reason": "stop",
+      "index": 0
+    }
+  ],
+  // Provider-specific fields may be included
 }
 ```
 
@@ -726,8 +761,8 @@ Backend route handlers should:
 
 1. Accept POST requests with the standardized request body
 2. Extract the `formattedRequest` and `apiKey` from the request
-3. Initialize the appropriate AI provider client
-4. Forward the request to the external API
+3. Initialize the appropriate client adapter using `ProviderClientFactory`
+4. Forward the request to the external API through the client adapter
 5. Format the response according to the standardized response contract
 6. Handle errors and return appropriate error responses
 
@@ -737,49 +772,36 @@ Frontend provider implementations should:
 
 1. Implement the `AIProviderInterface`
 2. Format requests using the `formatRequest` method
-3. Send requests to the backend with the standardized request body
+3. Use client adapters for API communication via `submitCompletion` and `submitStream` methods
 4. Parse responses using the `parseResponse` or `parseStreamingResponse` methods
 5. Handle errors and provide meaningful error messages
 
+## Client Adapter Pattern Benefits
 
+The new Client Adapter pattern provides several key benefits:
 
-## Capability Configuration
+1. **Separation of Concerns**: 
+   - Provider implementations focus on business logic
+   - Client adapters focus on SDK interaction
+   - API routes focus on HTTP handling
 
-Each capability can define its own configuration structure, which is stored within the `ModelConfig` object. The configuration should follow these guidelines:
+2. **Code Reuse**:
+   - Same client adapters used in both development and production
+   - Consistent request/response handling across environments
 
+3. **Testability**:
+   - Client adapters can be easily mocked
+   - Provider implementations can be tested in isolation
 
-Example for Thinking Mode capability:
+4. **Maintainability**:
+   - SDK upgrades only require changes to client adapters
+   - Provider-specific logic is centralized
 
-```typescript
-// In ModelConfig interface
-export interface ModelConfig {
-  model: string;
-  max_tokens: number;
-  temperature: number;
-  // ... other standard fields
-  
-  // Capability-specific configurations
-  thinking_mode?: {
-    enabled: boolean;
-    budget_tokens: number;
-  };
-  
-  file_upload?: {
-    enabled: boolean;
-    maxFiles: number;
-    maxSizePerFile: number;
-  };
-  
-  // Allow for future capabilities
-  [key: string]: any;
-}
-```
+5. **Extensibility**:
+   - New providers can be added by implementing a new client adapter
+   - Existing code remains unchanged
 
-## Deployment Execution Flows
-
-The application supports two primary deployment modes with different execution flows: Next.js API routes for production and Express server for local development. Below are detailed sequence diagrams for both modes.
-
-### Next.js API Routes Execution Flow
+## Sequence Diagram for Client Adapter Pattern
 
 ```mermaid
 sequenceDiagram
@@ -787,6 +809,7 @@ sequenceDiagram
     participant PC as ProviderContext
     participant API as AIProviderInterface
     participant Hook as useChatCompletion
+    participant CA as ClientAdapter
     participant NextAPI as Next.js API Routes
     participant ExtAPI as External Provider API
     
@@ -797,76 +820,48 @@ sequenceDiagram
     Hook->>API: Call formatRequest()
     API->>Hook: Return FormattedRequest
     
-    Hook->>NextAPI: POST /api/chat/{provider}
-    Note over Hook,NextAPI: Includes formattedRequest and apiKey
-    
-    NextAPI->>ExtAPI: Initialize provider SDK and send request
-    Note over NextAPI,ExtAPI: Direct SDK call with apiKey
-    
-    alt Non-streaming response
-        ExtAPI->>NextAPI: Return complete response
-        NextAPI->>Hook: Return standardized ProviderResponse
+    alt Frontend direct submission
+        Hook->>API: Call submitCompletion/submitStream()
+        API->>CA: Create client adapter
+        CA->>ExtAPI: Send request to external API
+        ExtAPI->>CA: Return response
+        CA->>API: Return standardized response
+        API->>Hook: Parse and return content
+    else API route submission
+        Hook->>NextAPI: POST /api/chat/{provider}
+        NextAPI->>CA: Create client adapter
+        CA->>ExtAPI: Send request to external API
+        ExtAPI->>CA: Return response
+        CA->>NextAPI: Return standardized response
+        NextAPI->>Hook: Return response
         Hook->>API: Call parseResponse()
         API->>Hook: Return extracted content
-        Hook->>UI: Return final content
-    else Streaming response
-        ExtAPI-->>NextAPI: Stream response chunks
-        loop For each chunk
-            NextAPI-->>Hook: Stream chunk via SSE
-            Hook->>API: Call parseStreamingResponse()
-            API->>Hook: Return extracted content
-            Hook->>UI: Update UI with chunk
-        end
     end
+    
+    Hook->>UI: Update UI with response
 ```
 
-### Express Server Execution Flow
+## Client Adapter Implementation
 
-```mermaid
-sequenceDiagram
-    participant UI as React UI
-    participant PC as ProviderContext
-    participant API as AIProviderInterface
-    participant Hook as useChatCompletion
-    participant Express as Express Server
-    participant Client as Provider Client
-    participant ExtAPI as External Provider API
-    
-    UI->>PC: Get current provider
-    PC->>UI: Return provider implementation
-    UI->>Hook: Call generateCompletion/Stream
-    
-    Hook->>API: Call formatRequest()
-    API->>Hook: Return FormattedRequest
-    
-    Hook->>Express: POST /api/{provider}
-    Note over Hook,Express: Includes messages, config, apiKey
-    
-    Express->>Client: Initialize client wrapper
-    Note over Express,Client: Create AnthropicClient/OpenAIClient
-    
-    alt Non-streaming response
-        Client->>ExtAPI: client.createMessage()
-        Note over Client,ExtAPI: SDK call with formatted params
-        ExtAPI->>Client: Return complete response
-        Client->>Express: Return response
-        Express->>Hook: Return standardized response
-        Hook->>API: Call parseResponse()
-        API->>Hook: Return extracted content
-        Hook->>UI: Return final content
-    else Streaming response
-        Client->>ExtAPI: client.createStreamingMessage()
-        Note over Client,ExtAPI: SDK call with stream=true
-        ExtAPI-->>Client: Stream response chunks
-        loop For each chunk
-            Client-->>Express: Process chunk
-            Express-->>Hook: Stream chunk via SSE
-            Hook->>API: Call parseStreamingResponse()
-            API->>Hook: Return extracted content
-            Hook->>UI: Update UI with chunk
-        end
-    end
-```
+### `ProviderClientFactory`
+
+Factory for creating provider client adapters.
+
+**Motivation:**
+- **Factory Pattern**: Centralizes creation of client adapters.
+- **SRP**: Responsible only for creating the appropriate client adapter.
+- **OCP**: New providers can be added by extending the factory.
+- **DIP**: Clients depend on the adapter interface, not concrete implementations.
+
+### `AnthropicClientAdapter` and `OpenAIClientAdapter`
+
+Concrete implementations of the `ProviderClientAdapter` interface.
+
+**Motivation:**
+- **SRP**: Each adapter is responsible only for communicating with a specific AI service.
+- **Encapsulation**: Hides the details of SDK initialization and request formatting.
+- **Adapter Pattern**: Provides a consistent interface over different provider SDKs.
+- **Testability**: Makes it easier to mock provider interactions for testing.
 
 ## Client Wrappers and Server Script
 

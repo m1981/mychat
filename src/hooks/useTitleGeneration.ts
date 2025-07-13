@@ -1,20 +1,22 @@
 import { useCallback } from 'react';
-
 import { ProviderRegistry } from '@config/providers/provider.registry';
 import useStore from '@store/store';
-import { MessageInterface, ModelConfig, ProviderKey } from '@type/chat';
+import { ProviderKey } from '@type/provider';
 import { UseTitleGenerationReturn } from '@type/hooks';
 import { debug } from '@utils/debug';
+import { MessageInterface } from '@type/chat';
+import { ModelConfig } from '@type/chat';
 
 // Define the system prompt for title generation
 const TITLE_SYSTEM_PROMPT = 'Generate a concise, descriptive title (5 words or less) for this conversation. Return only the title text with no quotes or additional explanation.';
 
 export function useTitleGeneration(providerKey: ProviderKey): UseTitleGenerationReturn {
   // Get state and setChats directly
-  const { chats, currentChatIndex, setChats } = useStore(state => ({
+  const { chats, currentChatIndex, setChats, apiKeys } = useStore(state => ({
     chats: state.chats,
     currentChatIndex: state.currentChatIndex,
-    setChats: state.setChats
+    setChats: state.setChats,
+    apiKeys: state.apiKeys
   }));
   
   const generateTitle = useCallback(async (messages: MessageInterface[], config: ModelConfig, chatIndex?: number) => {
@@ -68,21 +70,50 @@ export function useTitleGeneration(providerKey: ProviderKey): UseTitleGeneration
       const providerInstance = ProviderRegistry.getProvider(providerKey);
       debug.log('chat', `Using provider: ${providerInstance.id} for title generation`);
       
-      // FIX: Ensure we're passing parameters in the correct order
-      // First parameter should be messages array, second parameter should be config
+      // Get API key from store
+      const storeApiKeys = useStore.getState().apiKeys;
+      const apiKey = storeApiKeys[providerKey];
+
+      debug.log('chat', `API key for ${providerKey}: ${apiKey ? 'present' : 'missing'}`);
+      debug.log('chat', `All API keys: ${JSON.stringify(Object.keys(storeApiKeys).map(k => [k, storeApiKeys[k] ? 'present' : 'missing']))}`);
+
+      if (!apiKey) {
+        debug.log('chat', `No API key found for ${providerKey}`);
+        throw new Error(`No API key found for ${providerKey}`);
+      }
+
+      // Format the request using the provider's formatRequest method
       const formattedRequest = providerInstance.formatRequest(titlePrompt, {
         ...config,
-        // Ensure stream is false for title generation
-        stream: false
+        stream: false // Ensure stream is false for title generation
       });
 
-      debug.log('chat', 'Submitting title generation request');
-      // Submit request using the correct method from AIProviderBase
-      const response = await providerInstance.submitCompletion(formattedRequest);
+      debug.log('chat', 'Submitting title generation request via API route');
+
+      // Use the API route instead of direct client access
+      // This follows the architecture diagram where all API calls go through the backend
+      const response = await fetch(`/api/chat/${providerKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formattedRequest,
+          apiKey
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        debug.error('chat', `API route error: ${response.status} ${errorText}`);
+        throw new Error(`API route returned ${response.status}: ${errorText}`);
+      }
       
-      // Parse response using the correct method
-      const parsedResponse = providerInstance.parseResponse(response);
-      debug.log('chat', `Received title generation response: ${JSON.stringify(parsedResponse)}`);
+      const responseData = await response.json();
+      debug.log('chat', `Received title generation response from API route`);
+
+      // Parse the response using the provider's parseResponse method
+      const parsedResponse = providerInstance.parseResponse(responseData);
       
       // Extract title from response
       let title = '';

@@ -5,7 +5,7 @@ import PopupModal from '@components/PopupModal';
 import { DEFAULT_PROVIDER } from '@config/chat/ChatConfig';
 import { ProviderModel } from '@config/providers/provider.config';
 import { ProviderRegistry } from '@config/providers/provider.registry';
-import { ChatConfig, ModelConfig, ProviderKey } from '@type/chat';
+import { ProviderKey } from '@type/provider';
 import debug from 'debug';
 import { useTranslation } from 'react-i18next';
 

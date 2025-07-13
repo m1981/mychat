@@ -5,7 +5,7 @@ import { ProviderRegistry } from '@config/providers/provider.registry';
 import AnthropicIcon from '@icon/AnthropicIcon';
 import OpenAIIcon from '@icon/OpenAIIcon';
 import useStore from '@store/store';
-import { ProviderKey } from '@type/chat';
+import { ProviderKey } from '@type/provider';
 import { useTranslation } from 'react-i18next';
 
 const formFieldStyles = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500';

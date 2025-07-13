@@ -1,15 +1,18 @@
-export type Role = 'user' | 'assistant' | 'system';
-export type ProviderKey = 'anthropic' | 'openai' | string;
+/**
+ * Chat-related types
+ * Imports core types from provider.ts
+ */
+import { MessageInterface, ProviderKey } from './provider';
 
 export interface ModelConfig {
+  provider: ProviderKey;
   model: string;
   max_tokens: number;
   temperature: number;
-  presence_penalty: number;
   top_p: number;
+  presence_penalty: number;
   frequency_penalty: number;
-  // Make thinking_mode optional
-  thinking_mode?: {
+  thinking_mode: {
     enabled: boolean;
     budget_tokens: number;
   };
@@ -18,11 +21,6 @@ export interface ModelConfig {
 export interface ChatConfig {
   provider: ProviderKey;
   modelConfig: ModelConfig;
-}
-
-export interface MessageInterface {
-  role: Role;
-  content: string;
 }
 
 export interface ChatInterface {
