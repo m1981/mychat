@@ -1,7 +1,8 @@
+import { ProviderKey } from '../../types/provider';
+
 import { AnthropicClientAdapter } from './anthropic-client';
 import { OpenAIClientAdapter } from './openai-client';
 import { ProviderClientAdapter } from './provider-client-adapter';
-import { ProviderKey } from '../../types/provider';
 
 /**
  * Factory for creating provider-specific client adapters

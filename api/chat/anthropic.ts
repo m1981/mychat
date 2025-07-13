@@ -1,8 +1,8 @@
 
-import { NextApiRequest, NextApiResponse } from 'next';
 import { AnthropicClientAdapter } from '@api/clients/anthropic-client';
-import { FormattedRequest } from '@type/provider';
 import { formatStreamingChunk } from '@api/utils/response-formatter';
+import { FormattedRequest } from '@type/provider';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {

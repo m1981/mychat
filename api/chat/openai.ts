@@ -1,8 +1,8 @@
 
 /* eslint-env node */
-import type { NextApiRequest, NextApiResponse } from 'next';
 import { OpenAIClientAdapter } from '@api/clients/openai-client';
 import { FormattedRequest } from '@type/provider';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
 // Add parseRequestBody function with proper typing
 async function parseRequestBody(req: NextApiRequest): Promise<{

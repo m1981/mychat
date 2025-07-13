@@ -1,11 +1,12 @@
 import { useCallback } from 'react';
+
 import { ProviderRegistry } from '@config/providers/provider.registry';
 import useStore from '@store/store';
-import { ProviderKey } from '@type/provider';
-import { UseTitleGenerationReturn } from '@type/hooks';
-import { debug } from '@utils/debug';
 import { MessageInterface } from '@type/chat';
 import { ModelConfig } from '@type/chat';
+import { UseTitleGenerationReturn } from '@type/hooks';
+import { ProviderKey } from '@type/provider';
+import { debug } from '@utils/debug';
 
 // Define the system prompt for title generation
 const TITLE_SYSTEM_PROMPT = 'Generate a concise, descriptive title (5 words or less) for this conversation. Return only the title text with no quotes or additional explanation.';

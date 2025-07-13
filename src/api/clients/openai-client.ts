@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
+
 import { FormattedRequest, ProviderResponse } from '../../types/provider';
+
 import { ProviderClientAdapter } from './provider-client-adapter';
 
 /**

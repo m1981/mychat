@@ -1,6 +1,6 @@
 // src/config/models/model.registry.ts
-import { ProviderKey } from '@type/provider';
 import { ModelCapabilities } from '@type/model';
+import { ProviderKey } from '@type/provider';
 import { debug } from '@utils/debug';
 
 export class ModelRegistry {

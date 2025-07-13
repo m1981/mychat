@@ -1,8 +1,8 @@
-import { PROVIDER_CONFIGS } from '@config/providers/provider.config';
 import { OpenAIClientAdapter } from '@api/clients/openai-client';
+import { PROVIDER_CONFIGS } from '@config/providers/provider.config';
+import useStore from '@store/store';
 import { AIProviderBase, ProviderKey, ProviderCapabilities, MessageInterface, RequestConfig, FormattedRequest, ProviderResponse } from '@type/provider';
 import { getApiKey } from '@utils/auth';
-import useStore from '@store/store';
 import { debug } from '@utils/debug';
 
 export class OpenAIProvider implements AIProviderBase {

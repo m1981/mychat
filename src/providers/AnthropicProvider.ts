@@ -1,5 +1,5 @@
-import { PROVIDER_CONFIGS } from '@config/providers/provider.config';
 import { AnthropicClientAdapter } from '@api/clients/anthropic-client';
+import { PROVIDER_CONFIGS } from '@config/providers/provider.config';
 import { AIProviderBase, ProviderKey, ProviderCapabilities, MessageInterface, RequestConfig, FormattedRequest, ProviderResponse } from '@type/provider';
 import { getApiKey } from '@utils/auth';
 
