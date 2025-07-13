@@ -40,12 +40,11 @@ function createBaseConfig(env: Record<string, string>): UserConfig {
       alias: sharedAliases
     },
     optimizeDeps: {
-      exclude: ['@webassembly/*', '@anthropic-ai/sdk', 'openai'],
+      exclude: ['@webassembly/*'],
       force: true
     },
     define: {
       'process.cwd': 'function() { return "/" }',
-      // Handle Anthropic SDK env vars
       'process.env.ANTHROPIC_API_KEY': 'undefined',
       'process.env.ANTHROPIC_AUTH_TOKEN': 'undefined',
       'process.env.ANTHROPIC_BASE_URL': 'undefined',
@@ -136,7 +135,6 @@ function createProdConfig(): UserConfig {
     },
     build: {
       rollupOptions: {
-        external: ['@anthropic-ai/sdk', 'openai'],
         output: {
           sourcemapExcludeSources: false,
           manualChunks: {
