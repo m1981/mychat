@@ -292,8 +292,9 @@ jobs:
           # Also set in environment for the current process
           echo "VITE_OPENAI_API_KEY=${VITE_OPENAI_API_KEY}" >> $GITHUB_ENV
           echo "VITE_ANTHROPIC_API_KEY=${VITE_ANTHROPIC_API_KEY}" >> $GITHUB_ENV
-          # Create logs directory
+          # Create logs directory - ensure it exists before tests run
           mkdir -p test-results/server-logs
+          chmod -R 777 test-results  # Ensure directory is writable
       
       # Build the app for testing
       - name: Build app
@@ -310,6 +311,10 @@ jobs:
           VITE_ANTHROPIC_API_KEY: ${{ secrets.VITE_ANTHROPIC_API_KEY }}
           DEBUG: "app:*,api:*,pw:api"
         run: |
+          # Ensure log directory exists and is writable
+          mkdir -p test-results/server-logs
+          chmod -R 777 test-results
+          
           # Run tests with debug output
           NODE_ENV=test DEBUG=app:*,api:*,pw:api pnpm test:e2e
           

@@ -15,7 +15,7 @@ export default defineConfig({
   testDir: './e2e',
   timeout: 30000,
   expect: {
-    timeout: 5000,  // Increased from 1000ms to 5000ms
+    timeout: 5000,
   },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -32,8 +32,8 @@ export default defineConfig({
     : [['html', { open: 'never' }], ['list']],
 
   use: {
-    actionTimeout: 5000, // Increased from 1000ms to 5000ms
-    navigationTimeout: 10000, // Increased from 5000ms to 10000ms
+    actionTimeout: 5000,
+    navigationTimeout: 10000,
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
@@ -46,8 +46,8 @@ export default defineConfig({
   ],
   webServer: {
     command: process.env.CI 
-      ? 'cd dist && NODE_ENV=test DEBUG=app:* npx serve -s -l 5173 > ../test-results/server-logs/server.log 2>&1' 
-      : 'DEBUG=app:* pnpm dev | tee test-results/server-logs/server.log',
+      ? `mkdir -p test-results/server-logs && cd dist && NODE_ENV=test DEBUG=app:* npx serve -s -l 5173 > ../test-results/server-logs/server.log 2>&1`
+      : `mkdir -p test-results/server-logs && DEBUG=app:* pnpm dev | tee test-results/server-logs/server.log`,
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
