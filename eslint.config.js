@@ -13,7 +13,9 @@ export default [
       '**/dist/**',
       '**/backstop_data/**',
       '**/node_modules/**',
-      '**/coverage/**'
+      '**/coverage/**',
+      '**/test-results/**',
+      '**/playwright-report/**'
     ]
   },
   {

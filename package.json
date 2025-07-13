@@ -27,7 +27,7 @@
     "type:check:all": "pnpm type:check && pnpm type:check:tests && pnpm type:check:node",
     "type:watch": "tsc --noEmit --watch",
     "deps:check": "depcheck",
-    "lint:js": "eslint --ext .ts,.tsx,.js,.jsx .",
+    "lint:js": "eslint --ext .ts,.tsx,.js,.jsx . --quiet ",
     "lint:js:fix": "eslint --ext .ts,.tsx,.js,.jsx . --fix",
     "lint:deadcode": "ts-prune -i '(test|gatsby)' | grep -v cssExports | grep -v 'used in module'",
     "lint:styles": "stylelint src/**/*.{js,jsx,ts,tsx,css}",
