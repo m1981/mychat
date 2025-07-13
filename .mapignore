@@ -33,3 +33,15 @@ src/providers/ProviderComponent.ts
 src/providers/factory.ts
 src/services/ChatService.ts
 src/test/mocks/providerRegistryMock.ts
+src/api/clients/base-client.ts
+src/api/clients/client-factory.ts
+src/api/clients/provider-client-adapter.ts
+src/api/types/provider.ts
+src/api/utils/response-formatter.ts
+src/config/proxy-config.ts
+src/config/models/model.registry.ts
+src/api/clients/openai-client.ts
+src/api/clients/anthropic-client.ts
+src/providers/AnthropicProvider.ts
+src/providers/OpenAIProvider.ts
+src/utils/auth.ts
