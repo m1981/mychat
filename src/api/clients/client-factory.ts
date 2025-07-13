@@ -13,50 +13,82 @@ export class ProviderClientFactory {
    * @param requestId Optional request ID for tracking
    * @returns A client adapter instance
    */
-  static async createClient(provider: ProviderKey, apiKey: string, requestId?: string) {
-    // Skip SDK loading on client-side
-    if (typeof window !== 'undefined') {
-      // Return a client-side adapter that uses fetch to call your API
+  static createClient(provider: ProviderKey, apiKey: string, requestId?: string): ProviderClientAdapter {
+    // Check if we're running in a browser environment
+    const isBrowser = typeof window !== 'undefined';
+    
+    if (isBrowser) {
+      // In browser, return a fetch-based adapter
       return new BrowserClientAdapter(provider, apiKey, requestId);
     }
     
-    // Server-side: dynamically import the appropriate adapter
-    switch (provider) {
-      case 'anthropic':
-        const { AnthropicClientAdapter } = await import('./anthropic-client');
-        return new AnthropicClientAdapter(apiKey, requestId);
-      case 'openai':
-        const { OpenAIClientAdapter } = await import('./openai-client');
+    // In Node.js environment, dynamically require the appropriate adapter
+    // This code will never be included in the browser bundle
+    try {
+      if (provider === 'openai') {
+        // Using require instead of import to avoid bundling
+        const { OpenAIClientAdapter } = require('./openai-client');
         return new OpenAIClientAdapter(apiKey, requestId);
-      default:
-        throw new Error(`Unsupported provider: ${provider}`);
+      } else if (provider === 'anthropic') {
+        const { AnthropicClientAdapter } = require('./anthropic-client');
+        return new AnthropicClientAdapter(apiKey, requestId);
+      }
+    } catch (error) {
+      console.error(`Failed to load ${provider} adapter:`, error);
+      throw new Error(`Provider ${provider} is not supported in this environment`);
     }
+    
+    throw new Error(`Unsupported provider: ${provider}`);
   }
 }
 
-// Simple adapter for browser environments that calls your API
+// Browser-specific adapter implementation
 class BrowserClientAdapter implements ProviderClientAdapter {
-  constructor(private provider: ProviderKey, private apiKey: string, private requestId?: string) {}
+  constructor(
+    private provider: ProviderKey,
+    private apiKey: string,
+    private requestId?: string
+  ) {}
   
   async createCompletion(formattedRequest: FormattedRequest): Promise<ProviderResponse> {
     const response = await fetch(`/api/chat/${this.provider}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ formattedRequest, apiKey: this.apiKey })
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Request-ID': this.requestId || ''
+      },
+      body: JSON.stringify({
+        formattedRequest,
+        apiKey: this.apiKey
+      })
     });
     
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API error (${response.status}): ${errorText}`);
+    }
+    
     return await response.json();
   }
   
   async createStreamingCompletion(formattedRequest: FormattedRequest): Promise<ReadableStream> {
     const response = await fetch(`/api/chat/${this.provider}/stream`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ formattedRequest, apiKey: this.apiKey })
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Request-ID': this.requestId || ''
+      },
+      body: JSON.stringify({
+        formattedRequest,
+        apiKey: this.apiKey
+      })
     });
     
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API error (${response.status}): ${errorText}`);
+    }
+    
     return response.body!;
   }
 }

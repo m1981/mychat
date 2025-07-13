@@ -136,6 +136,11 @@ function createProdConfig(): UserConfig {
     },
     build: {
       rollupOptions: {
+        // Mark problematic SDK packages as external
+        external: [
+          '@anthropic-ai/sdk',
+          'openai'
+        ],
         output: {
           sourcemapExcludeSources: false,
           manualChunks: {
