@@ -1,7 +1,7 @@
 
-import { AnthropicClientAdapter } from '@api/clients/anthropic-client';
-import { formatStreamingChunk } from '@api/utils/response-formatter';
-import { FormattedRequest } from '@type/provider';
+import { AnthropicClientAdapter } from '../../src/api/clients/anthropic-client';
+import { formatStreamingChunk } from '../../src/api/utils/response-formatter';
+import { FormattedRequest } from '../../src/types/provider';
 import { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

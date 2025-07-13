@@ -1,20 +1,7 @@
 
-/* eslint-env node */
-import { OpenAIClientAdapter } from '@api/clients/openai-client';
-import { FormattedRequest } from '@type/provider';
-import type { NextApiRequest, NextApiResponse } from 'next';
-
-// Add parseRequestBody function with proper typing
-async function parseRequestBody(req: NextApiRequest): Promise<{
-  readonly formattedRequest: FormattedRequest;
-  readonly apiKey: string;
-}> {
-  const chunks = [];
-  for await (const chunk of req) {
-    chunks.push(chunk);
-  }
-  return JSON.parse(Buffer.concat(chunks).toString());
-}
+import { OpenAIClientAdapter } from '../../src/api/clients/openai-client';
+import { FormattedRequest } from '../../src/types/provider';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -22,8 +9,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Parse the request body
-    const { formattedRequest, apiKey } = await parseRequestBody(req);
+    // Extract request data
+    const { formattedRequest, apiKey } = req.body;
     
     if (!apiKey) {
       return res.status(400).json({ error: 'API key is required' });
