@@ -27,13 +27,17 @@ export class AnthropicProvider implements AIProviderBase {
   }
   
   formatRequest(messages: MessageInterface[], config: RequestConfig): FormattedRequest {
+    // Extract system message if present
+    const systemMessage = messages.find(msg => msg.role === 'system');
+    const nonSystemMessages = messages.filter(msg => msg.role !== 'system');
+    
     // Format messages for Anthropic API
-    return {
+    const formattedRequest: FormattedRequest = {
       model: config.model,
       max_tokens: config.max_tokens,
       temperature: config.temperature,
       top_p: config.top_p,
-      messages: messages.map(msg => ({
+      messages: nonSystemMessages.map(msg => ({
         role: msg.role,
         content: msg.content
       })),
@@ -46,6 +50,13 @@ export class AnthropicProvider implements AIProviderBase {
         }
       })
     };
+    
+    // Add system message as separate property if present
+    if (systemMessage) {
+      formattedRequest.system = systemMessage.content;
+    }
+    
+    return formattedRequest;
   }
   
   async submitCompletion(formattedRequest: FormattedRequest): Promise<ProviderResponse> {
