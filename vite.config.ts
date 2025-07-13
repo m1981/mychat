@@ -45,13 +45,14 @@ function createBaseConfig(env: Record<string, string>): UserConfig {
     },
     define: {
       'process.cwd': 'function() { return "/" }',
-      'process.env.ANTHROPIC_API_KEY': 'undefined',
-      'process.env.ANTHROPIC_AUTH_TOKEN': 'undefined',
-      'process.env.ANTHROPIC_BASE_URL': 'undefined',
+      // Add these specific environment variables for Anthropic SDK
+      'process.env.ANTHROPIC_API_KEY': JSON.stringify(env.VITE_ANTHROPIC_API_KEY || ''),
+      'process.env.ANTHROPIC_AUTH_TOKEN': JSON.stringify(''),
+      'process.env.ANTHROPIC_BASE_URL': JSON.stringify('https://api.anthropic.com'),
       // Handle OpenAI SDK env vars
-      'process.env.OPENAI_API_KEY': 'undefined',
-      'process.env.OPENAI_ORG_ID': 'undefined',
-      'process.env.OPENAI_PROJECT_ID': 'undefined',
+      'process.env.OPENAI_API_KEY': JSON.stringify(env.VITE_OPENAI_API_KEY || ''),
+      'process.env.OPENAI_ORG_ID': JSON.stringify(''),
+      'process.env.OPENAI_PROJECT_ID': JSON.stringify(''),
       // Existing environment variables
       'import.meta.env.VITE_OPENAI_API_KEY': JSON.stringify(env.VITE_OPENAI_API_KEY || ''),
       'import.meta.env.VITE_ANTHROPIC_API_KEY': JSON.stringify(env.VITE_ANTHROPIC_API_KEY || ''),
